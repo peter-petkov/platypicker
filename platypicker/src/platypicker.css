@@ -1,5 +1,6 @@
-/* @media (any-pointer: fine), (any-hover: hover) { */
-    *:has(> select.platypicker) {
+@supports (appearance: base-select) and selector(::picker(select)) {
+    platy-picker {
+        display: contents;
         anchor-scope: --platypicker;
 
         select.platypicker {
@@ -12,11 +13,12 @@
                 visibility: hidden;
             }
 
-            &:not([multiple]), &::picker(select) {
+            &:not([multiple]) {
                 appearance: base-select !important;
             }
 
             &::picker(select) {
+                appearance: base-select !important;
                 display: none;
             }
 
@@ -42,17 +44,15 @@
             & + .dropdown-menu[popover] {
                 display: revert;
                 position-anchor: --platypicker;
-                top: calc(anchor(bottom) + .125rem) !important;
-                left: anchor(left) !important;
+
+                /* Anchored below the select by default; the browser flips it
+                   above automatically if there isn't room, replacing the old
+                   getBoundingClientRect()-driven ".dropup" class toggle. */
+                position-try-fallbacks: flip-block;
+                top: calc(anchor(bottom) + .125rem);
+                left: anchor(left);
                 min-width: anchor-size();
                 max-height: 45vh;
-
-                transform: none !important;
-
-                .dropup & {
-                    top: unset !important;
-                    bottom: calc(anchor(top) + .125rem) !important;
-                }
 
                 .input-group:not(:has(*:not(.d-none))) {
                     display: none;
@@ -98,11 +98,11 @@
                     display: revert;
                 }
 
-                li:has(.dropdown-item.d-none), /* Hidden items */
-                li:has(.dropdown-header.d-none), /* Hidden headers */
-                li:has(.dropdown-divider.d-none), /* Hidden dividers */
-                li:has(.dropdown-header):not(:has(~ li .dropdown-item:not(.d-none))), /* Headers without any visible items */
-                li:has(.dropdown-divider):not(:has(~ li .dropdown-item:not(.d-none))) /* Dividers without any trailing items */
+                li:has(.dropdown-item.d-none),
+                li:has(.dropdown-header.d-none),
+                li:has(.dropdown-divider.d-none),
+                li:has(.dropdown-header):not(:has(~ li .dropdown-item:not(.d-none))),
+                li:has(.dropdown-divider):not(:has(~ li .dropdown-item:not(.d-none)))
                 {
                     display: none;
                 }
@@ -155,4 +155,4 @@
             }
         }
     }
-/* } */
+}

@@ -15,24 +15,26 @@
             <div class="card-body">
                 <h3 class="card-title"><img height="30" src="../platylogo.png" alt="Platypicker"> Platypicker</h3>
                 <label class="form-label" for="platypicker">Pick a food</label>
-                <select id="platypicker" class="form-select" name="platypicker" data-toggle="platypicker" data-search="true" data-controls="true">
-                    <option>Cheese 🧀</option>
-                    <option>Bread 🍞</option>
-                    <hr>
-                    <option disabled data-subtext="disabled">Coffee ☕</option>
-                    <option>Tea 🍵</option>
-                    <optgroup label="Fruits" data-subtext="disabled">
-                        <option value="1">Apple 🍎</option>
-                        <option value="2">Orange 🍊</option>
-                        <option value="3">Mango 🥭</option>
-                    </optgroup>
-                    <optgroup label="Vegetables (disabled)" disabled>
-                        <option value="4">Cucumber 🥒</option>
-                        <option value="5">Tomato 🍅</option>
-                        <option value="6">Broccoli 🥦</option>
-                    </optgroup>
-                    <option>Carrot 🥕</option>
-                </select>
+                <platy-picker search controls>
+                    <select id="platypicker" class="form-select" name="platypicker" required sel>
+                        <option>Cheese 🧀</option>
+                        <option>Bread 🍞</option>
+                        <hr>
+                        <option disabled data-subtext="disabled">Coffee ☕</option>
+                        <option>Tea 🍵</option>
+                        <optgroup label="Fruits" data-subtext="disabled">
+                            <option value="1">Apple 🍎</option>
+                            <option value="2">Orange 🍊</option>
+                            <option value="3">Mango 🥭</option>
+                        </optgroup>
+                        <optgroup label="Vegetables (disabled)" disabled>
+                            <option value="4">Cucumber 🥒</option>
+                            <option value="5">Tomato 🍅</option>
+                            <option value="6">Broccoli 🥦</option>
+                        </optgroup>
+                        <option>Carrot 🥕</option>
+                    </select>
+                </platy-picker>
             </div>
         </div>
     </div>
@@ -41,29 +43,30 @@
             <div class="card-body">
                 <h3 class="card-title"><img height="30" src="../platylogo.png" alt="Platypicker"> Multi-platypicker</h3>
                 <label class="form-label" for="multi-platypicker">Pick a food</label>
-                <select id="multi-platypicker" class="form-select" name="multi-platypicker" multiple size="1" data-toggle="platypicker" data-search="true" data-controls="true">
-                    <option>Cheese 🧀</option>
-                    <option>Bread 🍞</option>
-                    <hr>
-                    <option disabled data-subtext="disabled">Coffee ☕</option>
-                    <option>Tea 🍵</option>
-                    <optgroup label="Fruits">
-                        <option value="1">Apple 🍎</option>
-                        <option value="2">Orange 🍊</option>
-                        <option value="3">Mango 🥭</option>
-                    </optgroup>
-                    <optgroup label="Vegetables (disabled)" disabled>
-                        <option value="4">Cucumber 🥒</option>
-                        <option value="5">Tomato 🍅</option>
-                        <option value="6">Broccoli 🥦</option>
-                    </optgroup>
-                    <option>Carrot 🥕</option>
-                </select>
+                <platy-picker search controls>
+                    <select id="multi-platypicker" class="form-select" name="multi-platypicker" multiple size="1">
+                        <option>Cheese 🧀</option>
+                        <option>Bread 🍞</option>
+                        <hr>
+                        <option disabled data-subtext="disabled">Coffee ☕</option>
+                        <option>Tea 🍵</option>
+                        <optgroup label="Fruits">
+                            <option value="1">Apple 🍎</option>
+                            <option value="2">Orange 🍊</option>
+                            <option value="3">Mango 🥭</option>
+                        </optgroup>
+                        <optgroup label="Vegetables (disabled)" disabled>
+                            <option value="4">Cucumber 🥒</option>
+                            <option value="5">Tomato 🍅</option>
+                            <option value="6">Broccoli 🥦</option>
+                        </optgroup>
+                        <option>Carrot 🥕</option>
+                    </select>
+                </platy-picker>
             </div>
         </div>
     </div>
 </section>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
 <script type="module" src="../src/platypicker.js"></script>
 </body>
 </html>

@@ -1,16 +1,6 @@
 @import "../src/platypicker.css";
 
 :root {
-    --enter-animation-duration: .2s;
-    --exit-animation-duration: .3s;
-    --enter-animation-timing-function: cubic-bezier(.4, 0, 1, 1);
-    --exit-animation-timing-function: cubic-bezier(0, 0, .2, 1);
-    --dropdown-transition:
-            opacity var(--enter-animation-duration) var(--enter-animation-timing-function),
-            transform var(--enter-animation-duration) var(--enter-animation-timing-function),
-            overlay var(--enter-animation-duration) var(--enter-animation-timing-function) allow-discrete,
-            display var(--enter-animation-duration) var(--enter-animation-timing-function) allow-discrete;
-
     font-family: Inter, system-ui, sans-serif;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
 
