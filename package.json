@@ -1,0 +1,17 @@
+{
+  "name": "platypicker",
+  "version": "1.1.0",
+  "private": false,
+  "type": "module",
+  "main": "src/platypicker.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/peter-petkov/platypicker.git"
+  },
+  "files": [
+    "src"
+  ],
+  "dependencies": {
+    "bootstrap": "^5.3.8"
+  }
+}

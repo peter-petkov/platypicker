@@ -1,64 +1,66 @@
 name: Publish platypicker to npm
 
 on:
-  workflow_run:
-    workflows: ["Create Release From Version Tag"]
+  release:
     types:
-      - completed
+      - published
+
   workflow_dispatch:
     inputs:
       version:
-        description: "Version to publish (semver, without leading v)"
+        description: "Version to publish. Expected format: X, X.Y, or X.Y.Z"
         required: true
+        type: string
 
 jobs:
   publish:
     runs-on: ubuntu-latest
 
     permissions:
-      id-token: write
       contents: read
+      id-token: write
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Determine version
+        id: version
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            VERSION="${{ inputs.version }}"
+          else
+            VERSION="${{ github.event.release.tag_name }}"
+          fi
+
+          if [[ ! "${VERSION}" =~ ^[0-9]+(\.[0-9]+){0,2}$ ]]; then
+            echo "Invalid version format: ${VERSION}"
+            echo "Expected format: X, X.Y, or X.Y.Z where each part contains only digits."
+            exit 1
+          fi
+
+          echo "Using version: ${VERSION}"
+          echo "version=${VERSION}" >> "${GITHUB_OUTPUT}"
+
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ steps.version.outputs.version }}
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: '24'
           registry-url: 'https://registry.npmjs.org'
 
       - name: Install dependencies
-        working-directory: platypicker
         run: npm ci
 
       - name: Build package if necessary
-        working-directory: platypicker
         run: npm run build --if-present
 
       - name: Run package tests
-        working-directory: platypicker
         run: npm test --if-present
 
-      - name: Determine version
-        working-directory: platypicker
-        run: |
-          # Manual dispatch input takes priority
-          if [ -n "${{ github.event.inputs.version }}" ]; then
-            VERSION="${{ github.event.inputs.version }}"
-          # workflow_run trigger: use the tag from the triggering workflow
-          elif [ -n "${{ github.event.workflow_run.head_branch }}" ]; then
-            # head_branch contains 'refs/tags/1.2.3' on tag push triggers
-            REF="${{ github.event.workflow_run.head_branch }}"
-            VERSION="${REF#refs/tags/}"
-          else
-            echo "Error: Could not determine version"
-            exit 1
-          fi
+      - name: Set package version
+        run: npm version "${{ steps.version.outputs.version }}" --no-git-tag-version
 
-          echo "Using version: $VERSION"
-          npm version "$VERSION" --no-git-tag-version
-
-      - name: Publish to GitHub npm registry
-        working-directory: platypicker
-        run: npm publish
+      - name: Publish to npm
+        run: npm publish --provenance --access public
