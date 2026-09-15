@@ -111,20 +111,45 @@ export default class PlatyPicker extends HTMLElement {
     // Public attribute accessors
     // -----------------------------------------------------------------
 
-    get search() { return this.hasAttribute("search"); }
-    set search(value) { this.toggleAttribute("search", Boolean(value)); }
+    get search() {
+        return this.hasAttribute("search");
+    }
 
-    get controls() { return this.hasAttribute("controls"); }
-    set controls(value) { this.toggleAttribute("controls", Boolean(value)); }
+    set search(value) {
+        this.toggleAttribute("search", Boolean(value));
+    }
 
-    get searchPlaceholder() { return this.getAttribute("search-placeholder") ?? PlatyPicker.languageMap.searchPlaceholder; }
-    set searchPlaceholder(value) { this.setAttribute("search-placeholder", value); }
+    get controls() {
+        return this.hasAttribute("controls");
+    }
 
-    get selectAllLabel() { return this.getAttribute("select-all-label") ?? PlatyPicker.languageMap.selectAllLabel; }
-    set selectAllLabel(value) { this.setAttribute("select-all-label", value); }
+    set controls(value) {
+        this.toggleAttribute("controls", Boolean(value));
+    }
 
-    get selectNoneLabel() { return this.getAttribute("select-none-label") ?? PlatyPicker.languageMap.selectNoneLabel; }
-    set selectNoneLabel(value) { this.setAttribute("select-none-label", value); }
+    get searchPlaceholder() {
+        return this.getAttribute("search-placeholder") ?? PlatyPicker.languageMap.searchPlaceholder;
+    }
+
+    set searchPlaceholder(value) {
+        this.setAttribute("search-placeholder", value);
+    }
+
+    get selectAllLabel() {
+        return this.getAttribute("select-all-label") ?? PlatyPicker.languageMap.selectAllLabel;
+    }
+
+    set selectAllLabel(value) {
+        this.setAttribute("select-all-label", value);
+    }
+
+    get selectNoneLabel() {
+        return this.getAttribute("select-none-label") ?? PlatyPicker.languageMap.selectNoneLabel;
+    }
+
+    set selectNoneLabel(value) {
+        this.setAttribute("select-none-label", value);
+    }
 
     // -----------------------------------------------------------------
     // Popover & controls construction
@@ -203,6 +228,8 @@ export default class PlatyPicker extends HTMLElement {
         this.#list.replaceChildren();
 
         for (const child of this.#select.children) {
+            if (child.hidden) continue;
+
             if (child instanceof HTMLOptionElement) {
                 this.#addOptionItem(child);
             } else if (child instanceof HTMLOptGroupElement) {
@@ -212,7 +239,11 @@ export default class PlatyPicker extends HTMLElement {
                 this.#list.append(this.#wrapInListItem(header));
                 child["header"] = header;
 
-                for (const option of child.children) this.#addOptionItem(option);
+                for (const option of child.children) {
+                    if (option.hidden) continue;
+
+                    this.#addOptionItem(option);
+                }
 
                 if (child.nextElementSibling instanceof HTMLOptionElement) {
                     const divider = document.createElement("hr");
