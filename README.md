@@ -14,7 +14,7 @@ npm install platypicker
 import "platypicker";
 ```
 
-This registers the `<platy-picker>` custom element. It has no JS exports to import directly - everything is driven through markup and attributes.
+This registers the `<platy-picker>` custom element. It has no JS exports to import directly – everything is driven through markup and attributes.
 
 You'll also need the stylesheet:
 
@@ -55,15 +55,16 @@ For multi-select, add `multiple` (and, for a compact single-line trigger rather 
 
 ## Attributes
 
-| Attribute            | Type    | Default               | Description                                                                                             |
-|----------------------|---------|-----------------------|---------------------------------------------------------------------------------------------------------|
-| `search`             | boolean | off                   | Shows a filter input at the top of the popover. Matches against option text and `data-subtext`.         |
-| `controls`           | boolean | off                   | Shows "Select all" / "Select none" buttons.                                                             |
-| `search-placeholder` | string  | `"Type to filter..."` | Placeholder text for the search input.                                                                  |
-| `select-all-label`   | string  | `"Select all"`        | Label for the select-all button. Only appears when the `<select>` has `multiple`.                       |
-| `select-none-label`  | string  | `"Select none"`       | Label for the select-none button. Only appears if the `<select>` does not have the `required` attribute |
+| Attribute            | Type    | Default               | Description                                                                                                                        |
+|----------------------|---------|-----------------------|------------------------------------------------------------------------------------------------------------------------------------|
+| `search`             | boolean | off                   | Shows a filter input at the top of the popover. Matches against option text and `data-subtext`.                                    |
+| `controls`           | boolean | off                   | Shows "Select all" / "Select none" buttons.                                                                                        |
+| `placeholders`       | number  | off / `10`            | Appends Bootstrap placeholder rows to the popover. If present without a valid non-negative integer value, renders 10 placeholders. |
+| `search-placeholder` | string  | `"Type to filter..."` | Placeholder text for the search input.                                                                                             |
+| `select-all-label`   | string  | `"Select all"`        | Label for the select-all button. Only appears when the `<select>` has `multiple`.                                                  |
+| `select-none-label`  | string  | `"Select none"`       | Label for the select-none button. Only appears if the `<select>` does not have the `required` attribute                            |
 
-All attributes are reflected as properties too (e.g. `picker.search = true`), and are fully reactive - changing them after the element is connected updates the UI immediately.
+All attributes are reflected as properties too (e.g. `picker.search = true`), and are fully reactive – changing them after the element is connected updates the UI immediately.
 
 ```html
 <platy-picker search controls
@@ -82,7 +83,8 @@ All attributes are reflected as properties too (e.g. `picker.search = true`), an
 - **Subtext** - add `data-subtext="..."` to any `<option>` for a secondary line of text under its label (also searchable).
 - **Keyboard type-ahead** - typing while the popover is open jumps to (or, for non-multiselects, selects) the first matching option, mirroring native `<select>` behavior.
 - **Anchored, overflow-aware popover** - positioned via CSS anchor positioning; flips above the control automatically if there is no room below.
-- **Live DOM sync** - add, remove, or reorder `<option>`/`<optgroup>` elements on the underlying `<select>` at any time; the popover updates to match.
+- **Live DOM sync** – add, remove, or reorder `<option>`/`<optgroup>` elements on the underlying `<select>` at any time; the popover updates to match.
+- **Placeholder rows** – add the `placeholders` attribute to append Bootstrap placeholder rows while options are loading. Placeholders are removed as soon as you modify the select's options content.
 - **Validation-aware styling** - Bootstrap's `.is-valid`/`.is-invalid`/`.was-validated` conventions work as they would on a plain `.form-select`.
 - **`:state(open)`** - the `<platy-picker>` host exposes a custom state while its popover is open, so you can style around it without a class:
 ```css
@@ -96,8 +98,8 @@ All attributes are reflected as properties too (e.g. `picker.search = true`), an
 Platypicker requires `appearance: base-select` support. As of publishing:
 
 - Chrome / Edge 135+
-- Firefox - implemented behind the `dom.select.customizable_select.enabled` and `layout.css.appearance-base.enabled` flags, not yet enabled by default
-- Safari - not yet shipped
+- Firefox – implemented behind the `dom.select.customizable_select.enabled` and `layout.css.appearance-base.enabled` flags, not yet enabled by default
+- Safari – not yet shipped
 
 In any browser without support, `<platy-picker>` does nothing: the `<select>` inside it renders and behaves exactly as a plain native `<select>` would.
 

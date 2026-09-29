@@ -128,7 +128,11 @@ export default class PlatyPicker extends HTMLElement {
     }
 
     get placeholders() {
-        return this.getAttribute("placeholders") ?? 10;
+        if (this.hasAttribute("placeholders")) {
+            const value = this.getAttribute("placeholders");
+            const parsed = parseInt(value, 10);
+            return !isNaN(parsed) && parsed >= 0 && value === String(parsed) ? parsed : 10;
+        } else return undefined;
     }
 
     set placeholders(value) {
