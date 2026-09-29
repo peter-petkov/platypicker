@@ -31,6 +31,7 @@ export default class PlatyPicker extends HTMLElement {
     #typeAheadBuffer = "";
     #typeAheadTimer;
     #optionsObserver;
+    #havePlaceholdersBeenAppendedAlready;
 
     constructor() {
         super();
@@ -269,8 +270,11 @@ export default class PlatyPicker extends HTMLElement {
                 this.#list.append(this.#wrapInListItem(divider));
             }
         }
-        
-        if (this.placeholders) this.#appendPlaceholders(this.placeholders);
+
+        if (this.placeholders && !this.#havePlaceholdersBeenAppendedAlready) {
+            this.#appendPlaceholders(this.placeholders);
+            this.#havePlaceholdersBeenAppendedAlready = true;
+        }
     }
     
     #appendPlaceholders(count = 10) {
@@ -559,7 +563,7 @@ export default class PlatyPicker extends HTMLElement {
 
     #wireOptionsObserver() {
         this.#optionsObserver = new MutationObserver(PlatyPicker.#debounce(() => {
-            if (this.#select.options.length !== this.#list.querySelectorAll(".dropdown-item").length ||
+            if (this.#select.options.length !== this.#list.querySelectorAll(".dropdown-item:not(:has(.placeholder))").length ||
                 [...this.#select.options].some(o => !o.popoverItem))
                 this.#setListItems();
         }, 100));
