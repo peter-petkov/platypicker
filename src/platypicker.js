@@ -334,7 +334,7 @@ export default class PlatyPicker extends HTMLElement {
     #refreshSelectionState() {
         const query = this.#search.value.trim().toLowerCase();
 
-        for (const item of this.#list.querySelectorAll("li > .dropdown-item")) {
+        for (const item of this.#list.querySelectorAll("li > .dropdown-item:not(:has(.placeholder))")) {
             const option = item.option;
             let changed = false;
 
@@ -377,9 +377,9 @@ export default class PlatyPicker extends HTMLElement {
 
         for (const item of this.#list.querySelectorAll("li > .dropdown-item")) {
             const option = item.option;
-            const text = option.textContent.toLowerCase().trim();
-            const subtext = option.dataset.subtext?.toLowerCase().trim() ?? "";
-            const currentOptgroup = option.closest("optgroup");
+            const text = option?.textContent?.toLowerCase().trim();
+            const subtext = option?.dataset.subtext?.toLowerCase().trim() ?? "";
+            const currentOptgroup = option?.closest("optgroup");
             const optgroupLabel = currentOptgroup?.label?.toLowerCase().trim() ?? "";
 
             if (currentOptgroup !== optgroup) {
@@ -387,7 +387,7 @@ export default class PlatyPicker extends HTMLElement {
                 optgroupHasMatch = false;
             }
 
-            const matches = text.includes(query) || subtext.includes(query);
+            const matches = text && text.includes(query) || subtext.includes(query);
             const optgroupMatches = optgroupLabel.includes(query);
             item.classList.toggle("d-none", !matches && !optgroupMatches);
 
