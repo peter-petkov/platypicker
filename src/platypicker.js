@@ -127,6 +127,14 @@ export default class PlatyPicker extends HTMLElement {
         this.toggleAttribute("controls", Boolean(value));
     }
 
+    get placeholders() {
+        return this.getAttribute("placeholders") ?? 10;
+    }
+
+    set placeholders(value) {
+        this.setAttribute("placeholders", value);
+    }
+
     get searchPlaceholder() {
         return this.getAttribute("search-placeholder") ?? PlatyPicker.languageMap.searchPlaceholder;
     }
@@ -257,9 +265,11 @@ export default class PlatyPicker extends HTMLElement {
                 this.#list.append(this.#wrapInListItem(divider));
             }
         }
+        
+        if (this.placeholders) this.#appendPlaceholders(this.placeholders);
     }
     
-    appendPlaceholders(count = 10) {
+    #appendPlaceholders(count = 10) {
         for (let i = 0; i < count; i++) {
             this.#addOptionItem({
                 innerHTML:
