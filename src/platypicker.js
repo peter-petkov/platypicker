@@ -258,6 +258,17 @@ export default class PlatyPicker extends HTMLElement {
             }
         }
     }
+    
+    appendPlaceholders(count = 10) {
+        for (let i = 0; i < count; i++) {
+            this.#addOptionItem({
+                innerHTML:
+                    `<div class="placeholder-wave w-100">
+                        <span class="placeholder col-12 rounded-pill"></span>
+                    </div>`
+            }, true);
+        }
+    }
 
     #wrapInListItem(element) {
         const li = document.createElement("li");
@@ -265,23 +276,26 @@ export default class PlatyPicker extends HTMLElement {
         return li;
     }
 
-    #addOptionItem(option) {
+    #addOptionItem(option, isPlaceholder = false) {
         const item = document.createElement("button");
         item.type = "button";
         item.classList.add("dropdown-item", "rounded-2");
         item.innerHTML = option.innerHTML;
-        if (option.title) item.title = option.title;
-        if (option.selected && !option.disabled) item.classList.add("active");
-        if (option.disabled || option.closest("optgroup")?.disabled) item.classList.add("disabled");
+        if (!isPlaceholder) {
+            if (option.title) item.title = option.title;
+            if (option.selected && !option.disabled) item.classList.add("active");
+            if (option.disabled || option?.closest("optgroup")?.disabled) item.classList.add("disabled");
 
-        const subtext = document.createElement("small");
-        subtext.textContent = option.dataset.subtext ?? "";
-        item.append(subtext);
+            const subtext = document.createElement("small");
+            subtext.textContent = option.dataset?.subtext ?? "";
+            item.append(subtext);
 
-        item.option = option;
-        option.popoverItem = item;
+            item.option = option;
+            option.popoverItem = item;
 
-        item.addEventListener("click", () => this.#activateOption(option, item), { signal: this.#abort.signal });
+            item.addEventListener("click", () =>
+                this.#activateOption(option, item), { signal: this.#abort.signal });
+        } else item.disabled = true;
 
         this.#list.append(this.#wrapInListItem(item));
 
