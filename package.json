@@ -4,6 +4,8 @@
   "private": false,
   "type": "module",
   "main": "src/platypicker.js",
+  "author": "Peter Petkov",
+  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/peter-petkov/platypicker.git"

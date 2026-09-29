@@ -106,6 +106,14 @@
                 {
                     display: none;
                 }
+                
+                .dropdown-header, .dropdown-item {
+                    &::highlight(platypicker-highlight),
+                    small::highlight(platypicker-highlight) {
+                        background-color: #fee6b1;
+                        color: black;
+                    }
+                }
 
                 .dropdown-item {
                     display: flex;
@@ -144,12 +152,6 @@
                     &:hover, &:focus {
                         color: var(--bs-dropdown-link-hover-color);
                         background-color: var(--bs-dropdown-link-hover-bg);
-                    }
-
-                    &::highlight(platypicker-highlight),
-                    small::highlight(platypicker-highlight) {
-                        background-color: #fee6b1;
-                        color: black;
                     }
                 }
             }

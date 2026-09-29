@@ -217,7 +217,7 @@ export default class PlatyPicker extends HTMLElement {
     #isSelectable(option) {
         return !option.disabled &&
             !option.closest("optgroup")?.disabled &&
-            !option["popoverItem"]?.classList.contains("d-none");
+            !option.popoverItem?.classList.contains("d-none");
     }
 
     // -----------------------------------------------------------------
@@ -237,7 +237,7 @@ export default class PlatyPicker extends HTMLElement {
                 header.classList.add("dropdown-header");
                 header.textContent = child.label;
                 this.#list.append(this.#wrapInListItem(header));
-                child["header"] = header;
+                child.header = header;
 
                 for (const option of child.children) {
                     if (option.hidden) continue;
@@ -249,7 +249,7 @@ export default class PlatyPicker extends HTMLElement {
                     const divider = document.createElement("hr");
                     divider.classList.add("dropdown-divider");
                     this.#list.append(this.#wrapInListItem(divider));
-                    child["divider"] = divider;
+                    child.divider = divider;
                 }
             } else if (child instanceof HTMLHRElement) {
                 const divider = document.createElement("hr");
@@ -278,8 +278,8 @@ export default class PlatyPicker extends HTMLElement {
         subtext.textContent = option.dataset.subtext ?? "";
         item.append(subtext);
 
-        item["option"] = option;
-        option["popoverItem"] = item;
+        item.option = option;
+        option.popoverItem = item;
 
         item.addEventListener("click", () => this.#activateOption(option, item), { signal: this.#abort.signal });
 
@@ -307,7 +307,7 @@ export default class PlatyPicker extends HTMLElement {
         const query = this.#search.value.trim().toLowerCase();
 
         for (const item of this.#list.querySelectorAll("li > .dropdown-item")) {
-            const option = item["option"];
+            const option = item.option;
             let changed = false;
 
             if (item.firstChild.textContent !== option.textContent) {
@@ -326,7 +326,7 @@ export default class PlatyPicker extends HTMLElement {
         }
 
         for (const option of this.#select.selectedOptions)
-            option["popoverItem"]?.classList.add("active");
+            option.popoverItem?.classList.add("active");
     }
 
     // -----------------------------------------------------------------
@@ -340,6 +340,7 @@ export default class PlatyPicker extends HTMLElement {
         if (!query) {
             for (const el of this.#list.querySelectorAll(".d-none"))
                 if (el !== this.#search) el.classList.remove("d-none");
+
             return;
         }
 
@@ -347,10 +348,11 @@ export default class PlatyPicker extends HTMLElement {
         let optgroupHasMatch = false;
 
         for (const item of this.#list.querySelectorAll("li > .dropdown-item")) {
-            const option = item["option"];
+            const option = item.option;
             const text = option.textContent.toLowerCase().trim();
             const subtext = option.dataset.subtext?.toLowerCase().trim() ?? "";
             const currentOptgroup = option.closest("optgroup");
+            const optgroupLabel = currentOptgroup?.label?.toLowerCase().trim() ?? "";
 
             if (currentOptgroup !== optgroup) {
                 optgroup = currentOptgroup;
@@ -358,18 +360,24 @@ export default class PlatyPicker extends HTMLElement {
             }
 
             const matches = text.includes(query) || subtext.includes(query);
-            item.classList.toggle("d-none", !matches);
+            const optgroupMatches = optgroupLabel.includes(query);
+            item.classList.toggle("d-none", !matches && !optgroupMatches);
 
             if (matches) {
                 this.#highlightMatch(item, query);
                 if (optgroup) {
                     optgroupHasMatch = true;
-                    optgroup["header"].classList.remove("d-none");
-                    optgroup["divider"]?.classList.remove("d-none");
+                    optgroup.header.classList.remove("d-none");
+                    optgroup.divider?.classList.remove("d-none");
                 }
+            } else if (optgroupMatches && !optgroupHasMatch) {
+                this.#highlightOptgroupMatch(currentOptgroup.header, query);
+                optgroupHasMatch = true;
+                optgroup.header.classList.remove("d-none");
+                optgroup.divider?.classList.remove("d-none");
             } else if (optgroup && !optgroupHasMatch) {
-                optgroup["header"].classList.add("d-none");
-                optgroup["divider"]?.classList.add("d-none");
+                optgroup.header.classList.add("d-none");
+                optgroup.divider?.classList.add("d-none");
             }
         }
     }
@@ -377,12 +385,19 @@ export default class PlatyPicker extends HTMLElement {
     #highlightMatch(item, query) {
         if (PlatyPicker.#highlight.size >= PlatyPicker.maxHighlights) return;
 
-        const optionText = item["option"].textContent.trim().toLowerCase();
+        const optionText = item.option.textContent.trim().toLowerCase();
         this.#applyHighlightRange(item, "textRange", item.firstChild, optionText, query);
 
-        const optionSubtext = item["option"].dataset.subtext?.trim().toLowerCase();
+        const optionSubtext = item.option.dataset.subtext?.trim().toLowerCase();
         if (optionSubtext && optionSubtext !== optionText)
             this.#applyHighlightRange(item, "subtextRange", item.querySelector("small").firstChild, optionSubtext, query);
+    }
+
+    #highlightOptgroupMatch(item, query) {
+        if (PlatyPicker.#highlight.size >= PlatyPicker.maxHighlights) return;
+
+        const optgroupText = item.textContent.trim().toLowerCase();
+        this.#applyHighlightRange(item, "textRange", item.firstChild, optgroupText, query);
     }
 
     #applyHighlightRange(item, key, node, haystack, query) {
@@ -401,12 +416,13 @@ export default class PlatyPicker extends HTMLElement {
 
     #dropHighlightRange(item, key) {
         if (!item[key]) return;
+
         PlatyPicker.#highlight.delete(item[key]);
         this.#ownHighlightRanges.delete(item[key]);
         delete item[key];
     }
 
-    // Only clears ranges owned by *this* instance — a shared Highlight is a
+    // Only clears ranges owned by this instance - a shared Highlight is a
     // page-wide resource, so wiping the whole thing would clobber any other
     // open picker.
     #clearOwnHighlights() {
@@ -482,10 +498,10 @@ export default class PlatyPicker extends HTMLElement {
                     match.selected = true;
                     this.#select.dispatchEvent(new Event("change", { bubbles: true }));
                 } else {
-                    match["popoverItem"].focus();
+                    match.popoverItem.focus();
                 }
 
-                requestAnimationFrame(() => match["popoverItem"]?.scrollIntoView({ block: "nearest" }));
+                requestAnimationFrame(() => match.popoverItem?.scrollIntoView({ block: "nearest" }));
 
                 clearTimeout(this.#typeAheadTimer);
                 this.#typeAheadTimer = setTimeout(() => this.#typeAheadBuffer = "", 350);
@@ -516,7 +532,7 @@ export default class PlatyPicker extends HTMLElement {
     #wireOptionsObserver() {
         this.#optionsObserver = new MutationObserver(PlatyPicker.#debounce(() => {
             if (this.#select.options.length !== this.#list.querySelectorAll(".dropdown-item").length ||
-                [...this.#select.options].some(o => !o["popoverItem"]))
+                [...this.#select.options].some(o => !o.popoverItem))
                 this.#setListItems();
         }, 100));
         this.#optionsObserver.observe(this.#select, { childList: true, subtree: true });
