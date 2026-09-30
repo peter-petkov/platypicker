@@ -19,6 +19,15 @@ export default class PlatyPicker extends HTMLElement {
 
     static #isSupported = CSS.supports("appearance", "base-select");
 
+    static observedAttributes = [
+        "search",
+        "controls",
+        "search-placeholder",
+        "select-all-label",
+        "select-none-label",
+        "placeholders",
+    ];
+
     #internals;
     #select;
     #popover;
@@ -105,6 +114,17 @@ export default class PlatyPicker extends HTMLElement {
             case "select-none-label":
                 this.#selectNoneButton.textContent = this.selectNoneLabel;
                 break;
+            case "placeholders":
+                if (this.placeholders && !this.#havePlaceholdersBeenAppendedAlready) {
+                    this.#appendPlaceholders(this.placeholders);
+                    this.#havePlaceholdersBeenAppendedAlready = true;
+                } else if (!this.placeholders) {
+                    this.querySelectorAll("li:has(.dropdown-item .placeholder)")
+                        ?.forEach(el => el.remove());
+                    this.#havePlaceholdersBeenAppendedAlready = false;
+                }
+
+                break;
         }
     }
 
@@ -129,11 +149,22 @@ export default class PlatyPicker extends HTMLElement {
     }
 
     get placeholders() {
-        if (this.hasAttribute("placeholders")) {
-            const value = this.getAttribute("placeholders");
-            const parsed = parseInt(value, 10);
-            return !isNaN(parsed) && parsed >= 0 && value === String(parsed) ? parsed : 10;
-        } else return undefined;
+        if (!this.hasAttribute("placeholders")) return undefined;
+
+        const value = this.getAttribute("placeholders");
+
+        // Handle boolean true or empty string (attribute present without value)
+        if (value === "" || value === "true") return 10;
+
+        // Handle boolean false
+        if (value === "false") return undefined;
+
+        // Handle integer values
+        const parsed = parseInt(value, 10);
+        if (!isNaN(parsed) && parsed >= 0 && value === String(parsed)) return parsed;
+
+        // Invalid value, treat as disabled
+        return undefined;
     }
 
     set placeholders(value) {
@@ -276,7 +307,7 @@ export default class PlatyPicker extends HTMLElement {
             this.#havePlaceholdersBeenAppendedAlready = true;
         }
     }
-    
+
     #appendPlaceholders(count = 10) {
         for (let i = 0; i < count; i++) {
             this.#addOptionItem({
