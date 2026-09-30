@@ -336,6 +336,7 @@ export default class PlatyPicker extends HTMLElement {
             if (option.disabled || option?.closest("optgroup")?.disabled) item.classList.add("disabled");
 
             const subtext = document.createElement("small");
+            subtext.classList.add("text-body-tertiary");
             subtext.textContent = option.dataset?.subtext ?? "";
             item.append(subtext);
 
