@@ -1,33 +1,39 @@
-name: Publish platypicker to npm
+name: Release and publish platypicker to npm
 
 on:
-  release:
-    types:
-      - published
+  push:
+    tags:
+      - '*'
 
   workflow_dispatch:
     inputs:
       version:
-        description: "Version to publish. Expected format: X, X.Y, or X.Y.Z"
+        description: "Version to release and publish. Expected format: X, X.Y, or X.Y.Z"
         required: true
         type: string
 
+permissions:
+  contents: write
+  issues: write
+  id-token: write
+
 jobs:
-  publish:
+  release-and-publish:
     runs-on: ubuntu-latest
 
-    permissions:
-      contents: read
-      id-token: write
-
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
       - name: Determine version
         id: version
         run: |
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
             VERSION="${{ inputs.version }}"
           else
-            VERSION="${{ github.event.release.tag_name }}"
+            VERSION="${GITHUB_REF_NAME}"
           fi
 
           if [[ ! "${VERSION}" =~ ^[0-9]+(\.[0-9]+){0,2}$ ]]; then
@@ -39,10 +45,48 @@ jobs:
           echo "Using version: ${VERSION}"
           echo "version=${VERSION}" >> "${GITHUB_OUTPUT}"
 
-      - name: Checkout repository
+      - name: Create Git tag if run manually
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+
+          if git rev-parse "${VERSION}" >/dev/null 2>&1; then
+            echo "Tag ${VERSION} already exists locally."
+          else
+            git tag "${VERSION}"
+            git push origin "${VERSION}"
+          fi
+
+      - name: Checkout release tag
         uses: actions/checkout@v5
         with:
           ref: ${{ steps.version.outputs.version }}
+          fetch-depth: 0
+
+      - name: Create GitHub label for version
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh label create "${{ steps.version.outputs.version }}" \
+            --color 0366d6 \
+            --description "Release version ${{ steps.version.outputs.version }}" \
+            || echo "Label already exists"
+
+      - name: Create GitHub release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+
+          if gh release view "${VERSION}" >/dev/null 2>&1; then
+            echo "Release ${VERSION} already exists."
+          else
+            gh release create "${VERSION}" \
+              --title "${VERSION}" \
+              --generate-notes \
+              --draft=false \
+              --prerelease=false
+          fi
 
       - name: Setup Node.js
         uses: actions/setup-node@v5
