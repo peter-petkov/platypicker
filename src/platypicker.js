@@ -235,14 +235,14 @@ export default class PlatyPicker extends HTMLElement {
                 option.selected = true;
             this.#select.dispatchEvent(new Event("change", { bubbles: true }));
         });
-        this.#selectAllButton.classList.toggle("d-none", !this.#select.multiple);
+        this.#selectAllButton.classList.toggle("d-none", !this.controls || !this.#select.multiple);
         form.append(this.#selectAllButton);
 
         this.#selectNoneButton = this.#buildActionButton(this.selectNoneLabel, () => {
-            this.#select.selectedIndex = -1;
+            this.#select.value = "";
             this.#select.dispatchEvent(new Event("change", { bubbles: true }));
         });
-        this.#selectNoneButton.classList.toggle("d-none", this.#select.required);
+        this.#selectNoneButton.classList.toggle("d-none", !this.controls || this.#select.required);
         form.append(this.#selectNoneButton);
 
         this.#popover.append(this.#list);
