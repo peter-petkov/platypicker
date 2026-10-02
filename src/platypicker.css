@@ -1,4 +1,10 @@
 @supports (appearance: base-select) and selector(::picker(select)) {
+    /* Must live at the top level, not nested inside platy-picker */
+    @position-try --platypicker-above {
+        top: auto;
+        bottom: calc(anchor(top) + .125rem);
+    }
+
     platy-picker {
         display: contents;
         anchor-scope: --platypicker;
@@ -45,12 +51,11 @@
                 display: revert;
                 position-anchor: --platypicker;
 
-                /* Anchored below the select by default; the browser flips it
-                   above automatically if there isn't room, replacing the old
-                   getBoundingClientRect()-driven ".dropup" class toggle. */
-                position-try-fallbacks: flip-block;
+                inset: auto;
+                margin: 0;
                 top: calc(anchor(bottom) + .125rem);
                 left: anchor(left);
+                position-try-fallbacks: --platypicker-above;
                 min-width: anchor-size();
                 max-height: 45vh;
 
