@@ -124,6 +124,7 @@
                     display: flex;
                     align-items: center;
                     gap: .25rem;
+                    scroll-margin-block: 4rem;
 
                     &.active, &:active {
                         color: initial;

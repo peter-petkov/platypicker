@@ -50,6 +50,13 @@ export default class PlatyPicker extends HTMLElement {
             CSS.highlights.set("platypicker-highlight", PlatyPicker.#highlight);
             PlatyPicker.#highlightRegistered = true;
         }
+
+        // TODO for server side:
+        //  Let's say we have a limit of 100 visible entries.
+        //   1. Initially retrieve double the amount (200), only show 100
+        //   2. Proportionally to how close the user scrolls to the end, reveal more of the remaining 100 (see Excel)
+        //   3. Once a threshold is passed (say 50 or 33%), retrieve the next 100 and store them.
+        //   4. On filter, send the request with the filter string and repeat the process above
     }
 
     // -----------------------------------------------------------------
@@ -72,6 +79,7 @@ export default class PlatyPicker extends HTMLElement {
         this.#setListItems();
         this.#wireSelect();
         this.#wireKeyboardTypeAhead();
+        this.#wireKeyboardNavigation();
         this.#wireOptionsObserver();
 
         PlatyPicker.#registry.set(this.#select, this);
@@ -333,7 +341,10 @@ export default class PlatyPicker extends HTMLElement {
         if (!isPlaceholder) {
             if (option.title) item.title = option.title;
             if (option.selected && !option.disabled) item.classList.add("active");
-            if (option.disabled || option?.closest("optgroup")?.disabled) item.classList.add("disabled");
+            if (option.disabled || option?.closest("optgroup")?.disabled) {
+                item.classList.add("disabled");
+                item.disabled = true; // Takes the item out of the Tab order.
+            }
 
             const subtext = document.createElement("small");
             subtext.classList.add("text-body-tertiary");
@@ -587,6 +598,32 @@ export default class PlatyPicker extends HTMLElement {
         const current = this.#select.selectedOptions[0];
         return [...this.#select.options].find(o => o !== current && isCandidate(o)) ??
             (current && isCandidate(current) ? current : undefined);
+    }
+
+    // -----------------------------------------------------------------
+    // Arrow key navigation (moves focus only, exactly like Tab / Shift+Tab,
+    // and never changes the selection)
+    // -----------------------------------------------------------------
+
+    #wireKeyboardNavigation() {
+        const { signal } = this.#abort;
+
+        this.#popover.addEventListener("keydown", e => {
+            if (e.ctrlKey || e.altKey || e.metaKey || e.shiftKey) return;
+
+            const step = { ArrowDown: 1, ArrowUp: -1 }[e.code];
+            if (!step) return;
+
+            // Same elements, in the same order, that Tab would visit inside the popover.
+            const focusable = [...this.#popover.querySelectorAll(
+                "input:not(.d-none), .input-group button:not(.d-none, :disabled), li > .dropdown-item:not(.disabled, .d-none, :disabled)")];
+            if (!focusable.length) return;
+
+            e.preventDefault();
+
+            const index = focusable.indexOf(e.target);
+            focusable[Math.min(Math.max(index + step, 0), focusable.length - 1)].focus();
+        }, { signal });
     }
 
     // -----------------------------------------------------------------
