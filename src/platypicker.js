@@ -135,6 +135,13 @@ export default class PlatyPicker extends HTMLElement {
                 break;
         }
     }
+    
+    setValue(value) {
+        if (!this.#select) return;
+
+        this.#select.value = value;
+        this.#refreshSelectionState();
+    }
 
     // -----------------------------------------------------------------
     // Public attribute accessors
