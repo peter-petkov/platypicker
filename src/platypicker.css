@@ -1,5 +1,15 @@
+/*
+ * Platypicker
+ *
+ * Wraps a native <select> in a searchable Bootstrap popover. Needs Bootstrap 5.3 and a browser with
+ * `appearance: base-select`, anchor positioning and CSS nesting. Without base-select support everything below is
+ * skipped and the plain select remains.
+ *
+ * Variables you can set on platy-picker or any ancestor:
+ *   --platypicker-highlight-bg, --platypicker-highlight-color   search match highlight
+ */
 @supports (appearance: base-select) and selector(::picker(select)) {
-    /* Must live at the top level, not nested inside platy-picker */
+    /* Must live at the top level, not nested inside platy-picker. */
     @position-try --platypicker-above {
         top: auto;
         bottom: calc(anchor(top) + .125rem);
@@ -9,11 +19,15 @@
         display: contents;
         anchor-scope: --platypicker;
 
-        select.platypicker {
+        /* ------------------------------------------------------------------------------------------------------
+           The select. It is styled with base-select, but its native picker stays hidden: the popover replaces it.
+           ------------------------------------------------------------------------------------------------------ */
+        > select.platypicker {
             anchor-name: --platypicker;
             white-space: nowrap;
             min-width: max-content;
 
+            /* Keeps the select's height when nothing is selected. */
             &:not(:has(option:checked))::after {
                 content: "\00a0";
                 visibility: hidden;
@@ -32,11 +46,12 @@
                 display: none;
             }
 
-            &.platypicker[multiple] {
+            /* A multiple select has no arrow of its own, so draw Bootstrap's, with room for a validation icon. */
+            &[multiple] {
                 background-image: var(--bs-form-select-bg-img), var(--bs-form-select-bg-icon, none);
-                padding-right: 4.125rem;
                 background-position: right .75rem center, center right 2.25rem;
                 background-size: 16px 12px, calc(.75em + .375rem) calc(.75em + .375rem);
+                padding-right: 4.125rem;
 
                 &.is-valid, .was-validated &:valid {
                     --bs-form-select-bg-icon: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3e%3cpath fill='%23198754' d='M2.3 6.73.6 4.53c-.4-1.04.46-1.4 1.1-.8l1.1 1.4 3.4-3.8c.6-.63 1.6-.27 1.2.7l-4 4.6c-.43.5-.8.4-1.1.1'/%3e%3c/svg%3e");
@@ -46,119 +61,116 @@
                     --bs-form-select-bg-icon: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' width='12' height='12' fill='none' stroke='%23dc3545'%3e%3ccircle cx='6' cy='6' r='4.5'/%3e%3cpath stroke-linejoin='round' d='M5.8 3.6h.4L6 6.5z'/%3e%3ccircle cx='6' cy='8.2' r='.6' fill='%23dc3545' stroke='none'/%3e%3c/svg%3e");
                 }
             }
+        }
 
-            & + .dropdown-menu[popover] {
-                display: revert;
-                position-anchor: --platypicker;
+        /* ------------------------------------------------------------------------------------------------------
+           The popover: a Bootstrap .dropdown-menu anchored below the select, or above it when there's no room.
+           ------------------------------------------------------------------------------------------------------ */
+        > .dropdown-menu[popover] {
+            /* Bootstrap fills the active item; here the selected item is marked by a bar and a check mark instead. */
+            --bs-dropdown-link-active-color: var(--bs-dropdown-link-color);
+            --bs-dropdown-link-active-bg: transparent;
 
-                inset: auto;
-                margin: 0;
-                top: calc(anchor(bottom) + .125rem);
-                left: anchor(left);
-                position-try-fallbacks: --platypicker-above;
-                min-width: anchor-size();
-                max-height: 45vh;
+            display: revert; /* Undoes .dropdown-menu's display: none, so [popover] decides when it's shown. */
+            position-anchor: --platypicker;
+            position-try-fallbacks: --platypicker-above;
+            inset: auto;
+            margin: 0;
+            top: calc(anchor(bottom) + .125rem);
+            left: anchor(left);
+            min-width: anchor-size();
+            max-height: 45vh;
 
-                .input-group:not(:has(*:not(.d-none))) {
+            /* Controls bar: the search box and the select all / none buttons. Each is shown or hidden with .d-none. */
+            .input-group {
+                &:not(:has(> :not(.d-none))) {
                     display: none;
                 }
 
-                .input-group input:not(:has(~ button:not(.d-none))) {
-                    border-top-right-radius: var(--bs-border-radius);
-                    border-bottom-right-radius: var(--bs-border-radius);
+                /* Bootstrap rounds only the first and last child, hidden or not, so round the visible ones instead.
+                   !important because Bootstrap's selectors for this are very specific. */
+                > :not(.d-none) {
+                    border-radius: var(--bs-border-radius-sm) !important;
 
-                    &.form-control-sm {
-                        border-top-right-radius: var(--bs-border-radius-sm);
-                        border-bottom-right-radius: var(--bs-border-radius-sm);
+                    &:has(~ :not(.d-none)) {
+                        border-top-right-radius: 0 !important;
+                        border-bottom-right-radius: 0 !important;
+                    }
+
+                    & ~ :not(.d-none) {
+                        border-top-left-radius: 0 !important;
+                        border-bottom-left-radius: 0 !important;
                     }
                 }
 
-                .input-group input.d-none {
-                    & ~ button {
-                        flex-grow: 1;
-                        flex-basis: 50%;
-                    }
-
-                    & + button:not(.d-none),
-                    & + button.d-none + button:not(.d-none) {
-                        border-top-left-radius: var(--bs-border-radius);
-                        border-bottom-left-radius: var(--bs-border-radius);
-
-                        &.btn-sm {
-                            border-top-left-radius: var(--bs-border-radius-sm);
-                            border-bottom-left-radius: var(--bs-border-radius-sm);
-                        }
-                    }
-                }
-
-                .input-group button:not(.d-none) + button:not(.d-none) {
+                > button:not(.d-none) + button:not(.d-none) {
                     border-left-width: 0;
                 }
 
-                li:has(.dropdown-item.d-none) ~ li:has(.dropdown-divider) {
-                    display: none;
+                /* Without the search box the buttons share the bar. */
+                > input.d-none ~ button {
+                    flex-grow: 1;
+                    flex-basis: 50%;
+                }
+            }
+
+            /* Filtering hides items with .d-none. Headers and dividers are tidied up here, in this order:
+               a divider goes while nothing visible is above it, comes back once something is, and any header or
+               divider with nothing visible below it goes either way. */
+            li:has(.dropdown-item.d-none) ~ li:has(.dropdown-divider) {
+                display: none;
+            }
+
+            li:has(.dropdown-item:not(.d-none)) ~ li:has(.dropdown-divider) {
+                display: revert;
+            }
+
+            li:has(> .d-none),
+            li:has(.dropdown-header):not(:has(~ li .dropdown-item:not(.d-none))),
+            li:has(.dropdown-divider):not(:has(~ li .dropdown-item:not(.d-none))) {
+                display: none;
+            }
+
+            /* Search matches. */
+            :is(.dropdown-header, .dropdown-item, small)::highlight(platypicker-highlight) {
+                background-color: var(--platypicker-highlight-bg, #fee6b1);
+                color: var(--platypicker-highlight-color, #000);
+            }
+
+            .dropdown-item {
+                position: relative;
+                display: flex;
+                align-items: center;
+                gap: .25rem;
+                scroll-margin-block: 4rem; /* Keeps a scrolled-to item clear of the sticky controls bar. */
+
+                /* Declared after the active rules from Bootstrap, so hovering a selected item still shows feedback. */
+                &:hover, &:focus {
+                    color: var(--bs-dropdown-link-hover-color);
+                    background-color: var(--bs-dropdown-link-hover-bg);
                 }
 
-                li:has(.dropdown-item:not(.d-none)) ~ li:has(.dropdown-divider) {
-                    display: revert;
+                /* Selected: a bar on the popover's left edge (the list has .5rem of padding)... */
+                &:is(.active, :active)::before {
+                    content: "";
+                    position: absolute;
+                    top: 50%;
+                    left: -.5rem;
+                    translate: 0 -50%;
+                    width: .25rem;
+                    height: 1.5rem;
+                    border-radius: 50rem;
+                    background: var(--bs-primary);
                 }
 
-                li:has(.dropdown-item.d-none),
-                li:has(.dropdown-header.d-none),
-                li:has(.dropdown-divider.d-none),
-                li:has(.dropdown-header):not(:has(~ li .dropdown-item:not(.d-none))),
-                li:has(.dropdown-divider):not(:has(~ li .dropdown-item:not(.d-none)))
-                {
-                    display: none;
-                }
-                
-                .dropdown-header, .dropdown-item {
-                    &::highlight(platypicker-highlight),
-                    small::highlight(platypicker-highlight) {
-                        background-color: #fee6b1;
-                        color: black;
-                    }
-                }
-
-                .dropdown-item {
-                    display: flex;
-                    align-items: center;
-                    gap: .25rem;
-                    scroll-margin-block: 4rem;
-
-                    &.active, &:active {
-                        color: initial;
-                        background-color: initial;
-
-                        &::before {
-                            display: inline-block;
-                            content: "";
-                            height: 1.5rem;
-                            width: .25rem;
-                            background: var(--bs-primary);
-                            margin-left: -1.5rem;
-                            margin-right: 1rem;
-                            border-radius: 50rem;
-                        }
-
-                        &.active::after {
-                            content: "";
-                            display: inline-block;
-                            height: .75rem;
-                            aspect-ratio: 1;
-                            margin-left: auto;
-                            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3e%3cpath fill='%212529' d='M2.3 6.73.6 4.53c-.4-1.04.46-1.4 1.1-.8l1.1 1.4 3.4-3.8c.6-.63 1.6-.27 1.2.7l-4 4.6c-.43.5-.8.4-1.1.1'/%3e%3c/svg%3e");
-                        }
-
-                        [data-bs-theme=dark] &.active::after {
-                            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3e%3cpath fill='%23dee2e6' d='M2.3 6.73.6 4.53c-.4-1.04.46-1.4 1.1-.8l1.1 1.4 3.4-3.8c.6-.63 1.6-.27 1.2.7l-4 4.6c-.43.5-.8.4-1.1.1'/%3e%3c/svg%3e");
-                        }
-                    }
-
-                    &:hover, &:focus {
-                        color: var(--bs-dropdown-link-hover-color);
-                        background-color: var(--bs-dropdown-link-hover-bg);
-                    }
+                /* ...and a check mark, drawn in the text color so it follows the light and dark themes. */
+                &.active::after {
+                    content: "";
+                    height: .75rem;
+                    aspect-ratio: 1;
+                    margin-left: auto;
+                    background-color: currentColor;
+                    mask: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3e%3cpath d='M2.3 6.73.6 4.53c-.4-1.04.46-1.4 1.1-.8l1.1 1.4 3.4-3.8c.6-.63 1.6-.27 1.2.7l-4 4.6c-.43.5-.8.4-1.1.1'/%3e%3c/svg%3e") center / contain no-repeat;
                 }
             }
         }

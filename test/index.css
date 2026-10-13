@@ -1,12 +1,21 @@
-@import "../src/platypicker.css";
-
 :root {
-    font-family: Inter, system-ui, sans-serif;
-    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    --bs-body-font-family: "InterVariable", "Inter", system-ui, sans-serif;
+}
 
-    @supports (font-variation-settings: normal) {
-        & {
-            font-family: InterVariable, sans-serif;
-        }
-    }
+/* Custom color scheme. Dark mode keeps Bootstrap's own background, text and border colors. */
+[data-bs-theme=light] {
+    --bs-body-bg: #edf2ee;
+    --bs-body-color: #16302c;
+    --bs-border-color: #c5d5cf;
+    --bs-primary: #0b7a75;
+    --bs-primary-rgb: 11, 122, 117;
+    --bs-link-color-rgb: 11, 122, 117;
+    --bs-code-color: #8a4b1f;
+}
+
+[data-bs-theme=dark] {
+    --bs-primary: #3cc2b7;
+    --bs-primary-rgb: 60, 194, 183;
+    --bs-link-color-rgb: 60, 194, 183;
+    --bs-code-color: #e3a56e;
 }

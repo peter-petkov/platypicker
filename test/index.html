@@ -2,71 +2,259 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Platypicker</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Platypicker demo</title>
     <link rel="icon" type="image/x-icon" href="../platylogo.ico">
     <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="./index.css">
+    <link rel="stylesheet" href="../src/platypicker.css">
+    <script src="./index.js"></script>
 </head>
-<body class="py-5 container">
-<section class="row g-2 mt-2">
-    <div class="col">
-        <div class="card" style="resize: horizontal; overflow: auto;">
-            <div class="card-body">
-                <h3 class="card-title"><img height="30" src="../platylogo.png" alt="Platypicker"> Platypicker</h3>
-                <label class="form-label" for="platypicker">Pick a food</label>
-                <platy-picker search controls placeholders>
-                    <select id="platypicker" class="form-select" name="platypicker" required>
-                        <option>Cheese 🧀</option>
-                        <option>Bread 🍞</option>
+<body>
+<header class="container d-flex flex-wrap align-items-center gap-3 py-4">
+    <img src="../platylogo.png" height="56" alt="">
+    <div class="me-auto">
+        <h1 class="h3 mb-1">Platypicker</h1>
+        <p class="mb-0 text-body-secondary">A searchable popover for native selects. Open any picker below and try it.</p>
+    </div>
+    <div class="btn-group" role="group" aria-label="Color theme">
+        <input type="radio" class="btn-check" name="theme" id="theme-light" value="light">
+        <label class="btn btn-sm btn-outline-secondary" for="theme-light">Light</label>
+        <input type="radio" class="btn-check" name="theme" id="theme-dark" value="dark">
+        <label class="btn btn-sm btn-outline-secondary" for="theme-dark">Dark</label>
+        <input type="radio" class="btn-check" name="theme" id="theme-auto" value="auto">
+        <label class="btn btn-sm btn-outline-secondary" for="theme-auto">Auto</label>
+    </div>
+</header>
+
+<main class="container">
+    <div id="no-support" class="alert alert-warning d-none">
+        This browser doesn't support <code>appearance: base-select</code>, so the pickers fall back to plain selects.
+    </div>
+
+    <section class="py-4 border-top">
+        <div class="row gy-3">
+            <div class="col-md-5">
+                <h2 class="h5">Single select</h2>
+                <p class="text-body-secondary">A plain select wrapped in a platy-picker. Pick with the mouse or arrow keys, or type the first letters of an option.</p>
+                <code>&lt;platy-picker&gt;&lt;select class="form-select"&gt;&lt;/platy-picker&gt;</code>
+            </div>
+            <div class="col-md-7">
+                <platy-picker><select class="form-select" aria-label="Food" data-fill="foods"></select></platy-picker>
+            </div>
+        </div>
+    </section>
+
+    <section class="py-4 border-top">
+        <div class="row gy-3">
+            <div class="col-md-5">
+                <h2 class="h5">Search and subtext</h2>
+                <p class="text-body-secondary">Filters as you type. Matches are highlighted in both the label and the subtext.</p>
+                <div class="d-flex flex-wrap gap-2">
+                    <code>search</code>
+                    <code>search-placeholder="Search cities…"</code>
+                    <code>data-subtext</code>
+                </div>
+            </div>
+            <div class="col-md-7">
+                <platy-picker search search-placeholder="Search cities…"><select class="form-select" aria-label="City" data-fill="cities:subtext"></select></platy-picker>
+            </div>
+        </div>
+    </section>
+
+    <section class="py-4 border-top">
+        <div class="row gy-3">
+            <div class="col-md-5">
+                <h2 class="h5">Multiple</h2>
+                <p class="text-body-secondary">Click several options. The select shows everything chosen.</p>
+                <code>multiple size="1"</code>
+            </div>
+            <div class="col-md-7">
+                <platy-picker><select class="form-select" multiple size="1" aria-label="Plants" data-fill="plants" data-pick="0,1"></select></platy-picker>
+            </div>
+        </div>
+    </section>
+
+    <section class="py-4 border-top">
+        <div class="row gy-3">
+            <div class="col-md-5">
+                <h2 class="h5">Select all and none</h2>
+                <p class="text-body-secondary">Select all acts on the options matching the current filter. Single selects only get Select none, and required selects hide it too.</p>
+                <div class="d-flex flex-wrap gap-2">
+                    <code>controls</code>
+                    <code>select-all-label="Take them all"</code>
+                    <code>select-none-label="Clear"</code>
+                </div>
+            </div>
+            <div class="col-md-7">
+                <platy-picker search controls select-all-label="Take them all" select-none-label="Clear"><select class="form-select" multiple size="1" aria-label="Clothes" data-fill="clothes" data-pick="1"></select></platy-picker>
+            </div>
+        </div>
+    </section>
+
+    <section class="py-4 border-top">
+        <div class="row gy-3">
+            <div class="col-md-5">
+                <h2 class="h5">Groups, dividers, disabled</h2>
+                <p class="text-body-secondary">Plain options, an <code>&lt;hr&gt;</code> divider, a disabled option with subtext, a tooltip from <code>title</code>, a disabled group, and an option after a group (which gets its own divider).</p>
+                <div class="d-flex flex-wrap gap-2">
+                    <code>&lt;optgroup&gt;</code>
+                    <code>&lt;hr&gt;</code>
+                    <code>disabled</code>
+                    <code>title</code>
+                </div>
+            </div>
+            <div class="col-md-7">
+                <platy-picker search controls>
+                    <select class="form-select" multiple size="1" aria-label="Technology">
+                        <option>💻 Laptop</option>
+                        <option>📱 Phone</option>
                         <hr>
-                        <option disabled data-subtext="disabled">Coffee ☕</option>
-                        <option>Tea 🍵</option>
-                        <optgroup label="Fruits" data-subtext="disabled">
-                            <option value="1">Apple 🍎</option>
-                            <option value="2">Orange 🍊</option>
-                            <option value="3">Mango 🥭</option>
+                        <option disabled data-subtext="discontinued">📠 Fax machine</option>
+                        <option title="Mechanical or membrane">⌨️ Keyboard</option>
+                        <optgroup label="Audio">
+                            <option>🎧 Headphones</option>
+                            <option>🔊 Speaker</option>
+                            <option>🎙️ Microphone</option>
                         </optgroup>
-                        <optgroup label="Vegetables (disabled)" disabled>
-                            <option value="4">Cucumber 🥒</option>
-                            <option value="5">Tomato 🍅</option>
-                            <option value="6">Broccoli 🥦</option>
+                        <optgroup label="Wearables (disabled)" disabled>
+                            <option>⌚ Smartwatch</option>
+                            <option>🥽 VR headset</option>
                         </optgroup>
-                        <option>Carrot 🥕</option>
+                        <optgroup label="Cameras">
+                            <option>📷 Camera</option>
+                            <option>📹 Camcorder</option>
+                        </optgroup>
+                        <option>🔌 Charger</option>
                     </select>
                 </platy-picker>
             </div>
         </div>
-    </div>
-    <div class="col">
-        <div class="card" style="resize: horizontal; overflow: auto;">
-            <div class="card-body">
-                <h3 class="card-title"><img height="30" src="../platylogo.png" alt="Platypicker"> Multi-platypicker</h3>
-                <label class="form-label" for="multi-platypicker">Pick a food</label>
-                <platy-picker search controls placeholders>
-                    <select id="multi-platypicker" class="form-select" name="multi-platypicker" multiple size="1">
-                        <option>Cheese 🧀</option>
-                        <option>Bread 🍞</option>
-                        <hr>
-                        <option disabled data-subtext="disabled">Coffee ☕</option>
-                        <option>Tea 🍵</option>
-                        <optgroup label="Fruits">
-                            <option value="1">Apple 🍎</option>
-                            <option value="2">Orange 🍊</option>
-                            <option value="3">Mango 🥭</option>
-                        </optgroup>
-                        <optgroup label="Vegetables (disabled)" disabled>
-                            <option value="4">Cucumber 🥒</option>
-                            <option value="5">Tomato 🍅</option>
-                            <option value="6">Broccoli 🥦</option>
-                        </optgroup>
-                        <option>Carrot 🥕</option>
-                    </select>
-                </platy-picker>
+    </section>
+
+    <section class="py-4 border-top">
+        <div class="row gy-3">
+            <div class="col-md-5">
+                <h2 class="h5">Placeholders</h2>
+                <p class="text-body-secondary">Skeleton rows after the last option, as a loading hint.</p>
+                <code>placeholders="4"</code>
+            </div>
+            <div class="col-md-7">
+                <platy-picker placeholders="4"><select class="form-select" aria-label="Drink" data-fill="drinks"></select></platy-picker>
             </div>
         </div>
-    </div>
-</section>
+    </section>
+
+    <section class="py-4 border-top">
+        <div class="row gy-3">
+            <div class="col-md-5">
+                <h2 class="h5">Sizes and validation</h2>
+                <p class="text-body-secondary">Bootstrap sizes and validation states carry over, including the feedback text.</p>
+                <div class="d-flex flex-wrap gap-2">
+                    <code>form-select-sm</code>
+                    <code>form-select-lg</code>
+                    <code>is-valid</code>
+                    <code>is-invalid</code>
+                </div>
+            </div>
+            <div class="col-md-7 d-grid gap-3">
+                <div><platy-picker><select class="form-select form-select-sm" aria-label="Small" data-fill="furniture"></select></platy-picker></div>
+                <div><platy-picker><select class="form-select form-select-lg" aria-label="Large" data-fill="furniture" data-pick="3"></select></platy-picker></div>
+                <div>
+                    <platy-picker>
+                        <select class="form-select is-valid" aria-label="Valid" data-fill="furniture" data-pick="2"></select>
+                        <div class="valid-feedback">Looks comfortable.</div>
+                    </platy-picker>
+                </div>
+                <div>
+                    <platy-picker>
+                        <select class="form-select is-invalid" required aria-label="Invalid" data-fill="furniture"></select>
+                        <div class="invalid-feedback">Choose a piece of furniture to continue.</div>
+                    </platy-picker>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="py-4 border-top">
+        <div class="row gy-3">
+            <div class="col-md-5">
+                <h2 class="h5">Live changes</h2>
+                <p class="text-body-secondary"><code>setValue()</code> updates the picker without firing <code>change</code>, by design. Adding or removing options, or toggling attributes, updates an open or closed picker.</p>
+                <div class="d-flex flex-wrap gap-2">
+                    <code>setValue(value)</code>
+                    <code>toggleAttribute("search")</code>
+                </div>
+            </div>
+            <div class="col-md-7">
+                <platy-picker id="live" search controls><select class="form-select" multiple size="1" aria-label="Live demo" data-fill="foods" data-pick="0"></select></platy-picker>
+                <div class="d-flex flex-wrap gap-2 mt-3">
+                    <button type="button" class="btn btn-sm btn-outline-secondary" id="live-set-value">setValue</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" id="live-add">Add option</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" id="live-remove">Remove last</button>
+                </div>
+                <div class="mt-3">
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="checkbox" id="live-search" data-attr="search">
+                        <label class="form-check-label" for="live-search">search</label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="checkbox" id="live-controls" data-attr="controls">
+                        <label class="form-check-label" for="live-controls">controls</label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="checkbox" id="live-placeholders" data-attr="placeholders">
+                        <label class="form-check-label" for="live-placeholders">placeholders</label>
+                    </div>
+                </div>
+                <output id="live-log" class="d-block form-text mt-2">No changes yet.</output>
+            </div>
+        </div>
+    </section>
+
+    <section class="py-4 border-top">
+        <h2 class="h5">Large list benchmark</h2>
+        <p class="text-body-secondary">Builds a car list, then times open, search and pick. Each action is timed up to the second frame after it, and the median of 3 runs is shown. Runs stack so you can compare before and after a change.</p>
+        <div class="d-flex flex-wrap align-items-center gap-3 mb-3">
+            <select id="benchmark-count" class="form-select form-select-sm w-auto" aria-label="Number of options">
+                <option>1000</option>
+                <option>5000</option>
+                <option selected>10000</option>
+                <option>25000</option>
+            </select>
+            <div class="form-check mb-0">
+                <input class="form-check-input" type="checkbox" id="benchmark-multiple">
+                <label class="form-check-label" for="benchmark-multiple">Multiple</label>
+            </div>
+            <div class="form-check mb-0">
+                <input class="form-check-input" type="checkbox" id="benchmark-grouped">
+                <label class="form-check-label" for="benchmark-grouped">Group by make</label>
+            </div>
+            <button type="button" id="benchmark-run" class="btn btn-sm btn-outline-secondary">Run benchmark</button>
+        </div>
+        <div class="row">
+            <div id="benchmark-host" class="col-md-6 mb-3"></div>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-sm">
+                <thead>
+                <tr>
+                    <th>Options</th>
+                    <th>Mode</th>
+                    <th>Build</th>
+                    <th>Open</th>
+                    <th>Search "an"</th>
+                    <th>Pick</th>
+                    <th>Items in DOM</th>
+                </tr>
+                </thead>
+                <tbody id="benchmark-results"></tbody>
+            </table>
+        </div>
+    </section>
+</main>
+
 <script type="module" src="../src/platypicker.js"></script>
 </body>
 </html>
