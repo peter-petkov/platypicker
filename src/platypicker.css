@@ -71,6 +71,9 @@
             --bs-dropdown-link-active-color: var(--bs-dropdown-link-color);
             --bs-dropdown-link-active-bg: transparent;
 
+            /* Bootstrap's .dropdown-menu is position: absolute, which overrides the popover's own fixed positioning.
+               Fixed measures the popover against the viewport, so the fallback below can flip it above the select. */
+            position: fixed;
             display: revert; /* Undoes .dropdown-menu's display: none, so [popover] decides when it's shown. */
             position-anchor: --platypicker;
             position-try-fallbacks: --platypicker-above;
