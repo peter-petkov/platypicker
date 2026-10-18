@@ -198,6 +198,12 @@ function setupBenchmark() {
         await nextPaint();
         const build = performance.now() - start;
 
+        // The list may keep rendering in the background (it is marked aria-busy while it does). Wait for it, so the
+        // timings below are not mixed with that work. Older versions never set it and are ready at once.
+        const list = picker.querySelector(".dropdown-menu ul");
+        while (list.getAttribute("aria-busy") === "true") await nextPaint();
+        const rendered = performance.now() - start;
+
         const select = picker.querySelector("select");
         const popover = picker.querySelector(".dropdown-menu");
         const search = picker.querySelector("input[name=platypicker-search]");
@@ -233,6 +239,7 @@ function setupBenchmark() {
                 <td>${count.toLocaleString()}</td>
                 <td>${multiple ? "multiple" : "single"}${grouped ? ", grouped" : ""}</td>
                 <td>${formatMs(build)}</td>
+                <td>${formatMs(rendered)}</td>
                 <td>${formatMs(median(times.open))}</td>
                 <td>${formatMs(median(times.search))}</td>
                 <td>${formatMs(median(times.pick))}</td>

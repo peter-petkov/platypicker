@@ -215,7 +215,7 @@
 
     <section class="py-4 border-top">
         <h2 class="h5">Large list benchmark</h2>
-        <p class="text-body-secondary">Builds a car list, then times open, search and pick. Each action is timed up to the second frame after it, and the median of 3 runs is shown. Runs stack so you can compare before and after a change.</p>
+        <p class="text-body-secondary">Builds a car list, then times open, search and pick. Each action is timed up to the second frame after it, and the median of 3 runs is shown. Build is the time to the first rows, and Rendered is the time until the whole list is in the page. Runs stack so you can compare before and after a change.</p>
         <div class="d-flex flex-wrap align-items-center gap-3 mb-3">
             <select id="benchmark-count" class="form-select form-select-sm w-auto" aria-label="Number of options">
                 <option>1000</option>
@@ -243,6 +243,7 @@
                     <th>Options</th>
                     <th>Mode</th>
                     <th>Build</th>
+                    <th>Rendered</th>
                     <th>Open</th>
                     <th>Search "an"</th>
                     <th>Pick</th>

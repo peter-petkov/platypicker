@@ -21,14 +21,11 @@ export class OptionGroup {
  * One selectable row. The list only ever reads these properties, so another kind of source (say, one fed by a
  * server) can hand out entries of the same shape.
  *
- * Dividers are not entries. An entry just remembers whether a divider sits directly before it
- * (`dividerBefore`) and, for the automatic divider after an option group, which group that divider closes
- * (`dividerGroup`, otherwise null).
+ * Dividers are not entries. An entry just remembers whether a divider sits directly before it (`dividerBefore`).
  */
 export class OptionEntry {
     group = null;
     dividerBefore = false;
-    dividerGroup = null;
 
     constructor(option) {
         this.option = option;
@@ -57,6 +54,91 @@ export class OptionEntry {
 
     get disabled() {
         return this.option.disabled || (this.group?.disabled ?? false);
+    }
+}
+
+/**
+ * The entries matching a search. Matching is lazy: `pull()` scans only as far as it is asked to, so a long list is
+ * never searched in one go, and a view that is no longer wanted is simply dropped.
+ *
+ * An entry matches when its label or subtext contains the query, or when its option group's label does (which
+ * includes the whole group). A divider is kept only between two matches, so one that sits between entries that were
+ * filtered out is carried forward to the next match, and there is never one before the first match.
+ */
+export class FilteredView {
+    #entries;
+    #query;
+    #index = 0;
+    #matchCount = 0;
+    #dividerPending = false;
+    #dividers = new Set();   // matches that have a divider before them
+    #groupMatches = new Map();
+
+    constructor(entries, query) {
+        this.#entries = entries;
+        this.#query = query;
+    }
+
+    get query() {
+        return this.#query;
+    }
+
+    /** Whether part of the list has not been scanned yet. */
+    get hasMore() {
+        return this.#index < this.#entries.length;
+    }
+
+    /**
+     * Scans on and returns the next matches: at most `count` of them, stopping early once `budget` milliseconds
+     * are spent. Check `hasMore` to see whether the scan has finished.
+     */
+    pull(count = Infinity, budget = Infinity) {
+        const found = [];
+        const deadline = performance.now() + budget;
+
+        for (let scanned = 1; this.hasMore && found.length < count; scanned++) {
+            const entry = this.#entries[this.#index++];
+            if (entry.dividerBefore) this.#dividerPending = true;
+
+            if (this.includes(entry)) {
+                if (this.#dividerPending && this.#matchCount) this.#dividers.add(entry);
+                this.#dividerPending = false;
+                this.#matchCount++;
+                found.push(entry);
+            }
+
+            // The clock is only read now and then, since reading it is not free.
+            if (scanned % 256 === 0 && performance.now() > deadline) break;
+        }
+
+        return found;
+    }
+
+    /** Whether the entry matches. Does not depend on how far the scan has got. */
+    includes(entry) {
+        return !this.#query || this.textMatches(entry) || this.groupMatches(entry.group);
+    }
+
+    /** Whether the entry's own label or subtext contains the query. */
+    textMatches(entry) {
+        return Boolean(this.#query) &&
+            (entry.label.toLowerCase().includes(this.#query) || entry.subtext.toLowerCase().includes(this.#query));
+    }
+
+    /** Whether the label of the entry's option group contains the query. */
+    groupMatches(group) {
+        if (!group || !this.#query) return false;
+
+        let matches = this.#groupMatches.get(group);
+        if (matches === undefined)
+            this.#groupMatches.set(group, matches = group.label.toLowerCase().trim().includes(this.#query));
+
+        return matches;
+    }
+
+    /** Whether a divider is shown right before this match. Only known for matches already pulled. */
+    hasDividerBefore(entry) {
+        return this.#dividers.has(entry);
     }
 }
 
@@ -99,27 +181,24 @@ export default class OptionSource {
 
     /**
      * Reads the select's children again. Entries of options that are still there keep their identity.
-     * Returns true when the list looks different.
+     * Returns true when the list would look different.
      */
     rebuild() {
         const previous = this.#entries;
         const entries = [];
         let changed = false;
         let dividerPending = false;
-        let dividerGroup = null;
 
         const add = (option, group) => {
             let entry = this.#entriesByOption.get(option);
             if (!entry) this.#entriesByOption.set(option, entry = new OptionEntry(option));
 
-            if (entry.group !== group || entry.dividerBefore !== dividerPending || entry.dividerGroup !== dividerGroup)
+            if (entry.group !== group || entry.dividerBefore !== dividerPending)
                 changed = true;
 
             entry.group = group;
             entry.dividerBefore = dividerPending;
-            entry.dividerGroup = dividerGroup;
             dividerPending = false;
-            dividerGroup = null;
 
             entries.push(entry);
         };
@@ -140,13 +219,10 @@ export default class OptionSource {
                 }
 
                 // An option group followed directly by a plain option gets a divider.
-                if (child.nextElementSibling instanceof HTMLOptionElement) {
+                if (child.nextElementSibling instanceof HTMLOptionElement)
                     dividerPending = true;
-                    dividerGroup = group;
-                }
             } else if (child instanceof HTMLHRElement) {
                 dividerPending = true;
-                dividerGroup = null;
             }
         }
 
@@ -155,6 +231,13 @@ export default class OptionSource {
 
         this.#entries = entries;
         return changed;
+    }
+
+    /**
+     * The entries matching a search, found lazily. The query is trimmed and lowercase; an empty one matches all.
+     */
+    filter(query) {
+        return new FilteredView(this.#entries, query);
     }
 
     /** Calls back, debounced, after the select's options change in a way that affects the list. */

@@ -8,6 +8,13 @@ function typeAheadText(label) {
     return label.replace(EMOJI, "").replace(/\s+/g, " ").trim().toLowerCase();
 }
 
+// Matches stream into the list in steps of these many rows, each scan step taking at most this many milliseconds.
+const CHUNK_SIZE = 100;
+const SCAN_BUDGET = 8;
+
+/** Lets the browser handle input and paint before the next step. */
+const yieldToMain = () => globalThis.scheduler?.yield?.() ?? new Promise(resolve => setTimeout(resolve));
+
 /**
  * The popover: a search box with select all / none buttons, and the list of entries.
  *
@@ -27,11 +34,12 @@ export default class ListView {
     #list;
 
     #config = {};
+    #view = null;                       // The FilteredView being shown.
+    #busy = false;                      // Whether matches are still streaming in.
+    #lastGroup = null;                  // The option group of the last row rendered.
     #rows = [];                         // The rendered records, in list order.
     #recordsByEntry = new WeakMap();
     #recordsByButton = new WeakMap();
-    #headers = new Map();               // group -> its header element
-    #groupDividers = new Map();         // group -> the divider that closes it
     #tail = [];                         // The placeholder <li>s after the last entry.
     #typeAheadBuffer = "";
     #typeAheadTimer;
@@ -56,6 +64,7 @@ export default class ListView {
     destroy() {
         clearTimeout(this.#typeAheadTimer);
         this.#popover.remove();
+        this.#view = null;
         this.#rows = [];
         this.#tail = [];
     }
@@ -142,11 +151,16 @@ export default class ListView {
         if (placeholdersChanged) this.#renderTail();
     }
 
-    /** Shows or hides select all / none. Also depends on the select (multiple, required), so it is cheap to repeat. */
+    /**
+     * Shows or hides select all / none, and turns select all off while matches are still streaming in, since it
+     * would miss the ones not found yet. Also depends on the select (multiple, required),
+     * so it is inexpensive to repeat.
+     */
     syncControls() {
         const controls = Boolean(this.#config.controls);
 
-        this.#selectAllButton.disabled = this.#selectNoneButton.disabled = !controls;
+        this.#selectAllButton.disabled = !controls || this.#busy;
+        this.#selectNoneButton.disabled = !controls;
         this.#selectAllButton.classList.toggle("d-none",
             !controls || !this.#source.multiple || !this.#source.canSelectAll);
         this.#selectNoneButton.classList.toggle("d-none", !controls || this.#source.required);
@@ -156,50 +170,100 @@ export default class ListView {
     // Rendering
     // -----------------------------------------------------------------
 
-    /** Renders the source's entries from scratch. */
+    /** Renders the matches of the current search from scratch. */
     render() {
+        this.#showMatches(this.#query());
+    }
+
+    /** Shows the entries matching a search. An empty one shows them all. */
+    filter(rawValue) {
+        this.#showMatches(rawValue.trim().toLowerCase());
+    }
+
+    /**
+     * The first matches are rendered right away. The rest stream in step by step, so typing and scrolling stay
+     * responsive on a long list. A newer search replaces the one being shown, and the old one stops.
+     */
+    #showMatches(query) {
+        const view = this.#view = this.#source.filter(query);
+
         this.#highlighter.clear();
-        this.#headers.clear();
-        this.#groupDividers.clear();
+        this.#lastGroup = null;
+        this.#rows = [];
+        this.#list.replaceChildren();
+        this.#renderTail();
+
+        this.#appendRows(view, view.pull(CHUNK_SIZE, SCAN_BUDGET));
+        // noinspection JSIgnoredPromiseFromCall, The stream manages its own lifetime and doesn't need to be awaited.
+        this.#stream(view);
+    }
+
+    async #stream(view) {
+        this.#setBusy(view.hasMore);
+
+        try {
+            while (view.hasMore) {
+                await yieldToMain();
+                if (this.#view !== view || this.#signal.aborted) return;
+
+                this.#appendRows(view, view.pull(CHUNK_SIZE, SCAN_BUDGET));
+            }
+        } finally {
+            if (this.#view === view) this.#setBusy(false);
+        }
+    }
+
+    #setBusy(busy) {
+        this.#busy = busy;
+        this.#list.setAttribute("aria-busy", busy);
+        this.syncControls();
+    }
+
+    #appendRows(view, entries) {
+        if (!entries.length) return;
 
         const fragment = document.createDocumentFragment();
-        const rows = [];
-        let group = null;
+        const records = [];
+        const matchingHeaders = [];
 
-        for (const entry of this.#source.entries) {
-            // Never a divider at the very top, and a run of dividers is one divider.
-            if (entry.dividerBefore && rows.length) {
+        for (const entry of entries) {
+            if (view.hasDividerBefore(entry)) {
                 const divider = document.createElement("hr");
                 divider.classList.add("dropdown-divider");
                 fragment.append(this.#wrapInListItem(divider));
-
-                if (entry.dividerGroup) this.#groupDividers.set(entry.dividerGroup, divider);
             }
 
-            if (entry.group !== group) {
-                group = entry.group;
+            if (entry.group !== this.#lastGroup) {
+                this.#lastGroup = entry.group;
 
-                if (group) {
+                if (entry.group) {
                     const header = document.createElement("h6");
                     header.classList.add("dropdown-header");
-                    header.textContent = group.label;
+                    header.textContent = entry.group.label;
                     fragment.append(this.#wrapInListItem(header));
 
-                    this.#headers.set(group, header);
+                    if (view.groupMatches(entry.group) && !view.textMatches(entry)) matchingHeaders.push(header);
                 }
             }
 
             const record = this.#createRecord(entry);
-            rows.push(record);
+            records.push(record);
             fragment.append(this.#wrapInListItem(record.button));
         }
 
-        this.#rows = rows;
-        this.#list.replaceChildren(fragment);
-        this.#tail = [];
-        this.#renderTail();
+        this.#rows.push(...records);
+        this.#list.insertBefore(fragment, this.#tail[0] ?? null);
 
-        if (this.#query()) this.filter(this.#search.value);
+        // Ranges are made once the rows are in the document: moving a node collapses the ranges inside it.
+        if (!view.query) return;
+
+        for (const header of matchingHeaders) {
+            if (this.#highlighter.isFull) break;
+            this.#highlighter.apply(header, "text", header.firstChild, view.query);
+        }
+
+        for (const record of records)
+            if (view.textMatches(record.entry)) this.#highlightMatch(record, view.query);
     }
 
     #createRecord(entry) {
@@ -234,12 +298,15 @@ export default class ListView {
         return li;
     }
 
-    /** The skeleton rows after the last entry. They are derived from the settings, so a re-render keeps them. */
+    /**
+     * The skeleton rows after the last entry. They are derived from the settings, so a re-render keeps them,
+     * and they are left out while a search is active.
+     */
     #renderTail() {
         for (const li of this.#tail) li.remove();
         this.#tail = [];
 
-        const hidden = Boolean(this.#query());
+        if (this.#view?.query) return;
 
         for (let i = 0; i < (this.#config.placeholders ?? 0); i++) {
             const wave = document.createElement("div");
@@ -252,7 +319,6 @@ export default class ListView {
             const button = document.createElement("button");
             button.type = "button";
             button.classList.add("dropdown-item", "rounded-2");
-            button.classList.toggle("d-none", hidden);
             button.disabled = true;
             button.append(wave);
 
@@ -287,61 +353,11 @@ export default class ListView {
     }
 
     // -----------------------------------------------------------------
-    // Filtering (hides rows with .d-none) and highlighting
+    // Highlighting
     // -----------------------------------------------------------------
 
     #query() {
         return this.#search.value.trim().toLowerCase();
-    }
-
-    filter(rawValue) {
-        const query = rawValue.trim().toLowerCase();
-        this.#highlighter.clear();
-
-        if (!query) {
-            for (const el of this.#list.querySelectorAll(".d-none")) el.classList.remove("d-none");
-            return;
-        }
-
-        let group = null;
-        let groupHasMatch = false;
-
-        for (const record of this.#rows) {
-            const { entry, button } = record;
-            const text = entry.label.toLowerCase();
-            const subtext = entry.subtext.toLowerCase();
-
-            if (entry.group !== group) {
-                group = entry.group;
-                groupHasMatch = false;
-            }
-
-            const groupLabel = group?.label?.toLowerCase().trim() ?? "";
-            const matches = text.includes(query) || subtext.includes(query);
-            const groupMatches = groupLabel.includes(query);
-            button.classList.toggle("d-none", !matches && !groupMatches);
-
-            if (matches) {
-                this.#highlightMatch(record, query);
-                if (group) {
-                    groupHasMatch = true;
-                    this.#toggleGroup(group, true);
-                }
-            } else if (groupMatches && !groupHasMatch) {
-                this.#highlightGroup(group, query);
-                groupHasMatch = true;
-                this.#toggleGroup(group, true);
-            } else if (group && !groupHasMatch) {
-                this.#toggleGroup(group, false);
-            }
-        }
-
-        for (const li of this.#tail) li.firstElementChild.classList.add("d-none");
-    }
-
-    #toggleGroup(group, visible) {
-        this.#headers.get(group)?.classList.toggle("d-none", !visible);
-        this.#groupDividers.get(group)?.classList.toggle("d-none", !visible);
     }
 
     #highlightMatch(record, query) {
@@ -355,20 +371,13 @@ export default class ListView {
             this.#highlighter.apply(button, "subtext", small.firstChild, query);
     }
 
-    #highlightGroup(group, query) {
-        if (this.#highlighter.isFull) return;
-
-        const header = this.#headers.get(group);
-        if (header) this.#highlighter.apply(header, "text", header.firstChild, query);
-    }
-
     // -----------------------------------------------------------------
     // Focus and scrolling
     // -----------------------------------------------------------------
 
-    /** Whether the entry is currently shown, that is, not filtered out. */
+    /** Whether the entry matches the current search. It may not have been rendered yet. */
     isVisible(entry) {
-        return !this.#recordsByEntry.get(entry)?.button.classList.contains("d-none");
+        return this.#view?.includes(entry) ?? true;
     }
 
     isSelectable(entry) {
@@ -376,7 +385,7 @@ export default class ListView {
     }
 
     focusInitial() {
-        this.#popover.querySelector("input:not(.d-none), .dropdown-item:not(.disabled, .d-none)")?.focus();
+        this.#popover.querySelector("input:not(.d-none), .dropdown-item:not(.disabled, :disabled)")?.focus();
     }
 
     scrollIntoView(entry) {
@@ -439,7 +448,7 @@ export default class ListView {
 
             // Same elements, in the same order, that Tab would visit inside the popover.
             const focusable = [...this.#popover.querySelectorAll(
-                "input:not(.d-none), .input-group button:not(.d-none, :disabled), li > .dropdown-item:not(.disabled, .d-none, :disabled)")];
+                "input:not(.d-none), .input-group button:not(.d-none, :disabled), li > .dropdown-item:not(.disabled, :disabled)")];
             if (!focusable.length) return;
 
             e.preventDefault();

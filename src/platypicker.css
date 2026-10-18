@@ -117,23 +117,6 @@
                 }
             }
 
-            /* Filtering hides items with .d-none. Headers and dividers are tidied up here, in this order:
-               a divider goes while nothing visible is above it, comes back once something is, and any header or
-               divider with nothing visible below it goes either way. */
-            li:has(.dropdown-item.d-none) ~ li:has(.dropdown-divider) {
-                display: none;
-            }
-
-            li:has(.dropdown-item:not(.d-none)) ~ li:has(.dropdown-divider) {
-                display: revert;
-            }
-
-            li:has(> .d-none),
-            li:has(.dropdown-header):not(:has(~ li .dropdown-item:not(.d-none))),
-            li:has(.dropdown-divider):not(:has(~ li .dropdown-item:not(.d-none))) {
-                display: none;
-            }
-
             /* Search matches. */
             :is(.dropdown-header, .dropdown-item, small)::highlight(platypicker-highlight) {
                 background-color: var(--platypicker-highlight-bg, #fee6b1);
