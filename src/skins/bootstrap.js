@@ -6,13 +6,12 @@
  *   import "platypicker/src/skins/bootstrap.js";
  *   import "platypicker";
  *
- * The select gets Bootstrap's form-select class, so it looks like the page's other selects, sizes and validation
- * states included. The popover and the badges take their colors, radius and shadow from Bootstrap's own variables,
- * so they follow the page's theme, its dark mode (data-bs-theme="dark", on the whole page or part of it) and any
- * custom colors. Needs Bootstrap 5.3 or later.
- *
- * Only form-select is added as a class: the select's base look has no specificity, so it wins whichever stylesheet
- * loads first. Everything else is set by the stylesheet below, which the page doesn't have to link.
+ * It dresses the picker in Bootstrap's own classes: form-select for the select, a dropdown-menu with dropdown-items,
+ * a dropdown-header and dropdown-dividers for the popover, form-control for the search box, btn-link buttons, badges
+ * with a btn-close for a multiple select, and placeholder bars for the skeleton rows. Platypicker's own paint steps
+ * aside for skinned pickers, so these classes decide the look whichever stylesheet loads first. A few small rules
+ * cover what Bootstrap has no class for: the check mark, search matches and where the badges sit.
+ * Needs Bootstrap 5.3 or later.
  */
 import { classes } from "../classes.js";
 
@@ -20,46 +19,40 @@ if (customElements.get("platy-picker")) {
     console.warn("Platypicker: import the Bootstrap skin before platypicker, or the pickers already in the page miss its classes.");
 }
 
-classes.select = [classes.select, "form-select"].filter(Boolean).join(" ");
+const plugs = {
+    host: "pp-skin pp-skin-bootstrap",
+    select: "form-select",
+    menu: "dropdown-menu p-0",
+    bar: "p-2 bg-body border-bottom",
+    search: "form-control form-control-sm",
+    button: "btn btn-link btn-sm",
+    list: "list-unstyled mb-0 py-1",
+    item: "dropdown-item",
+    subtext: "small text-body-secondary",
+    header: "dropdown-header",
+    divider: "dropdown-divider",
+    placeholder: "placeholder-glow",
+    placeholderBar: "placeholder col-8",
+    tag: "badge fw-normal text-secondary-emphasis bg-secondary-subtle border border-secondary-subtle",
+    tagRemove: "btn-close p-0",
+    tagCount: "badge fw-normal text-body-secondary border",
+    tagsPlaceholder: "text-body-secondary",
+};
 
-// A skin's values are the --_pp-skin-* variables, read after the page's --platypicker-* ones (see platypicker.css).
-// The few rules after them adjust what variables can't, at the same specificity as the base look, which they follow.
+for (const [part, value] of Object.entries(plugs)) {
+    classes[part] = [classes[part], value].filter(Boolean).join(" ");
+}
+
+// What Bootstrap has no class for. The variables feed the check mark, the select all spinner and search matches;
+// the rules line the badges up with form-select's padding and draw its chevron, which Bootstrap leaves off
+// multiple selects. They're one notch above Platypicker's layout rules, which they adjust.
 const css = `
 @supports (appearance: base-select) and selector(::picker(select)) {
-    :where(platy-picker) {
-        --_pp-skin-bg: var(--bs-body-bg);
-        --_pp-skin-color: var(--bs-body-color);
-        --_pp-skin-muted-color: var(--bs-secondary-color);
-        --_pp-skin-header-color: var(--bs-secondary-color);
-        --_pp-skin-border-color: var(--bs-border-color-translucent);
-        --_pp-skin-field-border-color: var(--bs-border-color);
-        --_pp-skin-hover-bg: var(--bs-tertiary-bg);
+    platy-picker.pp-skin-bootstrap {
         --_pp-skin-accent-color: var(--bs-link-color);
-        --_pp-skin-disabled-color: var(--bs-tertiary-color);
-        --_pp-skin-danger-color: var(--bs-form-invalid-border-color);
         --_pp-skin-highlight-bg: var(--bs-highlight-bg);
         --_pp-skin-highlight-color: var(--bs-highlight-color, inherit);
-        --_pp-skin-tag-bg: var(--bs-secondary-bg-subtle);
-        --_pp-skin-tag-border-color: var(--bs-secondary-border-subtle);
-        --_pp-skin-radius: var(--bs-border-radius);
-        --_pp-skin-menu-radius: var(--bs-border-radius);
-        --_pp-skin-shadow: var(--bs-box-shadow);
-    }
 
-    :where(platy-picker) {
-        /* The menu's outline, like a Bootstrap dropdown's. */
-        .pp-menu {
-            border-color: var(--bs-border-color-translucent);
-        }
-
-        /* The search box focuses like a form-control. */
-        .pp-search:focus-visible {
-            outline: 0;
-            border-color: var(--bs-primary-border-subtle);
-            box-shadow: 0 0 0 var(--bs-focus-ring-width, .25rem) var(--bs-focus-ring-color);
-        }
-
-        /* The badges line up with form-select's padding, and their chevron is form-select's. */
         .pp-tags {
             padding: 0 2.25rem 0 .4375rem;
 
