@@ -37,7 +37,7 @@ function init() {
     setupNavigation();
     setupSupportNotice();
     setupLiveDemo();
-    setupBatchDemo();
+    setupBatchCount();
     setupBenchmark();
 }
 
@@ -94,6 +94,9 @@ function setupExamples() {
         fillSelects(template.content);
         stage.className = "stage";
         stage.append(template.content.cloneNode(true));
+
+        // Page controls for the example (marked .stage-extra) go on the stage under the pickers, and aren't printed.
+        stage.append(...example.querySelectorAll(":scope > .stage-extra"));
 
         const tabs = [{ label: "HTML", text: printHTML(template.content.childNodes), html: true }];
         for (const block of example.querySelectorAll(":scope > [data-code]")) tabs.push(codeTab(block));
@@ -314,54 +317,70 @@ function setupSupportNotice() {
 // ---------------------------------------------------------------------------
 
 function setupLiveDemo() {
-    const picker = document.getElementById("live");
+    const example = document.querySelector("[data-live]");
+    const picker = example.querySelector("platy-picker");
     const select = picker.querySelector("select");
-    const log = document.getElementById("live-log");
+    const log = example.querySelector(".log");
     const extraOptions = ["🍰 Cake", "🥧 Pie", "🍪 Cookie", "🍫 Chocolate", "🍇 Grapes"];
     let added = 0;
 
+    // The newest entry goes first, and only the last five are kept.
+    const write = text => {
+        log.insertAdjacentHTML("afterbegin", "<li></li>");
+        log.firstElementChild.textContent = text;
+        log.children[5]?.remove();
+    };
+
     select.addEventListener("change", () => {
         const chosen = [...select.selectedOptions].map(option => option.text).join(", ");
-        log.textContent = `change event: ${chosen || "nothing selected"}`;
+        write(`change: ${chosen || "nothing selected"}`);
     });
 
-    document.getElementById("live-set-value").addEventListener("click", () => {
-        const enabled = [...select.options].filter(option => !option.disabled);
-        const value = enabled[Math.floor(Math.random() * enabled.length)].value;
+    const actions = {
+        "set-value"() {
+            const enabled = [...select.options].filter(option => !option.disabled);
+            const value = enabled[Math.floor(Math.random() * enabled.length)].value;
 
-        picker.setValue(value);
-        log.textContent = `setValue("${value}"): no change event fired`;
-    });
+            picker.setValue(value);
+            write(`setValue("${value}"), no change event`);
+        },
+        add() {
+            const option = new Option(extraOptions[added++ % extraOptions.length]);
+            select.add(option);
+            write(`added ${option.text}`);
+        },
+        remove() {
+            const option = select.lastElementChild;
+            option?.remove();
+            if (option) write(`removed ${option.text}`);
+        }
+    };
 
-    document.getElementById("live-add").addEventListener("click", () => {
-        select.add(new Option(extraOptions[added++ % extraOptions.length]));
-    });
-
-    document.getElementById("live-remove").addEventListener("click", () => {
-        select.lastElementChild?.remove();
-    });
+    for (const button of example.querySelectorAll("[data-action]")) {
+        button.addEventListener("click", () => actions[button.dataset.action]());
+    }
 
     // The checkboxes start from the element's attributes and set or remove them.
-    for (const checkbox of document.querySelectorAll("[data-attr]")) {
+    for (const checkbox of example.querySelectorAll("[data-attr]")) {
         checkbox.checked = picker.hasAttribute(checkbox.dataset.attr);
         checkbox.addEventListener("change", () => picker.toggleAttribute(checkbox.dataset.attr, checkbox.checked));
     }
 }
 
 // ---------------------------------------------------------------------------
-// Batches
+// Batches: how many of the options are in the list so far
 // ---------------------------------------------------------------------------
 
-function setupBatchDemo() {
-    const picker = document.getElementById("batch-demo");
+function setupBatchCount() {
+    const output = document.querySelector("[data-batch-count]");
+    const picker = output.closest(".stage").querySelector("platy-picker");
     const select = picker.querySelector("select");
-    const output = document.getElementById("batch-count");
 
     // The list only exists once the element has been defined.
     customElements.whenDefined("platy-picker").then(() => {
-        const list = picker.querySelector(".pp-list, .dropdown-menu ul");
+        const list = picker.querySelector(".pp-list");
         const update = () => output.textContent =
-            `${list.querySelectorAll(".pp-item, .dropdown-item").length.toLocaleString()} of ${select.options.length.toLocaleString()} options rendered`;
+            `${list.querySelectorAll(".pp-item").length.toLocaleString()} of ${select.options.length.toLocaleString()} options rendered`;
 
         new MutationObserver(update).observe(list, { childList: true });
         update();

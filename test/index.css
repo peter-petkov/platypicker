@@ -275,6 +275,31 @@ p {
     flex-direction: column;
 }
 
+/* Page controls that sit on an example's stage, under the pickers. */
+.stage-extra {
+    flex-basis: 100%;
+}
+
+.log {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    min-height: 1.5rem;
+    padding: 0;
+    margin: 0;
+    list-style: none;
+    font: 0.8rem/1.5 ui-monospace, "Cascadia Code", Consolas, monospace;
+    color: var(--page-muted);
+
+    &:empty::before {
+        content: "No events yet.";
+    }
+
+    li:first-child {
+        color: var(--page-color);
+    }
+}
+
 /* Wide enough for a few badges. */
 .stage platy-picker > select[multiple] {
     width: 20rem;

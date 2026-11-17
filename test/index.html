@@ -142,33 +142,57 @@
 
         <section id="long-lists">
             <h2>Long lists</h2>
-            <p>Long lists are rendered a batch at a time, and the next batch follows as you scroll down. Searching still covers every option. <code>batch-size="0"</code> renders everything.</p>
-            <div class="stage">
-                <platy-picker id="batch-demo" search batch-size="20"><select aria-label="Car" data-cars="2000"></select></platy-picker>
-                <output id="batch-count" class="hint"></output>
+            <p>Long lists are rendered a batch at a time, and the next batch follows as you scroll down. Searching still covers every option, and the arrow keys and type-ahead go past the rendered rows. <code>batch-size</code> sets how many rows a batch has (50 by default), and <code>batch-size="0"</code> renders everything at once.</p>
+            <div class="example">
+                <template>
+                    <platy-picker search batch-size="20">
+                        <select name="car" aria-label="Car" data-cars="2000"></select>
+                    </platy-picker>
+                </template>
+                <output class="hint stage-extra" data-batch-count></output>
             </div>
-            <p><code>placeholders</code> adds skeleton rows after the last rendered option for as long as more are still to come. With a local list they only flash by.</p>
-            <div class="stage">
-                <platy-picker placeholders="4" batch-size="4"><select aria-label="Drink" data-fill="drinks"></select></platy-picker>
+            <p><code>placeholders</code> adds skeleton rows after the last rendered option for as long as more are still to come. With a local list they only flash by, because the next batch is ready before you get there; they matter more when you add options as they arrive.</p>
+            <div class="example">
+                <template>
+                    <platy-picker placeholders="4" batch-size="4">
+                        <select name="drink" aria-label="Drink" data-fill="drinks"></select>
+                    </platy-picker>
+                </template>
             </div>
         </section>
 
         <section id="live-changes">
             <h2>Live changes</h2>
-            <p><code>setValue()</code> updates the picker without firing <code>change</code>, by design. Adding or removing options, or toggling attributes, updates an open or closed picker.</p>
-            <div class="stage stage-column">
-                <platy-picker id="live" search controls><select multiple size="1" aria-label="Live demo" data-fill="foods" data-pick="0"></select></platy-picker>
-                <div class="toolbar">
-                    <button type="button" class="button" id="live-set-value">setValue</button>
-                    <button type="button" class="button" id="live-add">Add option</button>
-                    <button type="button" class="button" id="live-remove">Remove last</button>
+            <p>The select stays the source of truth. Add, remove or relabel options with the usual DOM methods, and the picker follows, open or closed. Attributes are live too, and each has a matching property.</p>
+            <p><code>setValue()</code> selects by value and updates the badges and the list without firing <code>change</code>, as when a script sets <code>select.value</code>. Picks by the user fire <code>change</code> on the select.</p>
+            <div class="example" data-live>
+                <template>
+                    <platy-picker search controls>
+                        <select name="food" multiple size="1" aria-label="Food" data-fill="foods" data-pick="0"></select>
+                    </platy-picker>
+                </template>
+                <div class="toolbar stage-extra">
+                    <button type="button" class="button" data-action="set-value">setValue()</button>
+                    <button type="button" class="button" data-action="add">Add an option</button>
+                    <button type="button" class="button" data-action="remove">Remove the last</button>
                 </div>
-                <div class="toolbar">
+                <div class="toolbar stage-extra">
                     <label class="check"><input type="checkbox" data-attr="search">search</label>
                     <label class="check"><input type="checkbox" data-attr="controls">controls</label>
                     <label class="check"><input type="checkbox" data-attr="placeholders">placeholders</label>
                 </div>
-                <output id="live-log" class="hint">No changes yet.</output>
+                <ol class="log stage-extra" aria-label="Events" aria-live="polite"></ol>
+                <script type="text/plain" data-code="JS">
+                    const picker = document.querySelector("platy-picker");
+                    const select = picker.querySelector("select");
+
+                    select.addEventListener("change", () => console.log([...select.selectedOptions]));
+
+                    picker.setValue("🍕 Pizza");           // no change event
+                    select.add(new Option("🍰 Cake"));     // shows up in the list
+                    select.lastElementChild.remove();
+                    picker.search = false;                 // same as removeAttribute("search")
+                </script>
             </div>
         </section>
 
