@@ -81,7 +81,7 @@ All attributes are reflected as properties too (e.g. `picker.search = true`, `pi
 
 ## Features
 
-- **Search/filter** - type to narrow the option list; matches are highlighted using the native CSS Custom Highlight API. The search covers the whole list, including options that aren't rendered yet.
+- **Search/filter** - type to narrow the option list; matches are highlighted using the native CSS Custom Highlight API. The search covers the whole list, including options that aren't rendered yet. A search that finds nothing says "No matches", and screen readers hear how many options match once typing pauses.
 - **Select all / select none** - one-click bulk actions for multi-selects. Select all respects `disabled` options and option groups, and takes every option matching the current search, including ones not rendered yet. When either changes 1,000 options or more, which can freeze the page for a moment, it shows a spinner while it works.
 - **Badges** - a closed multi-select shows its selected options as badges on one line, then a "+N" count of those that don't fit. The × on a badge removes it with the mouse; the last badge of a `required` select has none. The badges are only a picture: the `<select>` underneath still takes the clicks, the focus and the keyboard, and is what screen readers read.
 - **Batched rendering** - long lists are rendered a batch at a time (see `batch-size`), and the next batch loads as you scroll near the end. Opening, searching and selecting stay fast with tens of thousands of options.
@@ -190,7 +190,7 @@ The look stays out of the way of your own CSS. Its colors, borders and spacing h
 
 ## Class plugs
 
-Every element Platypicker creates has a fixed `pp-*` class, which you can style directly: `pp-menu` (the popover), `pp-bar`, `pp-search`, `pp-button`, `pp-list`, `pp-item`, `pp-item-label`, `pp-item-subtext`, `pp-item-check`, `pp-group`, `pp-group-list`, `pp-header`, `pp-divider`, `pp-placeholder`, `pp-placeholder-bar`, and for the badges `pp-tags`, `pp-tag`, `pp-tag-label`, `pp-tag-remove`, `pp-tag-count` and `pp-tags-placeholder`. The `<select>` gets `pp-select`.
+Every element Platypicker creates has a fixed `pp-*` class, which you can style directly: `pp-menu` (the popover), `pp-bar`, `pp-search`, `pp-button`, `pp-list`, `pp-item`, `pp-item-label`, `pp-item-subtext`, `pp-item-check`, `pp-group`, `pp-group-list`, `pp-header`, `pp-divider`, `pp-empty` ("No matches"), `pp-status` (the match count for screen readers, hidden), `pp-placeholder`, `pp-placeholder-bar`, and for the badges `pp-tags`, `pp-tag`, `pp-tag-label`, `pp-tag-remove`, `pp-tag-count` and `pp-tags-placeholder`. The `<select>` gets `pp-select`.
 
 Each part also has a plug: extra classes added next to its fixed one, empty by default. They let you dress the picker in a framework's own classes, such as Bootstrap's or Tailwind's utilities. Two state plugs, `itemSelected` and `itemDisabled`, are added to a row while its option is selected or disabled. The full list, with what each part is, is in `src/classes.js`.
 
@@ -281,9 +281,12 @@ PlatyPicker.get(document.querySelector("select[name=food]"));
 // Defaults for every picker. Set them before the pickers connect.
 PlatyPicker.defaultBatchSize = 100;
 PlatyPicker.languageMap.searchPlaceholder = "Filtern...";
+PlatyPicker.languageMap.searchLabel = "Suchen"; // the search box's name for screen readers
 PlatyPicker.languageMap.selectAllLabel = "Alle";
 PlatyPicker.languageMap.selectNoneLabel = "Keine";
 PlatyPicker.languageMap.removeLabel = "Entfernen"; // the tooltip of a badge's ×
+PlatyPicker.languageMap.noMatchesLabel = "Keine Treffer";
+PlatyPicker.languageMap.matchesLabel = count => count === 1 ? "Ein Treffer" : `${count.toLocaleString("de")} Treffer`; // a function, for plurals
 
 // The most search matches highlighted at once, across the page.
 PlatyPicker.maxHighlights = 100;
