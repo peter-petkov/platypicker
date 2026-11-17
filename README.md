@@ -204,7 +204,7 @@ The same object is `PlatyPicker.classes`, which is enough for pickers you create
 
 ## Skins
 
-A skin fits Platypicker into a CSS framework by dressing it in the framework's own classes, so the pickers look like the rest of its forms. Import it before `platypicker`, since it fills the class plugs that the pickers read when they are created:
+A skin fits Platypicker into a CSS framework by dressing it in the framework's own classes, so the pickers look like the rest of its forms. There are skins for [Bootstrap](#bootstrap) and [Tailwind](#tailwind). Import one before `platypicker`, since it fills the class plugs that the pickers read when they are created:
 
 ```js
 import "platypicker/src/skins/bootstrap.js";
@@ -215,7 +215,9 @@ There's no extra stylesheet to link: the skin adds its few rules itself. Importe
 
 Platypicker's look has two halves. **Layout**, how the parts sit (the row with its subtext and check mark, the sticky search bar, the badges in one line), stays. **Paint**, the colors, borders, spacing and type, steps aside for a skinned picker, which has the `pp-skin` class, and leaves it to the framework's classes, whichever stylesheet loads first. The skin adds rules of its own only for what the framework has no class for, and your `--platypicker-*` variables still apply to those.
 
-**Bootstrap** (5.3 or later):
+### Bootstrap
+
+For Bootstrap 5.3 or later, in its classes:
 
 | Part                     | Classes                                                                  |
 |--------------------------|--------------------------------------------------------------------------|
@@ -228,9 +230,30 @@ Platypicker's look has two halves. **Layout**, how the parts sit (the row with i
 | badges                   | `badge` in the subtle secondary colors, with a `btn-close`                 |
 | skeleton rows            | `placeholder-glow` and `placeholder`                                       |
 
-So the select's sizes (`form-select-sm`, `form-select-lg`) and validation classes (`is-invalid`, `was-validated`) work as on any select, and everything follows your Bootstrap theme and `data-bs-theme="dark"`. The check mark takes Bootstrap's link color, and search matches its `<mark>` colors.
+So the select's sizes (`form-select-sm`, `form-select-lg`) and validation classes (`is-invalid`, `was-validated`) work as on any select, and everything follows your Bootstrap theme and `data-bs-theme="dark"`. The check mark takes Bootstrap's link color, and search matches its `<mark>` colors. Themes built on Bootstrap, such as Tabler or CoreUI, should work with it too.
 
-To make a skin of your own, fill the plugs with your framework's classes, include `pp-skin` in the `host` plug, and import it before `platypicker`. `src/skins/bootstrap.js` is a short example.
+### Tailwind
+
+For Tailwind 4, in utilities: gray with an indigo accent, the look of Tailwind's own form examples, with `dark:` variants so dark mode follows your Tailwind setup. Rows turn indigo under the pointer, and the check mark and search matches are indigo too.
+
+```js
+import "platypicker/src/skins/tailwind.js";
+import "platypicker";
+```
+
+Two lines in your Tailwind stylesheet go with it. Tailwind generates only the classes it finds in your sources and skips `node_modules`, so point it at the skin. And Tailwind puts its utilities in a cascade layer, which loses to any CSS outside layers, so import platypicker.css into its `components` layer, below the utilities, rather than linking it:
+
+```css
+@import "tailwindcss";
+@import "platypicker/src/platypicker.css" layer(components);
+@source "../node_modules/platypicker/src/skins/tailwind.js";
+```
+
+The `@source` path is relative to the stylesheet. For other colors, copy `src/skins/tailwind.js` into your project, change its classes and its import of `../classes.js` to `platypicker/src/classes.js`, and import and `@source` your copy instead. Tailwind needs to see every class written out in full, so changing the class names from script wouldn't work.
+
+### Your own skin
+
+To make a skin of your own, fill the plugs with your framework's classes, include `pp-skin` in the `host` plug, and import it before `platypicker`. `src/skins/bootstrap.js` and `src/skins/tailwind.js` are short examples.
 
 ## JavaScript API
 

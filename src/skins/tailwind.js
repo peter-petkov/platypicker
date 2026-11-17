@@ -14,7 +14,8 @@
  *   @import "platypicker/src/platypicker.css" layer(components);
  *   @source "../node_modules/platypicker/src/skins/tailwind.js";
  *
- * For other colors, change the plugs after importing this file, before importing platypicker.
+ * For other colors, copy this file, change its classes, and import and @source the copy instead: Tailwind needs to
+ * see each class written out in full.
  */
 import { classes } from "../classes.js";
 
