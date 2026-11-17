@@ -41,6 +41,7 @@ function init() {
     setupTheming();
     setupPlayground();
     setupBatchCount();
+    setupLoadingDemo();
     setupBenchmark();
 }
 
@@ -492,6 +493,60 @@ function setupTheming() {
     matchMedia("(prefers-color-scheme: dark)").addEventListener("change", showDefaults);
     showDefaults();
     update();
+}
+
+// ---------------------------------------------------------------------------
+// Loading as you scroll: pages of cars "arrive" a little after the picker asks for them
+// ---------------------------------------------------------------------------
+
+function setupLoadingDemo() {
+    const PAGE_SIZE = 20;
+    const TOTAL = 100; // roughly: the car generator spreads them evenly over the makes
+    const DELAY = 800;
+    const example = document.querySelector("[data-loading]");
+    const picker = example.querySelector("platy-picker");
+    const select = picker.querySelector("select");
+    const output = example.querySelector("[data-loading-count]");
+    let waiting = [];
+    let total = 0;
+    let run = 0;
+    let fetching = false;
+
+    // The attribute rather than the property: this runs before the element is defined, and setting the property
+    // then would hide the element's own accessor.
+    const receivePage = () => {
+        select.append(...waiting.splice(0, PAGE_SIZE));
+        picker.toggleAttribute("loading", waiting.length > 0);
+        output.textContent = `${select.options.length} of ${total} cars loaded`;
+    };
+
+    const startOver = () => {
+        const template = document.createElement("template");
+        template.innerHTML = carOptions(TOTAL, false);
+        waiting = [...template.content.children];
+        total = waiting.length;
+        select.replaceChildren();
+        run++;
+        fetching = false;
+        receivePage();
+    };
+
+    picker.addEventListener("loadmore", () => {
+        if (fetching) return;
+
+        const current = run;
+        fetching = true;
+        output.textContent = `${select.options.length} of ${total} cars loaded, loading more…`;
+
+        setTimeout(() => {
+            if (current !== run) return;
+            fetching = false;
+            receivePage();
+        }, DELAY);
+    });
+
+    example.querySelector("[data-loading-reset]").addEventListener("click", startOver);
+    startOver();
 }
 
 // ---------------------------------------------------------------------------
