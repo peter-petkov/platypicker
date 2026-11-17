@@ -224,7 +224,7 @@ Platypicker's look has two halves. **Layout**, how the parts sit (the row with i
 | search box               | `form-control form-control-sm`                                           |
 | All / None               | `btn btn-link btn-sm`                                                    |
 | rows, group labels, `<hr>` | `dropdown-item`, `dropdown-header`, `dropdown-divider`                     |
-| subtext                  | `small text-body-secondary`                                              |
+| subtext                  | `small`, in the secondary text color                                     |
 | badges                   | `badge` in the subtle secondary colors, with a `btn-close`                 |
 | skeleton rows            | `placeholder-glow` and `placeholder`                                       |
 

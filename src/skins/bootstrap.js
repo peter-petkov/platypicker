@@ -28,7 +28,7 @@ const plugs = {
     button: "btn btn-link btn-sm",
     list: "list-unstyled mb-0 py-1",
     item: "dropdown-item",
-    subtext: "small text-body-secondary",
+    subtext: "small",
     header: "dropdown-header",
     divider: "dropdown-divider",
     placeholder: "placeholder-glow",
@@ -43,15 +43,29 @@ for (const [part, value] of Object.entries(plugs)) {
     classes[part] = [classes[part], value].filter(Boolean).join(" ");
 }
 
-// What Bootstrap has no class for. The variables feed the check mark, the select all spinner and search matches;
-// the rules line the badges up with form-select's padding and draw its chevron, which Bootstrap leaves off
-// multiple selects. They're one notch above Platypicker's layout rules, which they adjust.
+// What Bootstrap has no class for. The variables feed the check mark, the select all spinner and search matches.
+// The subtext is secondary gray, and with the check mark takes the row's own color while it's pressed or disabled
+// (text-body-secondary would win over those, with its !important). The rest lines the badges up with form-select's
+// padding and draws its chevron, which Bootstrap leaves off multiple selects. They're one notch above Platypicker's
+// layout rules, which they adjust.
 const css = `
 @supports (appearance: base-select) and selector(::picker(select)) {
     platy-picker.pp-skin-bootstrap {
         --_pp-skin-accent-color: var(--bs-link-color);
         --_pp-skin-highlight-bg: var(--bs-highlight-bg);
         --_pp-skin-highlight-color: var(--bs-highlight-color, inherit);
+
+        .pp-item-subtext {
+            color: var(--bs-secondary-color);
+        }
+
+        .pp-item:is(:active, :disabled) > .pp-item-subtext {
+            color: inherit;
+        }
+
+        .pp-item:active > .pp-item-check {
+            background: currentColor;
+        }
 
         .pp-tags {
             padding: 0 2.25rem 0 .4375rem;
