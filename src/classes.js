@@ -26,6 +26,7 @@ export const classes = {
     groupList: "",      // the list of a group's rows
     header: "",         // an option group's label
     divider: "",        // an <hr> between options
+    empty: "",          // "No matches", under the list when a search finds nothing
     placeholder: "",    // a skeleton row's content
     placeholderBar: "", // the bar inside it
     tags: "",           // the badges over a closed multiple select
@@ -51,6 +52,8 @@ const fixed = {
     groupList: "pp-group-list",
     header: "pp-header",
     divider: "pp-divider",
+    empty: "pp-empty",
+    status: "pp-status",
     placeholder: "pp-placeholder",
     placeholderBar: "pp-placeholder-bar",
     tags: "pp-tags",

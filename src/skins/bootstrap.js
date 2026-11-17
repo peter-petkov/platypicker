@@ -32,6 +32,7 @@ const plugs = {
     subtext: "small",
     header: "dropdown-header",
     divider: "dropdown-divider",
+    empty: "dropdown-item-text text-body-secondary mb-1",
     placeholder: "placeholder-glow",
     placeholderBar: "placeholder col-8",
     tag: "badge text-secondary-emphasis bg-secondary-subtle border border-secondary-subtle",

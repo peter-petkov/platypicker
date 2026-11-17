@@ -303,6 +303,23 @@
             mask: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3e%3cpath d='m5 12 5 5 10-10'/%3e%3c/svg%3e") center / contain no-repeat;
         }
 
+        /* "No matches", under the list. */
+        .pp-empty {
+            margin: 0;
+        }
+
+        /* The match count for screen readers: in the page, but not on screen. Pinned to the top, where it can
+           never make the popover scroll. */
+        .pp-status {
+            position: absolute;
+            inset: 0 auto auto 0;
+            width: 1px;
+            height: 1px;
+            overflow: hidden;
+            clip-path: inset(50%);
+            white-space: nowrap;
+        }
+
         /* Skeleton rows, shown at the end of the list while more rows are to come. */
         .pp-placeholder {
             flex: 1;
@@ -509,6 +526,13 @@
             font-weight: 400;
             line-height: 1.5;
             color: var(--_pp-header);
+        }
+
+        .pp-empty {
+            padding: .5rem .625rem;
+            font-size: .875em;
+            line-height: 1.5;
+            color: var(--_pp-muted);
         }
 
         .pp-divider {

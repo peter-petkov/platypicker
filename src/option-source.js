@@ -70,6 +70,7 @@ export class FilteredView {
     #query;
     #index = 0;
     #matchCount = 0;
+    #count;                  // All the matches, once count() has counted them.
     #dividerPending = false;
     #dividers = new Set();   // matches that have a divider before them
     #groupMatches = new Map();
@@ -83,10 +84,22 @@ export class FilteredView {
         return this.#query;
     }
 
-    /** How many entries match: all of them without a search, otherwise -1 until the scan is done. */
+    /**
+     * How many entries match: all of them without a search, otherwise -1 until the scan is done or count() has
+     * counted them.
+     */
     get size() {
         if (!this.#query) return this.#entries.length;
-        return this.hasMore ? -1 : this.#matchCount;
+        return this.#count ?? (this.hasMore ? -1 : this.#matchCount);
+    }
+
+    /** Counts the matches in one go, without scanning on. */
+    count() {
+        if (!this.#query) return this.#entries.length;
+        if (!this.hasMore) return this.#matchCount;
+
+        this.#count ??= this.#entries.reduce((count, entry) => count + this.includes(entry), 0);
+        return this.#count;
     }
 
     /** Whether part of the list has not been scanned yet. */

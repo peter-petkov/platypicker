@@ -43,6 +43,9 @@ export default class ListView {
     #selectNoneButton;
     #busy = false;                      // Whether select all or select none is running.
     #list;
+    #empty;                             // "No matches", shown under the list when a search finds nothing.
+    #status;                            // Tells screen readers how many options match the search.
+    #announceTimer;
 
     #config = {};
     #view = null;                       // The FilteredView being shown.
@@ -100,6 +103,17 @@ export default class ListView {
         this.#list = document.createElement("ul");
         addClasses(this.#list, "list");
         this.#list.setAttribute("role", "listbox");
+        this.#list.id = `${this.#popover.id}-list`;
+
+        // Outside the list, which may only hold options.
+        this.#empty = document.createElement("p");
+        addClasses(this.#empty, "empty");
+        this.#empty.hidden = true;
+
+        // A polite live region, visually hidden, which screen readers read out when its text changes.
+        this.#status = document.createElement("div");
+        addClasses(this.#status, "status");
+        this.#status.setAttribute("role", "status");
     }
 
     /** Names the popover and its list after the select, as its label reads now. An empty label names neither. */
@@ -121,6 +135,8 @@ export default class ListView {
         this.#search = document.createElement("input");
         this.#search.type = "search";
         this.#search.name = "platypicker-search";
+        this.#search.autocomplete = "off";
+        this.#search.setAttribute("aria-controls", this.#list.id);
         addClasses(this.#search, "search");
         this.#search.addEventListener("input", () => this.filter(this.#search.value), { signal });
         this.#search.addEventListener("keydown", e => {
@@ -135,7 +151,7 @@ export default class ListView {
         this.#selectNoneButton = this.#buildActionButton(() => this.#busy || this.#actions.selectNone());
         form.append(this.#selectNoneButton);
 
-        this.#popover.append(this.#list);
+        this.#popover.append(this.#list, this.#empty, this.#status);
     }
 
     #buildActionButton(onClick) {
@@ -178,12 +194,17 @@ export default class ListView {
 
         this.#search.hidden = !config.search;
         this.#search.placeholder = config.searchPlaceholder;
+        this.#search.setAttribute("aria-label", config.searchLabel);
+        this.#empty.textContent = config.noMatchesLabel;
         this.#selectAllButton.textContent = config.selectAllLabel;
         this.#selectNoneButton.textContent = config.selectNoneLabel;
         this.syncControls();
 
         if (placeholdersChanged || loadingChanged) this.#syncTail(placeholdersChanged);
-        if (loadingChanged) this.#list.setAttribute("aria-busy", Boolean(config.loading));
+        if (loadingChanged) {
+            this.#list.setAttribute("aria-busy", Boolean(config.loading));
+            this.#syncEmpty();
+        }
     }
 
     /**
@@ -259,6 +280,32 @@ export default class ListView {
     filter(rawValue) {
         this.#showMatches(rawValue.trim().toLowerCase());
         this.#popover.scrollTop = 0;
+
+        // Once typing pauses, so that screen readers don't read out a count for every key.
+        clearTimeout(this.#announceTimer);
+        this.#announceTimer = setTimeout(() => this.#announce(), 500);
+    }
+
+    /**
+     * Tells screen readers how many options match the search, counting them all, also those not rendered yet. The
+     * count also gives the rows their aria-setsize, which would otherwise wait for the list to be rendered.
+     */
+    #announce() {
+        const view = this.#view;
+        if (!view?.query || this.#signal.aborted) {
+            this.#status.textContent = "";
+            return;
+        }
+
+        const count = view.count();
+        this.#syncSetSize(view);
+        this.#status.textContent = count ? this.#config.matchesLabel(count) : this.#config.noMatchesLabel;
+    }
+
+    /** Shows "No matches" when a search has found nothing, and nothing more is coming. */
+    #syncEmpty() {
+        const view = this.#view;
+        this.#empty.hidden = !(view?.query && !view.hasMore && !this.#rows.length && !this.#config.loading);
     }
 
     /**
@@ -307,6 +354,7 @@ export default class ListView {
     #renderMore(count, budget = ListView.#scanBudget) {
         this.#appendRows(this.#view, this.#view.pull(count, budget));
         this.#syncTail();
+        this.#syncEmpty();
     }
 
     /**
@@ -367,6 +415,7 @@ export default class ListView {
         this.#syncTabStop();
         this.#highlightItems(view, entries);
         this.#syncTail();
+        this.#syncEmpty();
 
         // A focused row that went away hands focus to the row that took its place, or to the search box.
         if (focusedIndex >= 0 && !this.#popover.contains(this.#focused()) &&

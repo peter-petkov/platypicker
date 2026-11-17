@@ -42,9 +42,13 @@ export default class PlatyPicker extends HTMLElement {
 
     static languageMap = {
         searchPlaceholder: "Type to filter...",
+        searchLabel: "Search",
         selectAllLabel: "All",
         selectNoneLabel: "None",
         removeLabel: "Remove",
+        noMatchesLabel: "No matches",
+        // What screen readers hear once typing in the search box pauses: how many options match.
+        matchesLabel: count => `${count.toLocaleString()} ${count === 1 ? "match" : "matches"}`,
     };
 
     static get(select) {
@@ -289,8 +293,11 @@ export default class PlatyPicker extends HTMLElement {
             search: this.search,
             controls: this.controls,
             searchPlaceholder: this.searchPlaceholder,
+            searchLabel: PlatyPicker.languageMap.searchLabel,
             selectAllLabel: this.selectAllLabel,
             selectNoneLabel: this.selectNoneLabel,
+            noMatchesLabel: PlatyPicker.languageMap.noMatchesLabel,
+            matchesLabel: PlatyPicker.languageMap.matchesLabel,
             placeholders: this.placeholders,
             batchSize: this.batchSize,
             loading: this.loading,
