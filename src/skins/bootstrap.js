@@ -28,6 +28,7 @@ const plugs = {
     button: "btn btn-link btn-sm",
     list: "list-unstyled mb-0 py-1",
     item: "dropdown-item",
+    itemDisabled: "disabled",
     subtext: "small",
     header: "dropdown-header",
     divider: "dropdown-divider",
@@ -59,12 +60,17 @@ const css = `
             color: var(--bs-secondary-color);
         }
 
-        .pp-item:is(:active, :disabled) > .pp-item-subtext {
+        .pp-item:is(:active, [aria-disabled="true"]) > .pp-item-subtext {
             color: inherit;
         }
 
-        .pp-item[aria-pressed="true"]:active > .pp-item-check {
+        .pp-item[aria-selected="true"]:active > .pp-item-check {
             background-color: currentColor;
+        }
+
+        /* A disabled option can take keyboard focus, which Bootstrap's disabled class would leave invisible. */
+        .pp-item.disabled:focus-visible {
+            background-color: var(--bs-dropdown-link-hover-bg);
         }
 
         .pp-tags {

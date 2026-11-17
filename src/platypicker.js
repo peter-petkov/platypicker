@@ -126,6 +126,11 @@ export default class PlatyPicker extends HTMLElement {
         this.#view.configure(this.#viewConfig());
         this.#view.render();
 
+        // The select tells screen readers that it opens the popover, and whether it's open.
+        this.#select.setAttribute("aria-haspopup", "dialog");
+        this.#select.setAttribute("aria-controls", this.#view.popover.id);
+        this.#select.setAttribute("aria-expanded", "false");
+
         if (this.#select.multiple && this.#select.size <= 1) {
             this.#tags = new TagsView({
                 select: this.#select,
@@ -156,6 +161,7 @@ export default class PlatyPicker extends HTMLElement {
 
         removeClasses(this.#select, "select");
         removeClasses(this, "host");
+        for (const name of ["aria-haspopup", "aria-controls", "aria-expanded"]) this.#select.removeAttribute(name);
 
         this.#select = this.#source = this.#highlighter = this.#view = this.#tags = null;
     }
@@ -367,6 +373,25 @@ export default class PlatyPicker extends HTMLElement {
         this.#select.focus();
     }
 
+    /**
+     * The select's label, for the popover's: from aria-labelledby, aria-label or its <label>s, in that order, as
+     * screen readers name it. A picker inside a label adds none of its own text: not its options, popover or badges.
+     */
+    #label() {
+        const select = this.#select;
+        const textOf = node => node.nodeType === Node.TEXT_NODE ? node.data
+            : node.localName === "select" || node.localName === "platy-picker" ? ""
+                : [...node.childNodes].map(textOf).join("");
+
+        const ids = select.getAttribute("aria-labelledby")?.trim();
+        const root = select.getRootNode();
+        const label = ids
+            ? ids.split(/\s+/).map(id => root.getElementById?.(id)).filter(Boolean).map(textOf).join(" ")
+            : select.getAttribute("aria-label") ?? [...select.labels].map(textOf).join(" ");
+
+        return label.replace(/\s+/g, " ").trim();
+    }
+
     // -----------------------------------------------------------------
     // Select interaction (open/close, outside click, focus)
     // -----------------------------------------------------------------
@@ -409,10 +434,12 @@ export default class PlatyPicker extends HTMLElement {
 
             this.#catchUp();
             this.#view.refresh(); // Picks up selection changes that fire no change event, like select.value = x.
+            this.#view.setLabel(this.#label()); // The label may have changed since the last time.
         }, { signal });
 
         popover.addEventListener("toggle", e => {
             this.#internals.states[e.newState === "open" ? "add" : "delete"]("open");
+            this.#select.setAttribute("aria-expanded", e.newState === "open");
             this.#tags?.refresh(); // Catches selection changes that fire no change event, like select.value = x.
 
             if (e.newState === "open") {

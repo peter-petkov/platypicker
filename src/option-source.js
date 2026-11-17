@@ -83,6 +83,12 @@ export class FilteredView {
         return this.#query;
     }
 
+    /** How many entries match: all of them without a search, otherwise -1 until the scan is done. */
+    get size() {
+        if (!this.#query) return this.#entries.length;
+        return this.hasMore ? -1 : this.#matchCount;
+    }
+
     /** Whether part of the list has not been scanned yet. */
     get hasMore() {
         return this.#index < this.#entries.length;

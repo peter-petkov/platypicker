@@ -24,6 +24,8 @@ export default class ListView {
         return label.replace(ListView.#emoji, "").replace(/\s+/g, " ").trim().toLowerCase();
     }
 
+    static #lastId = 0;
+
     /** Lets the browser handle input and paint before the next step. */
     static #yieldToMain() {
         return globalThis.scheduler?.yield?.() ?? new Promise(resolve => setTimeout(resolve));
@@ -48,8 +50,9 @@ export default class ListView {
     #lastGroup = null;                  // The option group of the last row rendered.
     #rows = [];                         // The rendered records, in list order.
     #recordsByEntry = new WeakMap();    // Only the entries rendered right now.
-    #headerItems = new Map();           // option group -> the <li> of its header, as rendered right now
+    #groupItems = new Map();            // option group -> its <li role="group">, as rendered right now
     #dividerItems = new Map();          // entry -> the <li> of the divider rendered right before it
+    #setSize = null;                    // The aria-setsize the rows carry.
     #recordsByButton = new WeakMap();
     #tail = [];                         // The <li>s after the last row, present while more rows are to come.
     #typeAheadBuffer = "";
@@ -89,10 +92,21 @@ export default class ListView {
         this.#popover = document.createElement("div");
         addClasses(this.#popover, "menu");
         this.#popover.popover = "manual";
+        this.#popover.id = `platypicker-${++ListView.#lastId}`;
+        this.#popover.setAttribute("role", "dialog");
         select.insertAdjacentElement("afterend", this.#popover);
 
         this.#list = document.createElement("ul");
         addClasses(this.#list, "list");
+        this.#list.setAttribute("role", "listbox");
+    }
+
+    /** Names the popover and its list after the select, as its label reads now. An empty label names neither. */
+    setLabel(label) {
+        for (const element of [this.#popover, this.#list]) {
+            if (!label) element.removeAttribute("aria-label");
+            else if (element.getAttribute("aria-label") !== label) element.setAttribute("aria-label", label);
+        }
     }
 
     #buildControls() {
@@ -136,7 +150,7 @@ export default class ListView {
         this.#list.addEventListener("click", e => {
             const button = e.target.closest(".pp-item");
             const record = button && this.#recordsByButton.get(button);
-            if (!record || button.disabled) return;
+            if (!record || record.entry.disabled) return;
 
             this.#actions.activate(record.entry);
         }, { signal: this.#signal });
@@ -176,6 +190,7 @@ export default class ListView {
         this.#selectAllButton.disabled = this.#selectNoneButton.disabled = !controls;
         this.#selectAllButton.hidden = !controls || !this.#source.multiple || !this.#source.canSelectAll;
         this.#selectNoneButton.hidden = !controls || this.#source.required;
+        this.#list.setAttribute("aria-multiselectable", this.#source.multiple);
 
         this.#styleBar();
     }
@@ -251,9 +266,10 @@ export default class ListView {
         this.#sentinelObserver?.disconnect();
         this.#highlighter.clear();
         this.#lastGroup = null;
+        this.#setSize = null;
         this.#rows = [];
         this.#recordsByEntry = new WeakMap();
-        this.#headerItems = new Map();
+        this.#groupItems = new Map();
         this.#dividerItems = new Map();
         this.#list.replaceChildren();
         this.#tail = [];
@@ -303,8 +319,10 @@ export default class ListView {
     #appendRows(view, entries) {
         if (!entries.length) return;
 
-        const items = this.#buildItems(view, entries);
+        const { items, groups } = this.#buildItems(view, entries);
+        for (const [group, rows] of groups) group.lastElementChild.append(...rows);
         this.#list.insertBefore(this.#fragmentOf(items), this.#tail[0] ?? null);
+        this.#syncSetSize(view);
         this.#highlightItems(view, entries);
     }
 
@@ -321,20 +339,24 @@ export default class ListView {
     reconcile() {
         const focusedIndex = this.#rows.findIndex(record => record.button === this.#focused());
         const keep = Math.max(this.#rows.length, this.#stepSize);
-        const previous = { records: this.#recordsByEntry, headers: this.#headerItems, dividers: this.#dividerItems };
+        const previous = { records: this.#recordsByEntry, groups: this.#groupItems, dividers: this.#dividerItems };
 
         const view = this.#view = this.#source.filter(this.#query());
 
         this.#sentinelObserver?.disconnect();
         this.#highlighter.clear();
         this.#lastGroup = null;
+        this.#setSize = null;
         this.#rows = [];
         this.#recordsByEntry = new WeakMap();
-        this.#headerItems = new Map();
+        this.#groupItems = new Map();
         this.#dividerItems = new Map();
 
         const entries = view.pull(keep, Infinity);
-        this.#place(this.#buildItems(view, entries, previous));
+        const { items, groups } = this.#buildItems(view, entries, previous);
+        this.#place(this.#list, items);
+        for (const [group, rows] of groups) this.#place(group.lastElementChild, rows);
+        this.#syncSetSize(view);
         this.#highlightItems(view, entries);
         this.#syncTail();
 
@@ -342,7 +364,7 @@ export default class ListView {
         if (focusedIndex >= 0 && !this.#popover.contains(this.#focused()) &&
             this.#popover.matches(":popover-open")) {
             const next = this.#rows[Math.min(focusedIndex, this.#rows.length - 1)];
-            (next && !next.button.disabled ? next.button : this.#firstFocusable())?.focus({ preventScroll: true });
+            (next && !next.entry.disabled ? next.button : this.#firstFocusable())?.focus({ preventScroll: true });
         }
 
         if (!this.#isBatched) {
@@ -352,41 +374,50 @@ export default class ListView {
     }
 
     /**
-     * Makes the list items for the given matches, in order: dividers, group headers and rows. With `reuse` (the
-     * maps of a previous render), items that are still needed are taken from there and brought up to date.
+     * Makes the list items for the given matches, in order: dividers, groups and rows. A group is a
+     * <li role="group"> named by its header, with its rows in a list of its own. Returns the items for the list
+     * itself, and for each group the rows for its list. With `reuse` (the maps of a previous render), items that
+     * are still needed are taken from there and brought up to date.
      */
     #buildItems(view, entries, reuse) {
         const items = [];
+        const groups = new Map(); // group <li> -> the items for its own list
+
+        // The items to add to: the list's own, or a group's. A group may be from an earlier batch.
+        const itemsOf = group => {
+            if (!group) return items;
+            const li = this.#groupItems.get(group);
+            if (!groups.has(li)) groups.set(li, []);
+            return groups.get(li);
+        };
 
         for (const entry of entries) {
+            // Inside the group when it sits between two of its rows, before it when it comes ahead of the group.
+            const inGroup = entry.group && entry.group === this.#lastGroup;
+
             if (view.hasDividerBefore(entry)) {
                 let li = reuse?.dividers.get(entry);
                 if (!li) {
                     const divider = document.createElement("hr");
                     addClasses(divider, "divider");
                     li = this.#wrapInListItem(divider);
+                    li.setAttribute("aria-hidden", "true"); // A listbox holds options and groups only.
                 }
 
                 this.#dividerItems.set(entry, li);
-                items.push(li);
+                itemsOf(inGroup && entry.group).push(li);
             }
 
             if (entry.group !== this.#lastGroup) {
                 this.#lastGroup = entry.group;
 
-                // A group shows up once per render, so its header can be keyed by the group.
-                if (entry.group && !this.#headerItems.has(entry.group)) {
-                    let li = reuse?.headers.get(entry.group);
-                    if (!li) {
-                        const header = document.createElement("h6");
-                        addClasses(header, "header");
-                        li = this.#wrapInListItem(header);
-                    }
-
+                // A group shows up once per render, so it can be keyed by the group.
+                if (entry.group && !this.#groupItems.has(entry.group)) {
+                    const li = reuse?.groups.get(entry.group) ?? this.#createGroup();
                     const header = li.firstElementChild;
                     if (header.textContent !== entry.group.label) header.textContent = entry.group.label;
 
-                    this.#headerItems.set(entry.group, li);
+                    this.#groupItems.set(entry.group, li);
                     items.push(li);
                 }
             }
@@ -395,10 +426,47 @@ export default class ListView {
             const record = old ? this.#updateRecord(old) : this.#createRecord(entry);
             this.#recordsByEntry.set(entry, record);
             this.#rows.push(record);
-            items.push(old ? record.button.parentElement : this.#wrapInListItem(record.button));
+            record.button.setAttribute("aria-posinset", this.#rows.length);
+            if (this.#setSize !== null) record.button.setAttribute("aria-setsize", this.#setSize);
+
+            itemsOf(entry.group).push(old ? record.button.parentElement : this.#wrapInListItem(record.button));
         }
 
-        return items;
+        return { items, groups };
+    }
+
+    /**
+     * A group's <li>: its header, hidden from screen readers since it names the group instead, and the list its
+     * rows go in. Both lists are display: contents, so the rows line up as one.
+     */
+    #createGroup() {
+        const header = document.createElement("h6");
+        addClasses(header, "header");
+        header.id = `${this.#popover.id}-${++ListView.#lastId}`;
+        header.setAttribute("aria-hidden", "true");
+
+        const list = document.createElement("ul");
+        addClasses(list, "groupList");
+        list.setAttribute("role", "none");
+
+        const li = document.createElement("li");
+        addClasses(li, "group");
+        li.setAttribute("role", "group");
+        li.setAttribute("aria-labelledby", header.id);
+        li.append(header, list);
+        return li;
+    }
+
+    /**
+     * Gives every row the size of the list, for "3 of 20". It's known at once without a search, and once the scan is
+     * done with one; until then it's -1, unknown.
+     */
+    #syncSetSize(view) {
+        const size = String(view.size);
+        if (size === this.#setSize) return;
+
+        this.#setSize = size;
+        for (const record of this.#rows) record.button.setAttribute("aria-setsize", size);
     }
 
     #fragmentOf(items) {
@@ -408,18 +476,19 @@ export default class ListView {
     }
 
     /**
-     * Puts the items in the list in the given order, ahead of the tail. Items that are no longer wanted are removed,
-     * and the rest only move when their order changed, since moving a node takes focus away from it.
+     * Puts the items in a list (the list itself or a group's) in the given order, ahead of the tail. Items that are no
+     * longer wanted are removed, and the rest only move when their order changed, since moving a node takes focus
+     * away from it.
      */
-    #place(items) {
+    #place(list, items) {
         const wanted = new Set(items);
-        for (const child of [...this.#list.children])
+        for (const child of [...list.children])
             if (!wanted.has(child) && !this.#tail.includes(child)) child.remove();
 
-        let cursor = this.#list.firstElementChild;
+        let cursor = list.firstElementChild;
         for (const item of items) {
             if (item === cursor) cursor = cursor.nextElementSibling;
-            else this.#list.insertBefore(item, cursor);
+            else list.insertBefore(item, cursor);
         }
     }
 
@@ -431,7 +500,7 @@ export default class ListView {
         for (const entry of entries) {
             if (this.#highlighter.isFull) return;
 
-            const header = entry.group && this.#headerItems.get(entry.group)?.firstElementChild;
+            const header = entry.group && this.#groupItems.get(entry.group)?.firstElementChild;
             if (header && view.groupMatches(entry.group) && !view.textMatches(entry))
                 this.#highlighter.apply(header, "text", header.firstChild, view.query);
 
@@ -443,6 +512,7 @@ export default class ListView {
     #createRecord(entry) {
         const button = document.createElement("button");
         button.type = "button";
+        button.setAttribute("role", "option");
         addClasses(button, "item");
 
         const label = document.createElement("span");
@@ -460,7 +530,7 @@ export default class ListView {
 
         button.append(label, small, check);
 
-        const record = { entry, button, text, small, active: undefined };
+        const record = { entry, button, text, small, active: undefined, disabled: false };
         this.#recordsByButton.set(button, record);
 
         return this.#updateRecord(record);
@@ -474,9 +544,12 @@ export default class ListView {
         if (small.textContent !== entry.subtext) small.textContent = entry.subtext;
         if (button.title !== entry.title) button.title = entry.title;
 
-        if (button.disabled !== entry.disabled) {
+        // Not the disabled attribute: a disabled option stays focusable, so it can be found, and says it's disabled.
+        if (record.disabled !== entry.disabled) {
+            record.disabled = entry.disabled;
             toggleClasses(button, "itemDisabled", entry.disabled);
-            button.disabled = entry.disabled; // Takes the item out of the Tab order.
+            if (entry.disabled) button.setAttribute("aria-disabled", "true");
+            else button.removeAttribute("aria-disabled");
         }
 
         this.#syncActive(record);
@@ -484,7 +557,7 @@ export default class ListView {
     }
 
     /**
-     * Marks the row as selected or not, with aria-pressed (which also tells screen readers) and the itemSelected
+     * Marks the row as selected or not, with aria-selected (which also tells screen readers) and the itemSelected
      * plug. A selected option that is disabled on its own is not marked.
      */
     #syncActive(record) {
@@ -492,12 +565,13 @@ export default class ListView {
         if (record.active === active) return;
 
         record.active = active;
-        record.button.setAttribute("aria-pressed", active);
+        record.button.setAttribute("aria-selected", active);
         toggleClasses(record.button, "itemSelected", active);
     }
 
     #wrapInListItem(element) {
         const li = document.createElement("li");
+        li.setAttribute("role", "none");
         li.append(element);
         return li;
     }
@@ -547,9 +621,11 @@ export default class ListView {
             button.type = "button";
             addClasses(button, "item");
             button.disabled = true;
+            button.setAttribute("aria-disabled", "true");
             button.append(wave);
 
             const li = this.#wrapInListItem(button);
+            li.setAttribute("aria-hidden", "true");
             this.#list.append(li);
             this.#tail.push(li);
         }
@@ -623,14 +699,14 @@ export default class ListView {
             return;
         }
 
-        const target = selectedButton && !selectedButton.disabled
+        const target = selectedButton && !selected.disabled
             ? selectedButton
-            : this.#popover.querySelector(".pp-item:not(:disabled)");
+            : this.#popover.querySelector(".pp-item:not(:disabled, [aria-disabled='true'])");
         target?.focus({ preventScroll: target === selectedButton });
     }
 
     #firstFocusable() {
-        return this.#popover.querySelector("input:not([hidden]), .pp-item:not(:disabled)");
+        return this.#popover.querySelector("input:not([hidden]), .pp-item:not(:disabled, [aria-disabled='true'])");
     }
 
     scrollIntoView(entry) {

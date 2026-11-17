@@ -22,6 +22,8 @@ export const classes = {
     label: "",          // a row's label
     subtext: "",        // a row's subtext (data-subtext)
     check: "",          // a row's check mark, shown while its option is selected
+    group: "",          // an option group: its header and the list of its rows
+    groupList: "",      // the list of a group's rows
     header: "",         // an option group's label
     divider: "",        // an <hr> between options
     placeholder: "",    // a skeleton row's content
@@ -45,6 +47,8 @@ const fixed = {
     label: "pp-item-label",
     subtext: "pp-item-subtext",
     check: "pp-item-check",
+    group: "pp-group",
+    groupList: "pp-group-list",
     header: "pp-header",
     divider: "pp-divider",
     placeholder: "pp-placeholder",

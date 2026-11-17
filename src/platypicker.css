@@ -252,10 +252,17 @@
             margin: 0;
             list-style: none;
 
-            > li {
+            /* Every item, also those in a group's list, so a page's own list rules (like li + li) stay out. */
+            li {
                 margin: 0;
                 padding: 0;
             }
+        }
+
+        /* An option group: its header and rows sit in the list's grid as if the group weren't there. */
+        :is(.pp-group, .pp-group-list) {
+            display: contents;
+            list-style: none;
         }
 
         /* A row: the label, its subtext on the right, then a column for the check mark. */
@@ -291,7 +298,7 @@
             height: 1rem;
         }
 
-        .pp-item[aria-pressed="true"] > .pp-item-check {
+        .pp-item[aria-selected="true"] > .pp-item-check {
             background: var(--_pp-accent);
             mask: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3e%3cpath d='m5 12 5 5 10-10'/%3e%3c/svg%3e") center / contain no-repeat;
         }
@@ -307,7 +314,7 @@
             background-color: var(--_pp-highlight-bg);
         }
 
-        .pp-item:disabled :is(.pp-item-label, .pp-item-subtext)::highlight(platypicker-highlight) {
+        .pp-item:is(:disabled, [aria-disabled="true"]) :is(.pp-item-label, .pp-item-subtext)::highlight(platypicker-highlight) {
             color: inherit;
             background-color: transparent;
             text-decoration: underline;
@@ -478,7 +485,7 @@
                 outline-offset: -2px;
             }
 
-            &:disabled {
+            &:is(:disabled, [aria-disabled="true"]) {
                 color: var(--_pp-disabled);
                 background: none;
                 cursor: default;
@@ -491,7 +498,7 @@
             color: var(--_pp-muted);
         }
 
-        .pp-item:disabled .pp-item-subtext {
+        .pp-item:is(:disabled, [aria-disabled="true"]) .pp-item-subtext {
             color: inherit;
         }
 
