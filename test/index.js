@@ -175,8 +175,14 @@ async function skinStage(host) {
 }
 
 // The framework's stylesheets, platypicker.css and the skin's own rules, each parsed once and shared by every stage.
+// A skin can ask for platypicker.css in a cascade layer, as Tailwind does so that its utilities win over the layout.
 async function loadSkinSheets() {
-    const load = async href => new CSSStyleSheet().replace(await (await fetch(href)).text());
+    const text = async href => (await fetch(href)).text();
+    const load = async href => new CSSStyleSheet().replace(await text(href));
+    const layer = skin.platypickerLayer;
+    const platypicker = layer
+        ? text("../src/platypicker.css").then(css => new CSSStyleSheet().replace(`@layer ${layer} {\n${css}\n}`))
+        : load("../src/platypicker.css");
     const stage = new CSSStyleSheet();
 
     stage.replaceSync(`
@@ -190,7 +196,16 @@ async function loadSkinSheets() {
             max-width: 100%;
         }`);
 
-    const sheets = await Promise.all([...skin.stylesheets ?? [], "../src/platypicker.css"].map(load));
+    const sheets = await Promise.all([...(skin.stylesheets ?? []).map(load), platypicker]);
+
+    // Browsers ignore @property in a shadow root, and Tailwind relies on it for its variables' starting values, so
+    // the stylesheets' @property rules go to the page, where they apply everywhere.
+    const properties = sheets.flatMap(sheet => [...sheet.cssRules].filter(rule => rule instanceof CSSPropertyRule));
+    if (properties.length) {
+        const sheet = new CSSStyleSheet();
+        sheet.replaceSync(properties.map(rule => rule.cssText).join("\n"));
+        document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet];
+    }
 
     // The skin adopts its rules into the page when it loads, which is before <platy-picker> is defined.
     await customElements.whenDefined("platy-picker");
@@ -264,15 +279,20 @@ function setupSkins() {
         const heading = document.createElement("h3");
         const description = document.createElement("p");
         const file = entry.module.split("/").at(-1);
+        // A skin whose stylesheet is built (installCss) imports platypicker.css there instead of linking it.
         const install = [
             `<link rel="stylesheet" href="${entry.stylesheetName}">`,
-            `<link rel="stylesheet" href="node_modules/platypicker/src/platypicker.css">`,
+            ...entry.installCss ? [] : [`<link rel="stylesheet" href="node_modules/platypicker/src/platypicker.css">`],
             `<script type="module">`,
             `  import "${entry.importPath}";`,
             `  import "platypicker";`,
             `</script>`,
         ].join("\n");
-        const panel = codePanel([{ label: "HTML", text: install, html: true }, { label: file, text: "", html: false }]);
+        const panel = codePanel([
+            { label: "HTML", text: install, html: true },
+            ...entry.installCss ? [{ label: entry.stylesheetName, text: entry.installCss, html: false }] : [],
+            { label: file, text: "", html: false },
+        ]);
         const toolbar = document.createElement("div");
         const button = document.createElement("button");
 

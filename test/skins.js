@@ -2,7 +2,9 @@
 
 // The skins the docs page can show its examples in. Each brings its framework's stylesheets, Platypicker's skin
 // module for it, how the framework switches to dark mode, and the styles it gives <body>, which the examples' shadow
-// roots have no part of. An entry here appears in the page's skin switch, with its icon, and in the Skins section.
+// roots have no part of. platypickerLayer puts platypicker.css in a cascade layer, and installCss is the stylesheet
+// source to show for a framework whose CSS is built. An entry here appears in the page's skin switch, with its icon,
+// and in the Skins section.
 window.PLATY_SKINS = {
     base: {
         label: "Base",
@@ -20,5 +22,24 @@ window.PLATY_SKINS = {
         rootCss: "font-family: var(--bs-body-font-family); font-size: var(--bs-body-font-size); font-weight: var(--bs-body-font-weight); line-height: var(--bs-body-line-height); color: var(--bs-body-color);",
         // Bootstrap Icons' bootstrap-fill, in Bootstrap's purple.
         icon: "data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%237952b3'%3e%3cpath d='M6.375 7.125V4.658h1.78c.973 0 1.542.457 1.542 1.237 0 .802-.604 1.23-1.764 1.23zm0 3.762h1.898c1.184 0 1.81-.48 1.81-1.377 0-.885-.65-1.348-1.886-1.348H6.375z'/%3e%3cpath d='M4.002 0a4 4 0 0 0-4 4v8a4 4 0 0 0 4 4h8a4 4 0 0 0 4-4V4a4 4 0 0 0-4-4zm1.06 12V3.545h3.399c1.587 0 2.543.809 2.543 2.11 0 .884-.65 1.675-1.483 1.816v.1c1.143.117 1.904.931 1.904 2.033 0 1.488-1.084 2.396-2.888 2.396z'/%3e%3c/svg%3e",
+    },
+    tailwind: {
+        label: "Tailwind",
+        description: "Tailwind 4 utilities, in gray with an indigo accent and dark: variants. Tailwind has to scan the skin for its classes, and platypicker.css goes in its components layer so that the utilities win over Platypicker's layout.",
+        // Built from the skin by npm run build:tailwind (see tailwind.input.css).
+        stylesheets: ["./tailwind.css"],
+        stylesheetName: "app.css",
+        platypickerLayer: "components",
+        installCss: [
+            `@import "tailwindcss";`,
+            `@import "platypicker/src/platypicker.css" layer(components);`,
+            `@source "../node_modules/platypicker/src/skins/tailwind.js";`,
+        ].join("\n"),
+        module: "../src/skins/tailwind.js",
+        importPath: "platypicker/src/skins/tailwind.js",
+        setTheme: (root, dark) => root.classList.toggle("dark", dark),
+        rootCss: "font-family: var(--font-sans); color: var(--color-gray-900); &.dark { color: var(--color-white); }",
+        // Tailwind's logo mark, in its sky blue.
+        icon: "data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2338bdf8'%3e%3cpath d='M12 4.8c-3.2 0-5.2 1.6-6 4.8 1.2-1.6 2.6-2.2 4.2-1.8.913.228 1.565.89 2.288 1.624C13.666 10.618 15.027 12 18 12c3.2 0 5.2-1.6 6-4.8-1.2 1.6-2.6 2.2-4.2 1.8-.913-.228-1.565-.89-2.288-1.624C16.337 6.182 14.976 4.8 12 4.8zM6 12c-3.2 0-5.2 1.6-6 4.8 1.2-1.6 2.6-2.2 4.2-1.8.913.228 1.565.89 2.288 1.624 1.177 1.194 2.538 2.576 5.512 2.576 3.2 0 5.2-1.6 6-4.8-1.2 1.6-2.6 2.2-4.2 1.8-.913-.228-1.565-.89-2.288-1.624C10.337 13.382 8.976 12 6 12z'/%3e%3c/svg%3e",
     },
 };
