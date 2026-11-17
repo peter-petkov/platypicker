@@ -170,7 +170,7 @@ The default colors switch between light and dark with the page's `color-scheme`,
 :root[data-theme="dark"] { color-scheme: dark; }  /* or follow your own switch */
 ```
 
-The look stays out of the way of your own CSS. Its rules have the specificity of a single class, and the select's own look has none, so a class you give the `<select>` (say, your framework's form field class) wins over it. If your page uses cascade layers, import the stylesheet into one:
+The look stays out of the way of your own CSS. Its colors, borders and spacing have the specificity of a single class, and the select's own look has none, so a class you give the `<select>` (say, your framework's form field class) wins over it. The rules that lay the parts out are one notch higher, so that a class can't break them. To restyle a picker entirely with a framework's classes, use a [skin](#skins). If your page uses cascade layers, import the stylesheet into one:
 
 ```css
 @import url("platypicker.css") layer(components);
@@ -204,16 +204,33 @@ The same object is `PlatyPicker.classes`, which is enough for pickers you create
 
 ## Skins
 
-A skin fits Platypicker into a CSS framework. Import it before `platypicker`, since it fills the class plugs that the pickers read when they are created:
+A skin fits Platypicker into a CSS framework by dressing it in the framework's own classes, so the pickers look like the rest of its forms. Import it before `platypicker`, since it fills the class plugs that the pickers read when they are created:
 
 ```js
 import "platypicker/src/skins/bootstrap.js";
 import "platypicker";
 ```
 
-There's no extra stylesheet to link: the skin adds its few rules itself. Imported after `platypicker`, it warns in the console.
+There's no extra stylesheet to link: the skin adds its few rules itself. Imported after `platypicker`, it warns in the console. The [docs page](https://peter-petkov.github.io/platypicker/) can show all its examples in each skin.
 
-**Bootstrap** (5.3 or later) gives the `<select>` Bootstrap's `form-select` class, so it looks like the page's other selects, and sizes (`form-select-sm`, `form-select-lg`) and validation classes (`is-invalid`, `was-validated`) work as usual. The popover and the badges take their colors, radius and shadow from Bootstrap's variables (`--bs-body-bg`, `--bs-link-color`, `--bs-border-color` and so on), so they follow your theme, custom colors and `data-bs-theme="dark"`, on the whole page or part of it. Your own `--platypicker-*` variables still win over the skin.
+Platypicker's look has two halves. **Layout**, how the parts sit (the row with its subtext and check mark, the sticky search bar, the badges in one line), stays. **Paint**, the colors, borders, spacing and type, steps aside for a skinned picker, which has the `pp-skin` class, and leaves it to the framework's classes, whichever stylesheet loads first. The skin adds rules of its own only for what the framework has no class for, and your `--platypicker-*` variables still apply to those.
+
+**Bootstrap** (5.3 or later):
+
+| Part                     | Classes                                                                  |
+|--------------------------|--------------------------------------------------------------------------|
+| select                   | `form-select`                                                            |
+| popover                  | `dropdown-menu`                                                          |
+| search box               | `form-control form-control-sm`                                           |
+| All / None               | `btn btn-link btn-sm`                                                    |
+| rows, group labels, `<hr>` | `dropdown-item`, `dropdown-header`, `dropdown-divider`                     |
+| subtext                  | `small text-body-secondary`                                              |
+| badges                   | `badge` in the subtle secondary colors, with a `btn-close`                 |
+| skeleton rows            | `placeholder-glow` and `placeholder`                                       |
+
+So the select's sizes (`form-select-sm`, `form-select-lg`) and validation classes (`is-invalid`, `was-validated`) work as on any select, and everything follows your Bootstrap theme and `data-bs-theme="dark"`. The check mark takes Bootstrap's link color, and search matches its `<mark>` colors.
+
+To make a skin of your own, fill the plugs with your framework's classes, include `pp-skin` in the `host` plug, and import it before `platypicker`. `src/skins/bootstrap.js` is a short example.
 
 ## JavaScript API
 
