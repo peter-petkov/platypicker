@@ -231,7 +231,7 @@ function setupBenchmark() {
         const select = picker.querySelector("select");
         const popover = picker.querySelector(".dropdown-menu");
         const search = picker.querySelector("input[name=platypicker-search]");
-        const times = { open: [], search: [], pick: [] };
+        const times = { open: [], search: [], pick: [], selectAll: [], selectNone: [] };
         let domItems = 0;
 
         const measure = async (key, action) => {
@@ -256,6 +256,12 @@ function setupBenchmark() {
             if (popover.matches(":popover-open")) select.click();
             setSearch("");
             await nextPaint();
+
+            if (multiple) {
+                const [selectAll, selectNone] = popover.querySelectorAll(".input-group button");
+                await measure("selectAll", () => selectAll.click());
+                await measure("selectNone", () => selectNone.click());
+            }
         }
 
         document.getElementById("benchmark-results").insertAdjacentHTML("afterbegin", `
@@ -267,6 +273,8 @@ function setupBenchmark() {
                 <td>${formatMs(median(times.open))}</td>
                 <td>${formatMs(median(times.search))}</td>
                 <td>${formatMs(median(times.pick))}</td>
+                <td>${multiple ? formatMs(median(times.selectAll)) : "-"}</td>
+                <td>${multiple ? formatMs(median(times.selectNone)) : "-"}</td>
                 <td>${domItems.toLocaleString()}</td>
             </tr>`);
 
