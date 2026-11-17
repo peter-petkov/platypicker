@@ -6,20 +6,22 @@ import ListView from "./list-view.js";
 import OptionSource from "./option-source.js";
 import TagsView from "./tags-view.js";
 
-// While the popover is open, changes to the options are applied once they pause for RECONCILE_DELAY milliseconds,
-// and at least every RECONCILE_MAX_WAIT milliseconds while they keep coming.
-const RECONCILE_DELAY = 50;
-const RECONCILE_MAX_WAIT = 250;
-
-// Select all and select none show a spinner when they change at least this many options. Changing that many can
-// freeze the page for a moment, since the browser does the work in one go.
-const BUSY_THRESHOLD = 1000;
-
-/** Resolves once the browser has painted the next frame. */
-const afterPaint = () => new Promise(resolve => requestAnimationFrame(() => setTimeout(resolve)));
-
 export default class PlatyPicker extends HTMLElement {
     static #registry = new WeakMap(); // <select> -> PlatyPicker instance
+
+    // While the popover is open, changes to the options are applied once they pause for #reconcileDelay
+    // milliseconds, and at least every #reconcileMaxWait milliseconds while they keep coming.
+    static #reconcileDelay = 50;
+    static #reconcileMaxWait = 250;
+
+    // Select all and select none show a spinner when they change at least this many options. Changing that many can
+    // freeze the page for a moment, since the browser does the work in one go.
+    static #busyThreshold = 1000;
+
+    /** Resolves once the browser has painted the next frame. */
+    static #afterPaint() {
+        return new Promise(resolve => requestAnimationFrame(() => setTimeout(resolve)));
+    }
 
     static get maxHighlights() {
         return Highlighter.maxHighlights;
@@ -114,7 +116,10 @@ export default class PlatyPicker extends HTMLElement {
                 selectAll: () => this.#selectAll(),
                 selectNone: () => this.#selectNone(),
                 close: () => this.#close(),
-                loadMore: search => this.dispatchEvent(new CustomEvent("loadmore", { bubbles: true, detail: { search } })),
+                loadMore: search => this.dispatchEvent(new CustomEvent("loadmore", {
+                    bubbles: true,
+                    detail: { search }
+                })),
             },
         });
 
@@ -330,7 +335,7 @@ export default class PlatyPicker extends HTMLElement {
      * removed in the meantime, in which case nothing was changed.
      */
     async #runBulk(action, count, change) {
-        if (count < BUSY_THRESHOLD) {
+        if (count < PlatyPicker.#busyThreshold) {
             change();
             return true;
         }
@@ -339,7 +344,7 @@ export default class PlatyPicker extends HTMLElement {
         view.setBusy(action, true);
 
         try {
-            await afterPaint();
+            await PlatyPicker.#afterPaint();
             if (this.#view !== view) return false;
 
             change();
@@ -423,7 +428,7 @@ export default class PlatyPicker extends HTMLElement {
 
     /**
      * Called for every change to the options. While the popover is closed nothing is done until it opens. While it
-     * is open, a burst of changes is applied once it pauses, and at least every RECONCILE_MAX_WAIT milliseconds.
+     * is open, a burst of changes is applied once it pauses, and at least every #reconcileMaxWait milliseconds.
      */
     #optionsChanged() {
         this.#stale = true;
@@ -435,7 +440,7 @@ export default class PlatyPicker extends HTMLElement {
 
         clearTimeout(this.#reconcileTimer);
         this.#reconcileTimer = setTimeout(() => this.#catchUp(),
-            Math.max(0, Math.min(RECONCILE_DELAY, this.#staleSince + RECONCILE_MAX_WAIT - now)));
+            Math.max(0, Math.min(PlatyPicker.#reconcileDelay, this.#staleSince + PlatyPicker.#reconcileMaxWait - now)));
     }
 
     /**
@@ -446,7 +451,7 @@ export default class PlatyPicker extends HTMLElement {
         if (!this.#tags) return;
 
         clearTimeout(this.#tagsTimer);
-        this.#tagsTimer = setTimeout(() => this.#tags?.refresh(), RECONCILE_DELAY);
+        this.#tagsTimer = setTimeout(() => this.#tags?.refresh(), PlatyPicker.#reconcileDelay);
     }
 
     /** Applies pending changes to the options, if there are any. */
