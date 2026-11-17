@@ -34,6 +34,7 @@ export default class ListView {
     #search;
     #selectAllButton;
     #selectNoneButton;
+    #busy = false;                      // Whether select all or select none is running.
     #list;
 
     #config = {};
@@ -108,10 +109,11 @@ export default class ListView {
         }, { signal });
         form.append(this.#search);
 
-        this.#selectAllButton = this.#buildActionButton(() => this.#actions.selectAll());
+        // Clicks are ignored while either action is running, so a long one can't be started twice.
+        this.#selectAllButton = this.#buildActionButton(() => this.#busy || this.#actions.selectAll());
         form.append(this.#selectAllButton);
 
-        this.#selectNoneButton = this.#buildActionButton(() => this.#actions.selectNone());
+        this.#selectNoneButton = this.#buildActionButton(() => this.#busy || this.#actions.selectNone());
         form.append(this.#selectNoneButton);
 
         this.#popover.append(this.#list);
@@ -171,6 +173,18 @@ export default class ListView {
         this.#selectNoneButton.classList.toggle("d-none", !controls || this.#source.required);
 
         this.#styleBar();
+    }
+
+    /**
+     * Shows a spinner in place of the label of the select all ("selectAll") or select none ("selectNone") button,
+     * and ignores clicks on both while it is shown. The button stays enabled, so it keeps focus.
+     */
+    setBusy(action, busy) {
+        const button = action === "selectAll" ? this.#selectAllButton : this.#selectNoneButton;
+
+        this.#busy = busy;
+        if (busy) button.setAttribute("aria-busy", "true");
+        else button.removeAttribute("aria-busy");
     }
 
     /**

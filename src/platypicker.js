@@ -9,6 +9,12 @@ import OptionSource from "./option-source.js";
 const RECONCILE_DELAY = 50;
 const RECONCILE_MAX_WAIT = 250;
 
+// Select all and select none show a spinner when they change at least this many options. Changing that many can
+// freeze the page for a moment, since the browser does the work in one go.
+const BUSY_THRESHOLD = 1000;
+
+/** Resolves once the browser has painted the next frame. */
+const afterPaint = () => new Promise(resolve => requestAnimationFrame(() => setTimeout(resolve)));
 
 export default class PlatyPicker extends HTMLElement {
     static #registry = new WeakMap(); // <select> -> PlatyPicker instance
@@ -248,16 +254,42 @@ export default class PlatyPicker extends HTMLElement {
         this.#select.dispatchEvent(new Event("change", { bubbles: true }));
     }
 
-    #selectAll() {
+    async #selectAll() {
         this.#catchUp(); // A change to the options may still be waiting, and select all must see it.
 
-        this.#source.select(this.#source.entries.filter(entry => this.#view.isSelectable(entry)));
-        this.#select.dispatchEvent(new Event("change", { bubbles: true }));
+        const entries = this.#source.entries.filter(entry => this.#view.isSelectable(entry));
+        if (await this.#runBulk("selectAll", entries.length, () => this.#source.select(entries)))
+            this.#select.dispatchEvent(new Event("change", { bubbles: true }));
     }
 
-    #selectNone() {
-        this.#source.clear();
-        this.#select.dispatchEvent(new Event("change", { bubbles: true }));
+    async #selectNone() {
+        if (await this.#runBulk("selectNone", this.#select.selectedOptions.length, () => this.#source.clear()))
+            this.#select.dispatchEvent(new Event("change", { bubbles: true }));
+    }
+
+    /**
+     * Runs a change to many options. A large one freezes the page while the browser makes it, so the button first
+     * shows a spinner, and the change is only made once that has been painted. Returns false when the picker was
+     * removed in the meantime, in which case nothing was changed.
+     */
+    async #runBulk(action, count, change) {
+        if (count < BUSY_THRESHOLD) {
+            change();
+            return true;
+        }
+
+        const view = this.#view;
+        view.setBusy(action, true);
+
+        try {
+            await afterPaint();
+            if (this.#view !== view) return false;
+
+            change();
+            return true;
+        } finally {
+            view.setBusy(action, false);
+        }
     }
 
     #close() {

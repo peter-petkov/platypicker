@@ -98,6 +98,37 @@
                     border-left-width: 0;
                 }
 
+                /* While a long select all or select none runs, its button shows Bootstrap's spinner in place of its
+                   label and keeps its width. The spinner turns with a transform, which browsers can keep animating
+                   while the page is busy. */
+                > button[aria-busy="true"] {
+                    --bs-btn-hover-bg: var(--bs-btn-bg);
+                    --bs-btn-hover-border-color: var(--bs-btn-border-color);
+                    --bs-btn-active-bg: var(--bs-btn-bg);
+                    --bs-btn-active-border-color: var(--bs-btn-border-color);
+                    position: relative;
+                    color: transparent;
+                    transition: none; /* The label must be gone before the page freezes, not fading out during it. */
+                    cursor: progress;
+
+                    &::after {
+                        content: "";
+                        position: absolute;
+                        inset: 0;
+                        width: 1rem;
+                        height: 1rem;
+                        margin: auto;
+                        border: .2em solid var(--bs-btn-color);
+                        border-right-color: transparent;
+                        border-radius: 50%;
+                        animation: spinner-border .75s linear infinite;
+
+                        @media (prefers-reduced-motion: reduce) {
+                            animation-duration: 1.5s;
+                        }
+                    }
+                }
+
                 /* Without the search box the buttons share the bar. */
                 > input.d-none ~ button {
                     flex-grow: 1;
