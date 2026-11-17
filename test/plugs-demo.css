@@ -12,7 +12,6 @@
 .pill-item-selected {
     background: light-dark(#fde7ef, #43202d);
     color: light-dark(#a3164a, #ff9cbf);
-    font-weight: 600;
 }
 
 .pill-tag {

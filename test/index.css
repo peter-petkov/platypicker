@@ -193,7 +193,6 @@ code, pre {
         &[aria-current] {
             background: var(--page-accent-soft);
             color: var(--page-accent);
-            font-weight: 500;
         }
     }
 }
