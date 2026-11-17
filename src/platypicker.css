@@ -75,9 +75,11 @@
 
             /* Keeps one line of height when nothing is selected, whatever the select's padding. Not
                :not(:has(option:checked)): Firefox re-checks that for every option whose selection changes, so
-               selecting all of a long list took seconds. */
+               selecting all of a long list took seconds. Floated, so that a select made display: block (as by
+               Bootstrap's form-select) doesn't put it on a line of its own above the selected option. */
             &:not([multiple])::before {
                 content: "\200b";
+                float: inline-start;
             }
 
             &::picker(select) {
