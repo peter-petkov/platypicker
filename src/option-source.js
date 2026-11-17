@@ -271,14 +271,49 @@ export default class OptionSource {
         entry.option.selected = selected;
     }
 
+    /** Selects all of the entries, keeping what is selected already. Fast even for a very long list. */
+    select(entries) {
+        this.#changeInBulk(() => {
+            for (const entry of entries) entry.option.selected = true;
+        });
+    }
+
     /** Makes the entry the only selected one. */
     selectOnly(entry) {
         this.#select.selectedIndex = -1;
         entry.option.selected = true;
     }
 
+    /**
+     * Deselects everything. A multiple select is cleared with selectedIndex = -1, which needs no value comparisons:
+     * assigning value = "" compares every option's value, which made select none on a long list slow in Firefox,
+     * and it would select an option whose value happens to be empty. A single select keeps value = "", so an option
+     * with an empty value still works as its placeholder.
+     */
     clear() {
-        this.#select.value = "";
+        this.#changeInBulk(() => {
+            if (this.#select.multiple) this.#select.selectedIndex = -1;
+            else this.#select.value = "";
+        });
+    }
+
+    /**
+     * A multiple select with size="1" is very slow at being changed option by option: Chrome needs about 14 seconds to
+     * select 25,000 of them, and about 15 milliseconds when the size is 2 or more. So the size is raised while the
+     * change is made and put back right after, before anything is drawn.
+     */
+    #changeInBulk(change) {
+        const select = this.#select;
+        const size = select.getAttribute("size");
+        const raise = select.multiple && select.size === 1;
+
+        if (raise) select.setAttribute("size", "2");
+
+        try {
+            change();
+        } finally {
+            if (raise) select.setAttribute("size", size);
+        }
     }
 
     setValue(value) {

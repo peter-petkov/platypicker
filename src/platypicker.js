@@ -239,8 +239,7 @@ export default class PlatyPicker extends HTMLElement {
     }
 
     #selectAll() {
-        for (const entry of this.#source.entries.filter(entry => this.#view.isSelectable(entry)))
-            this.#source.setSelected(entry, true);
+        this.#source.select(this.#source.entries.filter(entry => this.#view.isSelectable(entry)));
 
         this.#select.dispatchEvent(new Event("change", { bubbles: true }));
     }
