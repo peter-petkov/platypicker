@@ -103,7 +103,6 @@ export default class ListView {
         this.#search = document.createElement("input");
         this.#search.type = "search";
         this.#search.name = "platypicker-search";
-        this.#search.autofocus = true;
         addClasses(this.#search, "search");
         this.#search.addEventListener("input", () => this.filter(this.#search.value), { signal });
         this.#search.addEventListener("keydown", e => {
@@ -602,7 +601,7 @@ export default class ListView {
     focusInitial() {
         const selected = this.#source.firstSelected;
         const selectedButton = selected && this.ensureRendered(selected) ? this.#recordsByEntry.get(selected).button : null;
-        selectedButton?.scrollIntoView({ block: "center" });
+        if (selectedButton) this.#reveal(selectedButton, true);
 
         if (!this.#search.hidden) {
             this.#search.focus({ preventScroll: true });
@@ -620,7 +619,27 @@ export default class ListView {
     }
 
     scrollIntoView(entry) {
-        this.#recordsByEntry.get(entry)?.button.scrollIntoView({ block: "nearest" });
+        const button = this.#recordsByEntry.get(entry)?.button;
+        if (button) this.#reveal(button, false);
+    }
+
+    /**
+     * Scrolls the popover so that a row is in view, centred or by the least amount. Element.scrollIntoView() would
+     * also scroll the page to bring the row to the middle of the window, which makes the page jump on open.
+     * The sticky bar covers the top of the popover, so the part under it doesn't count as in view.
+     */
+    #reveal(button, center) {
+        const popover = this.#popover;
+        if (!popover.matches(":popover-open")) return;
+
+        const bar = this.#form.hidden ? 0 : this.#form.offsetHeight;
+        const top = button.getBoundingClientRect().top - popover.getBoundingClientRect().top - popover.clientTop - bar;
+        const height = button.offsetHeight;
+        const room = popover.clientHeight - bar;
+
+        if (center) popover.scrollTop += top - (room - height) / 2;
+        else if (top < 0) popover.scrollTop += top;
+        else if (top + height > room) popover.scrollTop += top + height - room;
     }
 
     // -----------------------------------------------------------------
