@@ -45,6 +45,7 @@
             <a href="#class-plugs">Class plugs</a>
             <p>More</p>
             <a href="#benchmark">Benchmark</a>
+            <a href="#playground">Playground</a>
         </nav>
     </aside>
 
@@ -345,6 +346,46 @@
                     </thead>
                     <tbody id="benchmark-results"></tbody>
                 </table>
+            </div>
+        </section>
+        <section id="playground">
+            <h2>Playground</h2>
+            <p>Put a picker together. Every change rebuilds it from the markup below, keeping what you had selected where it can.</p>
+            <div class="playground" data-playground>
+                <form class="playground-controls">
+                    <fieldset>
+                        <legend>Options</legend>
+                        <platy-picker>
+                            <select name="list" aria-label="Option list">
+                                <option value="foods">Food</option>
+                                <option value="cities">Cities, with subtext</option>
+                                <option value="groups">Technology, with groups</option>
+                                <option value="cars">Cars (2,000)</option>
+                            </select>
+                        </platy-picker>
+                        <label class="check"><input type="checkbox" name="multiple" checked>multiple</label>
+                        <label class="check"><input type="checkbox" name="required">required</label>
+                        <label class="check"><input type="checkbox" name="disabled">disabled</label>
+                    </fieldset>
+                    <fieldset>
+                        <legend>Picker</legend>
+                        <label class="check"><input type="checkbox" name="search" checked>search</label>
+                        <label class="check"><input type="checkbox" name="controls" checked>controls</label>
+                        <label class="field-row">batch-size <input class="field" type="number" name="batch-size" min="0" placeholder="50"></label>
+                        <label class="field-row">placeholders <input class="field" type="number" name="placeholders" min="0" placeholder="off"></label>
+                    </fieldset>
+                    <fieldset>
+                        <legend>Text</legend>
+                        <label class="field-row">placeholder <input class="field" name="placeholder" value="Pick a few"></label>
+                        <label class="field-row">search-placeholder <input class="field" name="search-placeholder" placeholder="Type to filter..."></label>
+                        <label class="field-row">select-all-label <input class="field" name="select-all-label" placeholder="Select all"></label>
+                        <label class="field-row">select-none-label <input class="field" name="select-none-label" placeholder="Select none"></label>
+                    </fieldset>
+                </form>
+                <div class="stage stage-column" data-playground-stage>
+                    <div data-playground-host></div>
+                    <ol class="log" aria-label="Events" aria-live="polite"></ol>
+                </div>
             </div>
         </section>
     </main>

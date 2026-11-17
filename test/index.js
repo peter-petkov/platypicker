@@ -38,6 +38,7 @@ function init() {
     setupSupportNotice();
     setupLiveDemo();
     setupTheming();
+    setupPlayground();
     setupBatchCount();
     setupBenchmark();
 }
@@ -468,6 +469,121 @@ function setupBatchCount() {
         new MutationObserver(update).observe(list, { childList: true });
         update();
     });
+}
+
+// ---------------------------------------------------------------------------
+// Playground. Every change builds a new picker from the form, prints it, and swaps it in.
+// ---------------------------------------------------------------------------
+
+const PLAYGROUND_GROUPS = `
+    <option>💻 Laptop</option>
+    <option>📱 Phone</option>
+    <hr>
+    <option disabled data-subtext="discontinued">📠 Fax machine</option>
+    <option title="Mechanical or membrane">⌨️ Keyboard</option>
+    <optgroup label="Audio">
+        <option>🎧 Headphones</option>
+        <option>🔊 Speaker</option>
+        <option>🎙️ Microphone</option>
+    </optgroup>
+    <optgroup label="Cameras">
+        <option>📷 Camera</option>
+        <option>📹 Camcorder</option>
+    </optgroup>
+    <option>🔌 Charger</option>`;
+
+// The form fields that become attributes of the same name. Checkboxes are boolean attributes, the rest are left off
+// while empty.
+const PICKER_ATTRIBUTES = ["search", "controls", "batch-size", "placeholders", "placeholder", "search-placeholder", "select-all-label", "select-none-label"];
+const SELECT_ATTRIBUTES = ["multiple", "required", "disabled"];
+
+// Text fields that only matter with some of the switches. The others are disabled and left out of the markup.
+const PLAYGROUND_RELEVANT = {
+    "placeholder": form => form.elements.multiple.checked,
+    "search-placeholder": form => form.elements.search.checked,
+    "select-all-label": form => form.elements.controls.checked && form.elements.multiple.checked,
+    "select-none-label": form => form.elements.controls.checked && !form.elements.required.checked,
+};
+
+function setupPlayground() {
+    const root = document.querySelector("[data-playground]");
+    const form = root.querySelector("form");
+    const host = root.querySelector("[data-playground-host]");
+    const log = root.querySelector(".log");
+    const panel = codePanel([{ label: "HTML", text: "", html: true }]);
+    let timer;
+
+    root.append(panel);
+
+    const write = text => {
+        log.insertAdjacentHTML("afterbegin", "<li></li>");
+        log.firstElementChild.textContent = text;
+        log.children[5]?.remove();
+    };
+
+    const setAttributes = (element, names) => {
+        for (const name of names) {
+            const field = form.elements[name];
+            if (field.disabled) continue;
+            if (field.type === "checkbox") element.toggleAttribute(name, field.checked);
+            else if (field.value.trim()) element.setAttribute(name, field.value.trim());
+        }
+    };
+
+    const build = () => {
+        const previous = host.querySelector("select");
+        const kept = new Set(previous ? [...previous.selectedOptions].map(option => option.value) : []);
+        const picker = document.createElement("platy-picker");
+        const select = document.createElement("select");
+        const list = form.elements.list.value;
+
+        for (const [name, relevant] of Object.entries(PLAYGROUND_RELEVANT)) form.elements[name].disabled = !relevant(form);
+        setAttributes(picker, PICKER_ATTRIBUTES);
+        select.name = list;
+        select.setAttribute("aria-label", "Playground");
+        setAttributes(select, SELECT_ATTRIBUTES);
+        if (select.multiple) select.size = 1;
+
+        if (list === "groups") select.innerHTML = PLAYGROUND_GROUPS;
+        else if (list === "cars") select.innerHTML = carOptions(2000, false);
+        else select.innerHTML = DATA[list].map(item => {
+            const [label, subtext] = Array.isArray(item) ? item : [item];
+            const option = new Option(label);
+            if (subtext) option.dataset.subtext = subtext;
+            return option.outerHTML;
+        }).join("");
+
+        // Keep the selection where the same values are still there. A single select keeps the first of them only.
+        for (const option of select.options) {
+            if (kept.has(option.value) && !option.disabled && (select.multiple || !select.querySelector("[selected]"))) {
+                option.defaultSelected = true;
+            }
+        }
+
+        picker.append(select);
+        panel.setCode("HTML", printHTML([picker]));
+
+        select.addEventListener("change", () => {
+            const chosen = [...select.selectedOptions].map(option => option.value).join(", ");
+            write(`change: ${chosen || "nothing selected"}`);
+        });
+
+        host.replaceChildren(picker);
+    };
+
+    form.addEventListener("input", event => {
+        if (event.target.name === "list") return;
+        clearTimeout(timer);
+        // Text fields wait for a pause in typing, the rest rebuild at once.
+        if (event.target.type === "text" || event.target.type === "number") timer = setTimeout(build, 250);
+        else build();
+    });
+    form.addEventListener("change", event => {
+        if (event.target.name === "list") build();
+    });
+    form.addEventListener("submit", event => event.preventDefault());
+
+    build();
 }
 
 // ---------------------------------------------------------------------------
