@@ -443,7 +443,13 @@ export default class ListView {
 
         const small = document.createElement("small");
         addClasses(small, "subtext");
-        button.append(label, small);
+
+        // Present on every row, selected or not, so the subtexts line up.
+        const check = document.createElement("span");
+        check.setAttribute("aria-hidden", "true");
+        addClasses(check, "check");
+
+        button.append(label, small, check);
 
         const record = { entry, button, text, small, active: undefined };
         this.#recordsByButton.set(button, record);

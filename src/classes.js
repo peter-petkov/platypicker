@@ -9,22 +9,23 @@
  * (itemSelected, itemDisabled) whenever their state changes.
  */
 export const classes = {
-    host: "dropdown",                                                   // <platy-picker>
-    select: "",                                                         // the <select> it wraps
-    menu: "dropdown-menu rounded-3 shadow p-0",                         // the popover
-    bar: "input-group p-2 bg-body-tertiary border-bottom sticky-top",   // the search box and buttons above the list
-    search: "form-control form-control-sm",                             // the search box
-    button: "btn btn-outline-secondary btn-sm",                         // select all and select none
-    list: "list-unstyled d-grid gap-1 p-2 mb-0",                        // the <ul> of options
-    item: "dropdown-item rounded-2",                                    // an option's row
-    itemSelected: "active",                                             // a row whose option is selected
-    itemDisabled: "disabled",                                           // a row whose option is disabled
-    label: "",                                                          // a row's label
-    subtext: "text-body-tertiary",                                      // a row's subtext (data-subtext)
-    header: "dropdown-header",                                          // an option group's label
-    divider: "dropdown-divider",                                        // an <hr> between options
-    placeholder: "placeholder-wave w-100",                              // a skeleton row's content
-    placeholderBar: "placeholder col-12 rounded-pill",                  // the bar inside it
+    host: "",           // <platy-picker>
+    select: "",         // the <select> it wraps
+    menu: "",           // the popover
+    bar: "",            // the search box and buttons above the list
+    search: "",         // the search box
+    button: "",         // select all and select none
+    list: "",           // the <ul> of options
+    item: "",           // an option's row
+    itemSelected: "",   // a row whose option is selected
+    itemDisabled: "",   // a row whose option is disabled
+    label: "",          // a row's label
+    subtext: "",        // a row's subtext (data-subtext)
+    check: "",          // a row's check mark, shown while its option is selected
+    header: "",         // an option group's label
+    divider: "",        // an <hr> between options
+    placeholder: "",    // a skeleton row's content
+    placeholderBar: "", // the bar inside it
 };
 
 const fixed = {
@@ -37,6 +38,7 @@ const fixed = {
     item: "pp-item",
     label: "pp-item-label",
     subtext: "pp-item-subtext",
+    check: "pp-item-check",
     header: "pp-header",
     divider: "pp-divider",
     placeholder: "pp-placeholder",

@@ -1,47 +1,81 @@
 /*
  * Platypicker
  *
- * Wraps a native <select> in a searchable Bootstrap popover. Needs Bootstrap 5.3 and a browser with
- * `appearance: base-select`, anchor positioning and CSS nesting. Without base-select support everything below is
- * skipped and the plain select remains.
+ * Wraps a native <select> in a searchable popover. Needs a browser with `appearance: base-select`, anchor
+ * positioning and CSS nesting. Without base-select support everything below is skipped and the plain select remains.
  *
- * Variables you can set on platy-picker or any ancestor:
- *   --platypicker-highlight-bg, --platypicker-highlight-color   search match highlight
+ * The file has two parts:
+ *   - Structure: what makes the picker work (positioning, the hidden native picker). Don't override it.
+ *   - Look: a neutral style meant to sit well in most pages. Its selectors mostly have the specificity of a single
+ *     class, so a framework class added through PlatyPicker.classes and loaded later wins. The select's own look
+ *     has no specificity, apart from its states, so the page's classes on the select win. Pages that use cascade
+ *     layers can import this file into one:
+ *     @import url("platypicker.css") layer(components);
+ *
+ * Variables you can set on platy-picker or any ancestor (colors follow the page's color-scheme):
+ *   --platypicker-bg                    popover and field background
+ *   --platypicker-color                 text
+ *   --platypicker-muted-color           subtexts and the search placeholder
+ *   --platypicker-header-color          option group labels
+ *   --platypicker-border-color          lines inside the popover
+ *   --platypicker-field-border-color    the select, the popover and the search box
+ *   --platypicker-hover-bg              a row under the pointer or with keyboard focus
+ *   --platypicker-accent-color          check marks, select all / none, focus rings
+ *   --platypicker-disabled-color        disabled rows
+ *   --platypicker-danger-color          an invalid select's border
+ *   --platypicker-highlight-bg          search match background
+ *   --platypicker-highlight-color       search match text
+ *   --platypicker-radius                the select, rows and the search box
+ *   --platypicker-menu-radius           the popover
+ *   --platypicker-shadow                the popover's shadow
+ *   --platypicker-max-height            the popover's height limit
  */
 @supports (appearance: base-select) and selector(::picker(select)) {
     /* Must live at the top level, not nested inside platy-picker. */
     @position-try --platypicker-above {
         top: auto;
-        bottom: calc(anchor(top) + .125rem);
+        bottom: calc(anchor(top) + .25rem);
     }
 
+    @keyframes platypicker-spin {
+        to {
+            transform: rotate(1turn);
+        }
+    }
+
+    @keyframes platypicker-pulse {
+        50% {
+            opacity: .4;
+        }
+    }
+
+    /* ==========================================================================================================
+       Structure
+       ========================================================================================================== */
     platy-picker {
         display: contents;
         anchor-scope: --platypicker;
 
-        /* ------------------------------------------------------------------------------------------------------
-           The select. It is styled with base-select, but its native picker stays hidden: the popover replaces it.
-           ------------------------------------------------------------------------------------------------------ */
+        [hidden] {
+            display: none !important;
+        }
+
+        /* The select. It is styled with base-select, but its native picker stays hidden: the popover replaces it. */
         > select.pp-select {
             anchor-name: --platypicker;
             white-space: nowrap;
             min-width: max-content;
 
-            /* Keeps the select's height when nothing is selected, using the min-heights Bootstrap gives .form-control.
-               Not :not(:has(option:checked)): Firefox re-checks that for every option whose selection changes, so
-               selecting all of a long list took seconds. */
-            min-height: calc(1.5em + .75rem + calc(var(--bs-border-width) * 2));
-
-            &.form-select-sm {
-                min-height: calc(1.5em + .5rem + calc(var(--bs-border-width) * 2));
-            }
-
-            &.form-select-lg {
-                min-height: calc(1.5em + 1rem + calc(var(--bs-border-width) * 2));
-            }
-
             &:not([multiple]) {
                 appearance: base-select !important;
+                column-gap: 0; /* base-select's gap is for the picker icon, which is hidden below. */
+            }
+
+            /* Keeps one line of height when nothing is selected, whatever the select's padding. Not
+               :not(:has(option:checked)): Firefox re-checks that for every option whose selection changes, so
+               selecting all of a long list took seconds. */
+            &:not([multiple])::before {
+                content: "\200b";
             }
 
             &::picker(select) {
@@ -52,152 +86,316 @@
             &::picker-icon {
                 display: none;
             }
-
-            /* A multiple select has no arrow of its own, so draw Bootstrap's, with room for a validation icon. */
-            &[multiple] {
-                background-image: var(--bs-form-select-bg-img), var(--bs-form-select-bg-icon, none);
-                background-position: right .75rem center, center right 2.25rem;
-                background-size: 16px 12px, calc(.75em + .375rem) calc(.75em + .375rem);
-                padding-right: 4.125rem;
-
-                &.is-valid, .was-validated &:valid {
-                    --bs-form-select-bg-icon: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3e%3cpath fill='%23198754' d='M2.3 6.73.6 4.53c-.4-1.04.46-1.4 1.1-.8l1.1 1.4 3.4-3.8c.6-.63 1.6-.27 1.2.7l-4 4.6c-.43.5-.8.4-1.1.1'/%3e%3c/svg%3e");
-                }
-
-                &.is-invalid, .was-validated &:invalid {
-                    --bs-form-select-bg-icon: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' width='12' height='12' fill='none' stroke='%23dc3545'%3e%3ccircle cx='6' cy='6' r='4.5'/%3e%3cpath stroke-linejoin='round' d='M5.8 3.6h.4L6 6.5z'/%3e%3ccircle cx='6' cy='8.2' r='.6' fill='%23dc3545' stroke='none'/%3e%3c/svg%3e");
-                }
-            }
         }
 
-        /* ------------------------------------------------------------------------------------------------------
-           The popover: a Bootstrap .dropdown-menu anchored below the select, or above it when there's no room.
-           ------------------------------------------------------------------------------------------------------ */
+        /* The popover, anchored below the select, or above it when there's no room. Fixed positioning measures it
+           against the viewport, which the fallback needs to flip it. */
         > .pp-menu[popover] {
-            /* Bootstrap fills the active item; here the selected item is marked by a bar and a check mark instead. */
-            --bs-dropdown-link-active-color: var(--bs-dropdown-link-color);
-            --bs-dropdown-link-active-bg: transparent;
-
-            /* Bootstrap's .dropdown-menu is position: absolute, which overrides the popover's own fixed positioning.
-               Fixed measures the popover against the viewport, so the fallback below can flip it above the select. */
             position: fixed;
-            display: revert; /* Undoes .dropdown-menu's display: none, so [popover] decides when it's shown. */
+            display: revert; /* Undoes display: none from a framework's menu class, so [popover] decides. */
             position-anchor: --platypicker;
             position-try-fallbacks: --platypicker-above;
             inset: auto;
             margin: 0;
-            top: calc(anchor(bottom) + .125rem);
+            top: calc(anchor(bottom) + .25rem);
             left: anchor(left);
-            min-width: anchor-size();
-            max-height: 45vh;
+            min-width: anchor-size(width);
+            max-width: max(anchor-size(width), 20rem);
+            max-height: var(--platypicker-max-height, 45vh);
+            overflow: auto;
+            overscroll-behavior: contain;
+        }
+    }
 
-            /* Controls bar: the search box and the select all / none buttons. Each is shown or hidden with [hidden],
-               and script marks where the shown ones sit with data-position (see ListView), since rules with :has()
-               would make long lists very slow. Bootstrap rounds the first and last child of an input group whether
-               they're shown or not, hence the !important. */
-            .pp-bar {
-                > [data-position] {
-                    border-radius: var(--bs-border-radius-sm) !important;
-                }
+    /* ==========================================================================================================
+       Look
+       ========================================================================================================== */
+    platy-picker {
+        --_pp-bg: var(--platypicker-bg, light-dark(#ffffff, #222225));
+        --_pp-color: var(--platypicker-color, light-dark(#1d1c1a, #ececee));
+        --_pp-muted: var(--platypicker-muted-color, light-dark(#7d7b76, #93939a));
+        --_pp-header: var(--platypicker-header-color, light-dark(#5f5e5a, #b0b0b6));
+        --_pp-border: var(--platypicker-border-color, light-dark(#e3e1dc, #36363b));
+        --_pp-field-border: var(--platypicker-field-border-color, light-dark(#c4c1bb, #48484e));
+        --_pp-hover: var(--platypicker-hover-bg, light-dark(#f0efec, #2d2d31));
+        --_pp-accent: var(--platypicker-accent-color, light-dark(#1f63d6, #7aaefc));
+        --_pp-disabled: var(--platypicker-disabled-color, light-dark(#b4b2ab, #5a5a60));
+        --_pp-danger: var(--platypicker-danger-color, light-dark(#c62828, #f27373));
+        --_pp-highlight-bg: var(--platypicker-highlight-bg, light-dark(#fde58a, #d99a1e));
+        --_pp-highlight-color: var(--platypicker-highlight-color, light-dark(#1d1c1a, #16120a));
+        --_pp-radius: var(--platypicker-radius, 6px);
+        --_pp-menu-radius: var(--platypicker-menu-radius, 8px);
+        --_pp-shadow: var(--platypicker-shadow,
+            0 8px 24px light-dark(rgb(0 0 0 / .12), rgb(0 0 0 / .4)),
+            0 2px 6px light-dark(rgb(0 0 0 / .08), rgb(0 0 0 / .3)));
+    }
 
-                > [data-position="first"] {
-                    border-start-end-radius: 0 !important;
-                    border-end-end-radius: 0 !important;
-                }
+    /* The select: a plain field with a chevron. No specificity at all, so the page's own select styles win. */
+    :where(platy-picker > select.pp-select) {
+        box-sizing: border-box;
+        padding: .375rem 2rem .375rem .625rem;
+        font: inherit;
+        line-height: 1.5;
+        color: var(--_pp-color);
+        background: var(--_pp-bg) no-repeat right .625rem center / .75rem;
+        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23888' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpath d='m3 6 5 5 5-5'/%3e%3c/svg%3e");
+        border: 1px solid var(--_pp-field-border);
+        border-radius: var(--_pp-radius);
+        cursor: pointer;
 
-                > [data-position="middle"] {
-                    border-radius: 0 !important;
-                }
+        &[multiple] {
+            appearance: none;
+        }
 
-                > [data-position="last"] {
-                    border-start-start-radius: 0 !important;
-                    border-end-start-radius: 0 !important;
-                }
+        &:focus-visible {
+            outline: 2px solid var(--_pp-accent);
+            outline-offset: 1px;
+        }
 
-                > button:not([hidden]) + button:not([hidden]) {
-                    border-left-width: 0;
-                }
+        &:user-invalid {
+            border-color: var(--_pp-danger);
+        }
 
-                /* While a long select all or select none runs, its button shows Bootstrap's spinner in place of its
-                   label and keeps its width. The spinner turns with a transform, which browsers can keep animating
-                   while the page is busy. */
-                > button[aria-busy="true"] {
-                    --bs-btn-hover-bg: var(--bs-btn-bg);
-                    --bs-btn-hover-border-color: var(--bs-btn-border-color);
-                    --bs-btn-active-bg: var(--bs-btn-bg);
-                    --bs-btn-active-border-color: var(--bs-btn-border-color);
-                    position: relative;
-                    color: transparent;
-                    transition: none; /* The label must be gone before the page freezes, not fading out during it. */
-                    cursor: progress;
+        &:disabled {
+            opacity: .6;
+            cursor: default;
+        }
+    }
 
-                    &::after {
-                        content: "";
-                        position: absolute;
-                        inset: 0;
-                        width: 1rem;
-                        height: 1rem;
-                        margin: auto;
-                        border: .2em solid var(--bs-btn-color);
-                        border-right-color: transparent;
-                        border-radius: 50%;
-                        animation: spinner-border .75s linear infinite;
+    :where(platy-picker) {
+        .pp-menu {
+            box-sizing: border-box;
+            padding: 0;
+            font: inherit;
+            color: var(--_pp-color);
+            background: var(--_pp-bg);
+            border: 1px solid var(--_pp-field-border);
+            border-radius: var(--_pp-menu-radius);
+            box-shadow: var(--_pp-shadow);
+        }
 
-                        @media (prefers-reduced-motion: reduce) {
-                            animation-duration: 1.5s;
-                        }
-                    }
-                }
+        /* The search box with select all / none as links beside it. Sticky, so it stays while the list scrolls. */
+        .pp-bar {
+            position: sticky;
+            top: 0;
+            z-index: 1;
+            display: flex;
+            align-items: center;
+            gap: .25rem;
+            margin: 0;
+            padding: .5rem;
+            background: var(--_pp-bg);
+            border-bottom: 1px solid var(--_pp-border);
+        }
 
-                /* Without the search box the buttons share the bar. */
-                > input[hidden] ~ button {
-                    flex-grow: 1;
-                    flex-basis: 50%;
-                }
+        .pp-search {
+            flex: 1;
+            min-width: 8rem;
+            box-sizing: border-box;
+            margin: 0 .25rem 0 0;
+            padding: .25rem .5rem;
+            font: inherit;
+            font-size: .875em;
+            line-height: 1.5;
+            color: var(--_pp-color);
+            background: var(--_pp-bg);
+            border: 1px solid var(--_pp-field-border);
+            border-radius: var(--_pp-radius);
+
+            &::placeholder {
+                color: var(--_pp-muted);
             }
 
-            /* Search matches. */
-            :is(.pp-header, .pp-item-label, .pp-item-subtext)::highlight(platypicker-highlight) {
-                background-color: var(--platypicker-highlight-bg, #fee6b1);
-                color: var(--platypicker-highlight-color, #000);
+            &:focus-visible {
+                outline: 2px solid var(--_pp-accent);
+                outline-offset: -1px;
+            }
+        }
+
+        .pp-button {
+            margin: 0;
+            padding: .25rem;
+            font: inherit;
+            font-size: .875em;
+            line-height: 1.5;
+            color: var(--_pp-accent);
+            white-space: nowrap;
+            background: none;
+            border: 0;
+            border-radius: var(--_pp-radius);
+            cursor: pointer;
+
+            &:hover {
+                text-decoration: underline;
             }
 
-            .pp-item {
+            &:focus-visible {
+                outline: 2px solid var(--_pp-accent);
+                outline-offset: -2px;
+            }
+
+            /* While a long select all or select none runs, its button shows a spinner in place of its label and
+               keeps its width. The spinner turns with a transform, which browsers can keep animating while the page
+               is busy. */
+            &[aria-busy="true"] {
                 position: relative;
-                display: flex;
-                align-items: center;
-                gap: .25rem;
-                scroll-margin-block: 4rem; /* Keeps a scrolled-to item clear of the sticky controls bar. */
+                color: transparent;
+                text-decoration: none;
+                transition: none; /* The label must be gone before the page freezes, not fading out during it. */
+                cursor: progress;
 
-                /* Declared after the active rules from Bootstrap, so hovering a selected item still shows feedback. */
-                &:hover, &:focus {
-                    color: var(--bs-dropdown-link-hover-color);
-                    background-color: var(--bs-dropdown-link-hover-bg);
-                }
-
-                /* Selected: a bar on the popover's left edge (the list has .5rem of padding)... */
-                &:is([aria-pressed="true"], :active)::before {
+                &::after {
                     content: "";
                     position: absolute;
-                    top: 50%;
-                    left: -.5rem;
-                    translate: 0 -50%;
-                    width: .25rem;
-                    height: 1.5rem;
-                    border-radius: 50rem;
-                    background: var(--bs-primary);
-                }
+                    inset: 0;
+                    box-sizing: border-box;
+                    width: 1em;
+                    height: 1em;
+                    margin: auto;
+                    border: .15em solid var(--_pp-accent);
+                    border-right-color: transparent;
+                    border-radius: 50%;
+                    animation: platypicker-spin .75s linear infinite;
 
-                /* ...and a check mark, drawn in the text color so it follows the light and dark themes. */
-                &[aria-pressed="true"]::after {
-                    content: "";
-                    height: .75rem;
-                    aspect-ratio: 1;
-                    margin-left: auto;
-                    background-color: currentColor;
-                    mask: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3e%3cpath d='M2.3 6.73.6 4.53c-.4-1.04.46-1.4 1.1-.8l1.1 1.4 3.4-3.8c.6-.63 1.6-.27 1.2.7l-4 4.6c-.43.5-.8.4-1.1.1'/%3e%3c/svg%3e") center / contain no-repeat;
+                    @media (prefers-reduced-motion: reduce) {
+                        animation-duration: 1.5s;
+                    }
                 }
             }
+        }
+
+        .pp-list {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr); /* Long labels are cut short instead of widening the rows. */
+            gap: 1px;
+            margin: 0;
+            padding: .25rem;
+            list-style: none;
+
+            > li {
+                margin: 0;
+                padding: 0;
+            }
+        }
+
+        /* A row: the label, its subtext on the right, then a column for the check mark. */
+        .pp-item {
+            box-sizing: border-box;
+            display: flex;
+            align-items: center;
+            gap: .5rem;
+            width: 100%;
+            margin: 0;
+            padding: .3125rem .5rem .3125rem .625rem;
+            font: inherit;
+            line-height: 1.5;
+            color: inherit;
+            text-align: start;
+            background: none;
+            border: 0;
+            border-radius: var(--_pp-radius);
+            cursor: pointer;
+            scroll-margin-block: 3.5rem; /* Keeps a scrolled-to row clear of the sticky bar. */
+
+            &:hover, &:focus-visible {
+                background: var(--_pp-hover);
+            }
+
+            &:focus-visible {
+                outline: 2px solid var(--_pp-accent);
+                outline-offset: -2px;
+            }
+
+            &[aria-pressed="true"] {
+                font-weight: 500;
+            }
+
+            &:disabled {
+                color: var(--_pp-disabled);
+                background: none;
+                cursor: default;
+            }
+        }
+
+        .pp-item-label {
+            flex: 1;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .pp-item-subtext {
+            font-size: .8125em;
+            font-weight: 400;
+            color: var(--_pp-muted);
+            white-space: nowrap;
+
+            &:empty {
+                display: none;
+            }
+        }
+
+        .pp-item:disabled .pp-item-subtext {
+            color: inherit;
+        }
+
+        .pp-item-check {
+            flex: none;
+            width: 1rem;
+            height: 1rem;
+        }
+
+        .pp-item[aria-pressed="true"] > .pp-item-check {
+            background: var(--_pp-accent);
+            mask: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3e%3cpath d='m5 12 5 5 10-10'/%3e%3c/svg%3e") center / contain no-repeat;
+        }
+
+        .pp-header {
+            margin: 0;
+            padding: .5rem .625rem .125rem;
+            font-size: .75em;
+            font-weight: 400;
+            line-height: 1.5;
+            color: var(--_pp-header);
+        }
+
+        .pp-divider {
+            height: 0;
+            margin: .25rem .375rem;
+            border: 0;
+            border-top: 1px solid var(--_pp-border);
+            opacity: 1;
+        }
+
+        /* Skeleton rows, shown at the end of the list while more rows are to come. */
+        .pp-placeholder {
+            flex: 1;
+        }
+
+        .pp-placeholder-bar {
+            display: block;
+            height: .75em;
+            margin-block: .375em;
+            background: var(--_pp-border);
+            border-radius: 999px;
+            animation: platypicker-pulse 1.5s ease-in-out infinite;
+
+            @media (prefers-reduced-motion: reduce) {
+                animation: none;
+            }
+        }
+
+        /* Search matches. In a disabled row a match is only underlined, so the row doesn't look clickable. */
+        :is(.pp-header, .pp-item-label, .pp-item-subtext)::highlight(platypicker-highlight) {
+            color: var(--_pp-highlight-color);
+            background-color: var(--_pp-highlight-bg);
+        }
+
+        .pp-item:disabled :is(.pp-item-label, .pp-item-subtext)::highlight(platypicker-highlight) {
+            color: inherit;
+            background-color: transparent;
+            text-decoration: underline;
         }
     }
 }
