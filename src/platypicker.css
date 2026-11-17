@@ -156,26 +156,29 @@
     /* ==========================================================================================================
        Look
        ========================================================================================================== */
+    /* Each value is the page's --platypicker-* variable if it sets one, then a skin's --_pp-skin-* value (see
+       src/skins), then the default. A skin sets its values on platy-picker itself, so they follow themes set on
+       part of the page, while the page's variables still win from any ancestor. */
     platy-picker {
-        --_pp-bg: var(--platypicker-bg, light-dark(#ffffff, #222225));
-        --_pp-color: var(--platypicker-color, light-dark(#1d1c1a, #ececee));
-        --_pp-muted: var(--platypicker-muted-color, light-dark(#7d7b76, #93939a));
-        --_pp-header: var(--platypicker-header-color, light-dark(#5f5e5a, #b0b0b6));
-        --_pp-border: var(--platypicker-border-color, light-dark(#e3e1dc, #36363b));
-        --_pp-field-border: var(--platypicker-field-border-color, light-dark(#c4c1bb, #48484e));
-        --_pp-hover: var(--platypicker-hover-bg, light-dark(#f0efec, #2d2d31));
-        --_pp-accent: var(--platypicker-accent-color, light-dark(#1f63d6, #7aaefc));
-        --_pp-disabled: var(--platypicker-disabled-color, light-dark(#b4b2ab, #5a5a60));
-        --_pp-danger: var(--platypicker-danger-color, light-dark(#c62828, #f27373));
-        --_pp-highlight-bg: var(--platypicker-highlight-bg, light-dark(#fde58a, #d99a1e));
-        --_pp-highlight-color: var(--platypicker-highlight-color, light-dark(#1d1c1a, #16120a));
-        --_pp-tag-bg: var(--platypicker-tag-bg, light-dark(#efeeea, #303035));
-        --_pp-tag-border: var(--platypicker-tag-border-color, light-dark(#dedcd6, #414147));
-        --_pp-radius: var(--platypicker-radius, 6px);
-        --_pp-menu-radius: var(--platypicker-menu-radius, 8px);
-        --_pp-shadow: var(--platypicker-shadow,
+        --_pp-bg: var(--platypicker-bg, var(--_pp-skin-bg, light-dark(#ffffff, #222225)));
+        --_pp-color: var(--platypicker-color, var(--_pp-skin-color, light-dark(#1d1c1a, #ececee)));
+        --_pp-muted: var(--platypicker-muted-color, var(--_pp-skin-muted-color, light-dark(#7d7b76, #93939a)));
+        --_pp-header: var(--platypicker-header-color, var(--_pp-skin-header-color, light-dark(#5f5e5a, #b0b0b6)));
+        --_pp-border: var(--platypicker-border-color, var(--_pp-skin-border-color, light-dark(#e3e1dc, #36363b)));
+        --_pp-field-border: var(--platypicker-field-border-color, var(--_pp-skin-field-border-color, light-dark(#c4c1bb, #48484e)));
+        --_pp-hover: var(--platypicker-hover-bg, var(--_pp-skin-hover-bg, light-dark(#f0efec, #2d2d31)));
+        --_pp-accent: var(--platypicker-accent-color, var(--_pp-skin-accent-color, light-dark(#1f63d6, #7aaefc)));
+        --_pp-disabled: var(--platypicker-disabled-color, var(--_pp-skin-disabled-color, light-dark(#b4b2ab, #5a5a60)));
+        --_pp-danger: var(--platypicker-danger-color, var(--_pp-skin-danger-color, light-dark(#c62828, #f27373)));
+        --_pp-highlight-bg: var(--platypicker-highlight-bg, var(--_pp-skin-highlight-bg, light-dark(#fde58a, #d99a1e)));
+        --_pp-highlight-color: var(--platypicker-highlight-color, var(--_pp-skin-highlight-color, light-dark(#1d1c1a, #16120a)));
+        --_pp-tag-bg: var(--platypicker-tag-bg, var(--_pp-skin-tag-bg, light-dark(#efeeea, #303035)));
+        --_pp-tag-border: var(--platypicker-tag-border-color, var(--_pp-skin-tag-border-color, light-dark(#dedcd6, #414147)));
+        --_pp-radius: var(--platypicker-radius, var(--_pp-skin-radius, 6px));
+        --_pp-menu-radius: var(--platypicker-menu-radius, var(--_pp-skin-menu-radius, 8px));
+        --_pp-shadow: var(--platypicker-shadow, var(--_pp-skin-shadow,
             0 8px 24px light-dark(rgb(0 0 0 / .12), rgb(0 0 0 / .4)),
-            0 2px 6px light-dark(rgb(0 0 0 / .08), rgb(0 0 0 / .3)));
+            0 2px 6px light-dark(rgb(0 0 0 / .08), rgb(0 0 0 / .3))));
     }
 
     /* The select: a plain field with a chevron. No specificity at all, so the page's own select styles win. */
