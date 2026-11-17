@@ -92,7 +92,7 @@ All attributes are reflected as properties too (e.g. `picker.search = true`, `pi
 - **Anchored, overflow-aware popover** - positioned via CSS anchor positioning; flips above the control automatically if there is no room below.
 - **Live DOM sync** – add, remove, reorder or edit `<option>`/`<optgroup>` elements on the underlying `<select>` at any time, including their `disabled`, `hidden`, `label`, `title` and `data-subtext` attributes, and the popover updates to match. Only what changed is updated, so focus and scroll position survive. While the popover is closed, updates wait until it opens; the badges follow right away.
 - **Loading as you scroll** – for options that come from a server, `loading` and the `loadmore` event let you fetch them a page at a time, with `placeholders` showing skeleton rows while you wait. See below.
-- **Accessible state** - selected rows carry `aria-pressed="true"`, so screen readers announce which options are selected.
+- **Accessible** - the popover is a dialog named after the select, which says when it's open. The list is a listbox of options that screen readers announce as selected or not and by position ("3 of 20", even while long lists render in batches), with option groups and disabled options as on a native select.
 - **`:state(open)`** - the `<platy-picker>` host exposes a custom state while its popover is open, so you can style around it without a class:
 ```css
   platy-picker:state(open) {
@@ -178,7 +178,7 @@ The look stays out of the way of your own CSS. Its colors, borders and spacing h
 
 ## Class plugs
 
-Every element Platypicker creates has a fixed `pp-*` class, which you can style directly: `pp-menu` (the popover), `pp-bar`, `pp-search`, `pp-button`, `pp-list`, `pp-item`, `pp-item-label`, `pp-item-subtext`, `pp-item-check`, `pp-header`, `pp-divider`, `pp-placeholder`, `pp-placeholder-bar`, and for the badges `pp-tags`, `pp-tag`, `pp-tag-label`, `pp-tag-remove`, `pp-tag-count` and `pp-tags-placeholder`. The `<select>` gets `pp-select`.
+Every element Platypicker creates has a fixed `pp-*` class, which you can style directly: `pp-menu` (the popover), `pp-bar`, `pp-search`, `pp-button`, `pp-list`, `pp-item`, `pp-item-label`, `pp-item-subtext`, `pp-item-check`, `pp-group`, `pp-group-list`, `pp-header`, `pp-divider`, `pp-placeholder`, `pp-placeholder-bar`, and for the badges `pp-tags`, `pp-tag`, `pp-tag-label`, `pp-tag-remove`, `pp-tag-count` and `pp-tags-placeholder`. The `<select>` gets `pp-select`.
 
 Each part also has a plug: extra classes added next to its fixed one, empty by default. They let you dress the picker in a framework's own classes, such as Bootstrap's or Tailwind's utilities. Two state plugs, `itemSelected` and `itemDisabled`, are added to a row while its option is selected or disabled. The full list, with what each part is, is in `src/classes.js`.
 
@@ -285,7 +285,7 @@ Version 2 drops Bootstrap. If you used 1.x with Bootstrap:
 
 - **Bootstrap is no longer needed**, and no longer used: the popover has a look of its own, themed with the variables above. A `form-select` class on the `<select>` still styles the select itself, and the [Bootstrap skin](#skins) brings the popover in line with your Bootstrap theme.
 - **The popover's classes changed.** CSS written against `.dropdown-menu`, `.dropdown-item`, `.dropdown-header` or `.input-group` inside the picker should use the `pp-*` classes instead, or put those Bootstrap classes back through the class plugs. The select's own class changed from `platypicker` to `pp-select`.
-- **Selected rows** are marked with `aria-pressed="true"` instead of the `active` class, and hidden parts with the `hidden` attribute instead of `d-none`.
+- **Selected rows** are marked with `aria-selected="true"` instead of the `active` class, and hidden parts with the `hidden` attribute instead of `d-none`.
 - **Multi-selects show badges** instead of the browser's own text, and draw their own arrow.
 - **Validation** is no longer tied to `.is-valid` / `.is-invalid`. An invalid select gets a red border through `:user-invalid`; Bootstrap's classes still style the select itself.
 - **Dark mode** follows `color-scheme`. Bootstrap's `data-bs-theme="dark"` already sets it.

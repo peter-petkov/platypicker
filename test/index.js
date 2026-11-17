@@ -984,7 +984,7 @@ function setupBenchmark() {
 
             await measure("search", () => setSearch("an"));
             await measure("pick", () => popover.querySelectorAll(
-                ".pp-item:not(:disabled), .dropdown-item:not(.disabled):not(.d-none)")[20]?.click());
+                ".pp-item:not(:disabled, [aria-disabled='true']), .dropdown-item:not(.disabled):not(.d-none)")[20]?.click());
 
             // Reset for the next run. A multiple select stays open after picking.
             if (popover.matches(":popover-open")) select.click();
