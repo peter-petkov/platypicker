@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Class plugs</title>
+    <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
+    <link rel="stylesheet" href="../src/platypicker.css">
+    <link rel="stylesheet" href="./plugs-demo.css">
+    <style>
+        :root {
+            color-scheme: light dark;
+        }
+
+        body {
+            margin: 0;
+            padding: 1.75rem 1.5rem;
+            font: 15px/1.6 "InterVariable", "Inter", system-ui, sans-serif;
+        }
+
+        /* The frame is short, so the usual 45vh would leave the list cramped. */
+        platy-picker {
+            --platypicker-max-height: 15rem;
+        }
+
+        select[multiple] {
+            width: 20rem;
+            max-width: 100%;
+        }
+    </style>
+    <script>
+        // Follows the docs page's theme switch, when it's shown there.
+        try {
+            const root = parent.document.documentElement;
+            const sync = () => document.documentElement.style.colorScheme = root.dataset.theme ?? "";
+            new MutationObserver(sync).observe(root, { attributes: true, attributeFilter: ["data-theme"] });
+            sync();
+        } catch {
+        }
+    </script>
+</head>
+<body>
+<platy-picker search controls>
+    <select name="fruit" multiple size="1" aria-label="Fruit">
+        <option selected>🍓 Strawberry</option>
+        <option selected>🍑 Peach</option>
+        <option>🍎 Apple</option>
+        <option>🍌 Banana</option>
+        <option>🍇 Grapes</option>
+        <option>🍉 Watermelon</option>
+        <option>🍍 Pineapple</option>
+        <option>🥝 Kiwi</option>
+    </select>
+</platy-picker>
+<script type="module">
+    import "./plugs-demo-classes.js";
+    import "../src/platypicker.js";
+</script>
+</body>
+</html>

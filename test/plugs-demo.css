@@ -1,0 +1,27 @@
+/* Loaded after platypicker.css, so these single classes win over its look. */
+
+.pill-menu {
+    border-radius: 16px;
+}
+
+.pill-field,
+.pill-item {
+    border-radius: 999px;
+}
+
+.pill-item-selected {
+    background: light-dark(#fde7ef, #43202d);
+    color: light-dark(#a3164a, #ff9cbf);
+    font-weight: 600;
+}
+
+.pill-tag {
+    border-color: transparent;
+    border-radius: 999px;
+    background: light-dark(#fde7ef, #43202d);
+    color: light-dark(#a3164a, #ff9cbf);
+}
+
+.pill-tag-remove {
+    color: inherit;
+}

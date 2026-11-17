@@ -40,6 +40,9 @@
             <p>Lists</p>
             <a href="#long-lists">Long lists</a>
             <a href="#live-changes">Live changes</a>
+            <p>Styling</p>
+            <a href="#theming">Theming</a>
+            <a href="#class-plugs">Class plugs</a>
             <p>More</p>
             <a href="#benchmark">Benchmark</a>
         </nav>
@@ -194,6 +197,117 @@
                     picker.search = false;                 // same as removeAttribute("search")
                 </script>
             </div>
+        </section>
+
+        <section id="theming">
+            <h2>Theming</h2>
+            <p>The stylesheet draws a neutral look meant to sit well in most pages, in light and dark. Change it with <code>--platypicker-*</code> variables, set on <code>platy-picker</code> or any ancestor. Move the controls to try a few; the CSS tab follows.</p>
+            <div class="example" data-theming>
+                <template>
+                    <platy-picker search controls>
+                        <select name="plants" multiple size="1" aria-label="Plants" data-fill="plants" data-pick="1,3"></select>
+                    </platy-picker>
+                </template>
+                <div class="controls stage-extra">
+                    <label>Accent <input type="color" value="#1f63d6" data-dark="#7aaefc" data-var="--platypicker-accent-color"></label>
+                    <label>Search match <input type="color" value="#fde58a" data-dark="#d99a1e" data-var="--platypicker-highlight-bg"></label>
+                    <label>Badge <input type="color" value="#efeeea" data-dark="#303035" data-var="--platypicker-tag-bg"></label>
+                    <label>Radius <input type="range" min="0" max="16" value="6" data-var="--platypicker-radius" data-unit="px"></label>
+                    <label>Menu radius <input type="range" min="0" max="20" value="8" data-var="--platypicker-menu-radius" data-unit="px"></label>
+                    <button type="button" class="button" data-reset>Reset</button>
+                </div>
+                <script type="text/plain" data-code="CSS"></script>
+            </div>
+            <p>The default colors switch between light and dark with the page's <code>color-scheme</code>, so a page with a dark theme should say so. Use <code>light-dark()</code> to give your own colors for both.</p>
+            <script type="text/plain" data-code="CSS">
+                :root { color-scheme: light dark; }               /* follow the system */
+                :root[data-theme="dark"] { color-scheme: dark; }  /* or follow your own switch */
+
+                .checkout {
+                  --platypicker-accent-color: light-dark(#0b7a75, #3cc2b7);
+                }
+            </script>
+            <details class="reference">
+                <summary>All variables</summary>
+                <table class="table">
+                    <thead>
+                    <tr><th>Variable</th><th>What it colors or sizes</th></tr>
+                    </thead>
+                    <tbody>
+                    <tr><td><code>--platypicker-bg</code></td><td>popover and field background</td></tr>
+                    <tr><td><code>--platypicker-color</code></td><td>text</td></tr>
+                    <tr><td><code>--platypicker-muted-color</code></td><td>subtexts and the search placeholder</td></tr>
+                    <tr><td><code>--platypicker-header-color</code></td><td>option group labels</td></tr>
+                    <tr><td><code>--platypicker-border-color</code></td><td>lines inside the popover</td></tr>
+                    <tr><td><code>--platypicker-field-border-color</code></td><td>the select, the popover and the search box</td></tr>
+                    <tr><td><code>--platypicker-hover-bg</code></td><td>a row under the pointer or with keyboard focus</td></tr>
+                    <tr><td><code>--platypicker-accent-color</code></td><td>check marks, select all / none, focus rings</td></tr>
+                    <tr><td><code>--platypicker-disabled-color</code></td><td>disabled rows</td></tr>
+                    <tr><td><code>--platypicker-danger-color</code></td><td>an invalid select's border</td></tr>
+                    <tr><td><code>--platypicker-highlight-bg</code></td><td>search match background</td></tr>
+                    <tr><td><code>--platypicker-highlight-color</code></td><td>search match text</td></tr>
+                    <tr><td><code>--platypicker-tag-bg</code></td><td>a badge in a multiple select</td></tr>
+                    <tr><td><code>--platypicker-tag-border-color</code></td><td>a badge's border</td></tr>
+                    <tr><td><code>--platypicker-radius</code></td><td>the select, rows and the search box (<code>6px</code>)</td></tr>
+                    <tr><td><code>--platypicker-menu-radius</code></td><td>the popover (<code>8px</code>)</td></tr>
+                    <tr><td><code>--platypicker-shadow</code></td><td>the popover's shadow</td></tr>
+                    <tr><td><code>--platypicker-max-height</code></td><td>the popover's height limit (<code>45vh</code>)</td></tr>
+                    </tbody>
+                </table>
+            </details>
+            <p>The look stays out of the way of your own CSS. Its rules have the specificity of a single class, and the select's own look has none, so a class you give the <code>&lt;select&gt;</code> wins over it. If your page uses cascade layers, import the stylesheet into one:</p>
+            <script type="text/plain" data-code="CSS">@import url("platypicker.css") layer(components);</script>
+        </section>
+
+        <section id="class-plugs">
+            <h2>Class plugs</h2>
+            <p>Every element Platypicker creates has a fixed <code>pp-*</code> class you can style. Each part also has a plug: extra classes added next to the fixed one, empty by default, for dressing the picker in a framework's own classes. Two state plugs, <code>itemSelected</code> and <code>itemDisabled</code>, are on a row while its option is selected or disabled.</p>
+            <p>Plugs are global, and elements read them when they are created. The pickers already in the page are created the moment <code>platypicker</code> is imported, so fill the plugs in a module of their own that imports <code>classes.js</code>, and import it first. The picker below runs in a frame of its own, so its plugs don't reach the rest of this page.</p>
+            <div class="example">
+                <iframe class="stage-extra frame" src="./plugs-demo.html" title="A picker with class plugs"></iframe>
+                <script type="text/plain" data-code="my-classes.js" data-src="./plugs-demo-classes.js"></script>
+                <script type="text/plain" data-code="CSS" data-src="./plugs-demo.css"></script>
+                <template data-code="HTML">
+                    <script type="module">
+                        import "./my-classes.js";
+                        import "platypicker";
+                    </script>
+                </template>
+            </div>
+            <details class="reference">
+                <summary>All plugs</summary>
+                <table class="table">
+                    <thead>
+                    <tr><th>Plug</th><th>Fixed class</th><th>Part</th></tr>
+                    </thead>
+                    <tbody>
+                    <tr><td><code>host</code></td><td></td><td><code>&lt;platy-picker&gt;</code></td></tr>
+                    <tr><td><code>select</code></td><td><code>pp-select</code></td><td>the <code>&lt;select&gt;</code> it wraps</td></tr>
+                    <tr><td><code>menu</code></td><td><code>pp-menu</code></td><td>the popover</td></tr>
+                    <tr><td><code>bar</code></td><td><code>pp-bar</code></td><td>the search box and buttons above the list</td></tr>
+                    <tr><td><code>search</code></td><td><code>pp-search</code></td><td>the search box</td></tr>
+                    <tr><td><code>button</code></td><td><code>pp-button</code></td><td>select all and select none</td></tr>
+                    <tr><td><code>list</code></td><td><code>pp-list</code></td><td>the list of options</td></tr>
+                    <tr><td><code>item</code></td><td><code>pp-item</code></td><td>an option's row</td></tr>
+                    <tr><td><code>itemSelected</code></td><td></td><td>a row whose option is selected</td></tr>
+                    <tr><td><code>itemDisabled</code></td><td></td><td>a row whose option is disabled</td></tr>
+                    <tr><td><code>label</code></td><td><code>pp-item-label</code></td><td>a row's label</td></tr>
+                    <tr><td><code>subtext</code></td><td><code>pp-item-subtext</code></td><td>a row's subtext</td></tr>
+                    <tr><td><code>check</code></td><td><code>pp-item-check</code></td><td>a row's check mark</td></tr>
+                    <tr><td><code>header</code></td><td><code>pp-header</code></td><td>an option group's label</td></tr>
+                    <tr><td><code>divider</code></td><td><code>pp-divider</code></td><td>an <code>&lt;hr&gt;</code> between options</td></tr>
+                    <tr><td><code>placeholder</code></td><td><code>pp-placeholder</code></td><td>a skeleton row's content</td></tr>
+                    <tr><td><code>placeholderBar</code></td><td><code>pp-placeholder-bar</code></td><td>the bar inside it</td></tr>
+                    <tr><td><code>tags</code></td><td><code>pp-tags</code></td><td>the badges over a closed multiple select</td></tr>
+                    <tr><td><code>tag</code></td><td><code>pp-tag</code></td><td>a badge</td></tr>
+                    <tr><td><code>tagLabel</code></td><td><code>pp-tag-label</code></td><td>a badge's label</td></tr>
+                    <tr><td><code>tagRemove</code></td><td><code>pp-tag-remove</code></td><td>a badge's remove button</td></tr>
+                    <tr><td><code>tagCount</code></td><td><code>pp-tag-count</code></td><td>the "+N" count</td></tr>
+                    <tr><td><code>tagsPlaceholder</code></td><td><code>pp-tags-placeholder</code></td><td>shown instead of badges while nothing is selected</td></tr>
+                    </tbody>
+                </table>
+            </details>
+            <p>The same object is <code>PlatyPicker.classes</code>, which is enough for pickers you create later from script.</p>
         </section>
 
         <section id="benchmark">

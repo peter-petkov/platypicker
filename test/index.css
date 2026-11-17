@@ -425,6 +425,62 @@ p {
     }
 }
 
+/* Theming controls */
+
+.controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.6rem 1.25rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--page-border);
+    font-size: 0.85rem;
+
+    label {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.45rem;
+        color: var(--page-muted);
+    }
+
+    input[type=color] {
+        width: 1.75rem;
+        height: 1.5rem;
+        padding: 0;
+        border: 1px solid var(--page-border);
+        border-radius: 5px;
+        background: none;
+        cursor: pointer;
+    }
+
+    input[type=range] {
+        width: 6rem;
+        accent-color: var(--page-accent);
+    }
+}
+
+/* A frame for examples that need a page of their own. It's tall enough for the popover. */
+.stage:has(> .frame) {
+    padding: 0;
+}
+
+.frame {
+    display: block;
+    height: 22rem;
+    border: 0;
+}
+
+.reference {
+    margin-bottom: 1.25rem;
+
+    summary {
+        cursor: pointer;
+        color: var(--page-accent);
+        font-size: 0.9rem;
+        margin-bottom: 0.5rem;
+    }
+}
+
 #benchmark-host:empty {
     display: none;
 }

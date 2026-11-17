@@ -37,6 +37,7 @@ function init() {
     setupNavigation();
     setupSupportNotice();
     setupLiveDemo();
+    setupTheming();
     setupBatchCount();
     setupBenchmark();
 }
@@ -90,25 +91,45 @@ function setupExamples() {
     for (const example of document.querySelectorAll(".example")) {
         const template = example.querySelector(":scope > template:not([data-code])");
         const stage = document.createElement("div");
+        const tabs = [];
 
-        fillSelects(template.content);
         stage.className = "stage";
-        stage.append(template.content.cloneNode(true));
+
+        if (template) {
+            fillSelects(template.content);
+            stage.append(template.content.cloneNode(true));
+            tabs.push({ label: "HTML", text: printHTML(template.content.childNodes), html: true });
+        }
 
         // Page controls for the example (marked .stage-extra) go on the stage under the pickers, and aren't printed.
         stage.append(...example.querySelectorAll(":scope > .stage-extra"));
 
-        const tabs = [{ label: "HTML", text: printHTML(template.content.childNodes), html: true }];
-        for (const block of example.querySelectorAll(":scope > [data-code]")) tabs.push(codeTab(block));
+        const blocks = [...example.querySelectorAll(":scope > [data-code]")];
+        tabs.push(...blocks.map(codeTab));
 
-        example.replaceChildren(stage, codePanel(tabs));
+        const panel = codePanel(tabs);
+        example.replaceChildren(stage, panel);
+        blocks.forEach(block => loadCode(block, panel));
     }
 }
 
 function setupCodeBlocks() {
     for (const block of document.querySelectorAll("template[data-code], script[type='text/plain'][data-code]")) {
-        block.replaceWith(codePanel([codeTab(block)]));
+        const panel = codePanel([codeTab(block)]);
+        block.replaceWith(panel);
+        loadCode(block, panel);
     }
+}
+
+// A block with data-src shows that file, so the code shown is the code that runs.
+function loadCode(block, panel) {
+    if (!block.dataset.src) return;
+
+    fetch(block.dataset.src)
+        .then(response => response.text())
+        .then(text => panel.setCode(block.dataset.code, text.replace(/\r\n/g, "\n").trim()))
+        .catch(() => {
+        });
 }
 
 function codeTab(block) {
@@ -125,6 +146,13 @@ function codePanel(tabs) {
     const code = document.createElement("code");
     const copy = document.createElement("button");
     let current = tabs[0];
+
+    // Changes a tab's code, as for the CSS that the theming controls write.
+    panel.setCode = (label, text) => {
+        const tab = tabs.find(tab => tab.label === label);
+        tab.text = text;
+        if (tab === current) show(tab);
+    };
 
     const show = tab => {
         current = tab;
@@ -207,7 +235,14 @@ function printHTML(nodes, depth = 0) {
                 lines.push(`${pad}<${name}${attributes}>`);
             } else if (children.every(child => child.nodeType === Node.TEXT_NODE)) {
                 const text = node.textContent.trim();
-                lines.push(`${pad}<${name}${attributes}>${name === "script" ? text : escapeHTML(text)}</${name}>`);
+
+                // A script of several lines keeps its lines, indented one step inside the tag.
+                if (name === "script" && text.includes("\n")) {
+                    const body = dedent(node.textContent).split("\n").map(line => line && `${pad}  ${line}`).join("\n");
+                    lines.push(`${pad}<${name}${attributes}>`, body, `${pad}</${name}>`);
+                } else {
+                    lines.push(`${pad}<${name}${attributes}>${name === "script" ? text : escapeHTML(text)}</${name}>`);
+                }
             } else {
                 const options = children.filter(child => child.localName === "option");
                 let shown = children;
@@ -365,6 +400,54 @@ function setupLiveDemo() {
         checkbox.checked = picker.hasAttribute(checkbox.dataset.attr);
         checkbox.addEventListener("change", () => picker.toggleAttribute(checkbox.dataset.attr, checkbox.checked));
     }
+}
+
+// ---------------------------------------------------------------------------
+// Theming: the controls set variables on the example's stage, and the CSS tab shows the ones that changed
+// ---------------------------------------------------------------------------
+
+function setupTheming() {
+    const example = document.querySelector("[data-theming]");
+    const stage = example.querySelector(".stage");
+    const panel = example.querySelector(".code");
+    const inputs = [...example.querySelectorAll("[data-var]")];
+    const changed = new Set();
+    const cssValue = input => input.value + (input.dataset.unit ?? "");
+
+    // The controls nobody has moved show the default for the current theme (data-dark holds the dark one).
+    const showDefaults = () => {
+        const dark = (document.documentElement.dataset.theme ?? (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")) === "dark";
+        for (const input of inputs) {
+            if (!changed.has(input)) input.value = dark && input.dataset.dark ? input.dataset.dark : input.defaultValue;
+        }
+    };
+
+    const update = () => {
+        for (const input of inputs) {
+            if (changed.has(input)) stage.style.setProperty(input.dataset.var, cssValue(input));
+            else stage.style.removeProperty(input.dataset.var);
+        }
+
+        panel.setCode("CSS", changed.size
+            ? `platy-picker {\n${[...changed].map(input => `  ${input.dataset.var}: ${cssValue(input)};`).join("\n")}\n}`
+            : "/* Move a control to see the CSS. */");
+    };
+
+    for (const input of inputs) input.addEventListener("input", () => {
+        changed.add(input);
+        update();
+    });
+
+    example.querySelector("[data-reset]").addEventListener("click", () => {
+        changed.clear();
+        showDefaults();
+        update();
+    });
+
+    new MutationObserver(showDefaults).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+    matchMedia("(prefers-color-scheme: dark)").addEventListener("change", showDefaults);
+    showDefaults();
+    update();
 }
 
 // ---------------------------------------------------------------------------
