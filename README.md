@@ -58,13 +58,13 @@ For multi-select, add `multiple` and `size="1"`. The closed select then shows th
 | Attribute            | Type    | Default               | Description                                                                                                                                                                     |
 |----------------------|---------|-----------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `search`             | boolean | off                   | Shows a filter input at the top of the popover. Matches against option text, `data-subtext` and option group labels.                                                             |
-| `controls`           | boolean | off                   | Shows "Select all" / "Select none" links beside the search box.                                                                                                                 |
+| `controls`           | boolean | off                   | Shows "All" / "None" links beside the search box, which select all or none of the options.                                                                                     |
 | `placeholder`        | string  | none                  | Text shown in a multiple select while nothing is selected.                                                                                                                      |
 | `batch-size`         | number  | `50`                  | How many options are rendered at a time; the next batch loads as you scroll near the end of the list. `0` renders the whole list. A missing or invalid value uses the default.  |
 | `placeholders`       | number  | off / `10`            | Shows skeleton rows at the end of the list while more options are still to come. If present without a valid non-negative integer value, renders 10 of them.                    |
 | `search-placeholder` | string  | `"Type to filter..."` | Placeholder text for the search input.                                                                                                                                          |
-| `select-all-label`   | string  | `"Select all"`        | Label for select all. Only appears when the `<select>` has `multiple`.                                                                                                          |
-| `select-none-label`  | string  | `"Select none"`       | Label for select none. Only appears if the `<select>` does not have the `required` attribute.                                                                                   |
+| `select-all-label`   | string  | `"All"`               | Label for select all. Only appears when the `<select>` has `multiple`.                                                                                                          |
+| `select-none-label`  | string  | `"None"`              | Label for select none. Only appears if the `<select>` does not have the `required` attribute.                                                                                   |
 
 All attributes are reflected as properties too (e.g. `picker.search = true`, `picker.batchSize = 100`), and are fully reactive – changing them after the element is connected updates the UI immediately. A new `batch-size` applies to the batches that follow; rows already rendered stay.
 
@@ -186,10 +186,10 @@ PlatyPicker.get(document.querySelector("select[name=food]"));
 
 // Defaults for every picker. Set them before the pickers connect.
 PlatyPicker.defaultBatchSize = 100;
-PlatyPicker.languageMap.searchPlaceholder = "Filter...";
-PlatyPicker.languageMap.selectAllLabel = "All";
-PlatyPicker.languageMap.selectNoneLabel = "None";
-PlatyPicker.languageMap.removeLabel = "Remove"; // the tooltip of a badge's ×
+PlatyPicker.languageMap.searchPlaceholder = "Filtern...";
+PlatyPicker.languageMap.selectAllLabel = "Alle";
+PlatyPicker.languageMap.selectNoneLabel = "Keine";
+PlatyPicker.languageMap.removeLabel = "Entfernen"; // the tooltip of a badge's ×
 
 // The most search matches highlighted at once, across the page.
 PlatyPicker.maxHighlights = 100;
@@ -207,6 +207,7 @@ Version 2 drops Bootstrap. If you used 1.x with Bootstrap:
 - **Multi-selects show badges** instead of the browser's own text, and draw their own arrow.
 - **Validation** is no longer tied to `.is-valid` / `.is-invalid`. An invalid select gets a red border through `:user-invalid`; Bootstrap's classes still style the select itself.
 - **Dark mode** follows `color-scheme`. Bootstrap's `data-bs-theme="dark"` already sets it.
+- **Select all and select none** are labelled "All" and "None" by default. `select-all-label`, `select-none-label` or `PlatyPicker.languageMap` bring the old labels back.
 
 ## Browser support
 

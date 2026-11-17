@@ -40,8 +40,8 @@ export default class PlatyPicker extends HTMLElement {
 
     static languageMap = {
         searchPlaceholder: "Type to filter...",
-        selectAllLabel: "Select all",
-        selectNoneLabel: "Select none",
+        selectAllLabel: "All",
+        selectNoneLabel: "None",
         removeLabel: "Remove",
     };
 
