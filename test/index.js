@@ -4,7 +4,6 @@
 // Theme. Runs immediately because this file is loaded in <head>, so the page never flashes the wrong theme.
 // ---------------------------------------------------------------------------
 
-const darkQuery = matchMedia("(prefers-color-scheme: dark)");
 let themePreference = "auto"; // auto | light | dark
 
 try {
@@ -12,12 +11,12 @@ try {
 } catch {
 }
 
+// Auto leaves the attribute off, so the page's "color-scheme: light dark" follows the system.
 function applyTheme() {
-    document.documentElement.dataset.bsTheme =
-        themePreference === "auto" ? (darkQuery.matches ? "dark" : "light") : themePreference;
+    if (themePreference === "auto") delete document.documentElement.dataset.theme;
+    else document.documentElement.dataset.theme = themePreference;
 }
 
-darkQuery.addEventListener("change", applyTheme);
 applyTheme();
 
 // ---------------------------------------------------------------------------
@@ -30,8 +29,12 @@ document.addEventListener("readystatechange", () => {
 });
 
 function init() {
-    fillSelects();
+    fillSelects(document);
+    setupExamples();
+    setupCodeBlocks();
     setupTheme();
+    setupVersion();
+    setupNavigation();
     setupSupportNotice();
     setupLiveDemo();
     setupBatchDemo();
@@ -48,12 +51,15 @@ const DATA = {
     drinks: ["☕ Coffee", "🍵 Tea", "🧋 Bubble tea", "🥤 Soda", "🧃 Juice", "🍺 Beer", "🍷 Wine", "🥛 Milk", "💧 Water", "🍹 Cocktail"],
     plants: ["🌵 Cactus", "🌹 Rose", "🌻 Sunflower", "🌷 Tulip", "🌼 Daisy", "🌺 Hibiscus", "🌴 Palm", "🌲 Pine", "🌳 Oak", "🍀 Clover", "🌿 Basil", "🎋 Bamboo"],
     clothes: ["👕 T-shirt", "👖 Jeans", "🧥 Coat", "👗 Dress", "🧦 Socks", "🧢 Cap", "👟 Sneakers", "👢 Boots", "🧣 Scarf", "🧤 Gloves", "👔 Shirt", "👒 Sun hat"],
+    rooms: ["Kitchen", "Living room", "Bedroom", "Bathroom", "Hallway", "Office", "Garage", "Garden"],
     furniture: ["Sofa", "Armchair", "Bed", "Wardrobe", "Nightstand", "Dining table", "Chair", "Desk", "Bookshelf", "Coffee table", "Dresser", "Stool", "Bench", "TV stand"],
     cities: [["Tokyo", "Japan"], ["Paris", "France"], ["New York", "United States"], ["Cape Town", "South Africa"], ["Sydney", "Australia"], ["Rio de Janeiro", "Brazil"], ["Cairo", "Egypt"], ["Mumbai", "India"], ["Istanbul", "Turkey"], ["Mexico City", "Mexico"], ["Berlin", "Germany"], ["Toronto", "Canada"], ["Seoul", "South Korea"], ["Buenos Aires", "Argentina"]]
 };
 
-function fillSelects() {
-    for (const select of document.querySelectorAll("select[data-fill], select[data-cars]")) {
+// Fills the selects under root (the document, or an example's template). The data-* attributes are removed afterwards,
+// so the code shown for an example is plain markup, and nothing is filled twice.
+function fillSelects(root) {
+    for (const select of root.querySelectorAll("select[data-fill], select[data-cars]")) {
         const [key, withSubtext] = (select.dataset.fill ?? "").split(":");
 
         if (DATA[key]) select.insertAdjacentHTML("beforeend", DATA[key].map(item => {
@@ -64,17 +70,223 @@ function fillSelects() {
         // data-cars asks for that many generated car options, for lists that are long enough to need batches.
         if (select.dataset.cars) select.insertAdjacentHTML("beforeend", carOptions(Number(select.dataset.cars), false));
 
-        // data-pick holds the indexes of the options to preselect.
-        select.dataset.pick?.split(",").forEach(index => select.options[index].selected = true);
+        // data-pick holds the indexes of the options to preselect. Setting the attribute shows them in the code too.
+        select.dataset.pick?.split(",").forEach(index => select.options[index].defaultSelected = true);
+
+        select.removeAttribute("data-fill");
+        select.removeAttribute("data-cars");
+        select.removeAttribute("data-pick");
     }
 }
 
 // ---------------------------------------------------------------------------
-// Theme toggle and browser support notice
+// Examples. An .example holds a <template> with the live markup, and optionally <script type="text/plain"
+// data-code="CSS"> blocks for more tabs. The template is copied onto a stage and printed as the HTML tab, so the
+// example and its code can't drift apart. A <template data-code> or <script type="text/plain" data-code> outside an
+// example is just a code block.
+// ---------------------------------------------------------------------------
+
+function setupExamples() {
+    for (const example of document.querySelectorAll(".example")) {
+        const template = example.querySelector(":scope > template:not([data-code])");
+        const stage = document.createElement("div");
+
+        fillSelects(template.content);
+        stage.className = "stage";
+        stage.append(template.content.cloneNode(true));
+
+        const tabs = [{ label: "HTML", text: printHTML(template.content.childNodes), html: true }];
+        for (const block of example.querySelectorAll(":scope > [data-code]")) tabs.push(codeTab(block));
+
+        example.replaceChildren(stage, codePanel(tabs));
+    }
+}
+
+function setupCodeBlocks() {
+    for (const block of document.querySelectorAll("template[data-code], script[type='text/plain'][data-code]")) {
+        block.replaceWith(codePanel([codeTab(block)]));
+    }
+}
+
+function codeTab(block) {
+    return block.localName === "template"
+        ? { label: block.dataset.code, text: printHTML(block.content.childNodes), html: true }
+        : { label: block.dataset.code, text: dedent(block.textContent), html: false };
+}
+
+// A code box with tabs (or a single label), a Copy button, and the highlighted code.
+function codePanel(tabs) {
+    const panel = document.createElement("div");
+    const bar = document.createElement("div");
+    const pre = document.createElement("pre");
+    const code = document.createElement("code");
+    const copy = document.createElement("button");
+    let current = tabs[0];
+
+    const show = tab => {
+        current = tab;
+        code.innerHTML = tab.html ? highlightHTML(tab.text) : highlightCode(tab.text);
+        for (const button of bar.querySelectorAll("[role=tab]")) {
+            button.setAttribute("aria-selected", button.textContent === tab.label);
+        }
+    };
+
+    panel.className = "code";
+    bar.className = "code-bar";
+
+    if (tabs.length > 1) {
+        bar.setAttribute("role", "tablist");
+        for (const tab of tabs) {
+            const button = document.createElement("button");
+            button.type = "button";
+            button.setAttribute("role", "tab");
+            button.textContent = tab.label;
+            button.addEventListener("click", () => show(tab));
+            bar.append(button);
+        }
+    } else {
+        const label = document.createElement("span");
+        label.className = "code-label";
+        label.textContent = tabs[0].label;
+        bar.append(label);
+    }
+
+    copy.type = "button";
+    copy.className = "button copy";
+    copy.textContent = "Copy";
+    copy.addEventListener("click", async () => {
+        try {
+            await navigator.clipboard.writeText(current.text);
+            copy.textContent = "Copied";
+        } catch {
+            copy.textContent = "Can't copy";
+        }
+        setTimeout(() => copy.textContent = "Copy", 1500);
+    });
+    bar.append(copy);
+
+    pre.append(code);
+    panel.append(bar, pre);
+    show(current);
+    return panel;
+}
+
+// Removes the blank lines around a block and the indentation its lines share.
+function dedent(text) {
+    const lines = text.replace(/^\s*\n|\n\s*$/g, "").split("\n");
+    const indent = Math.min(...lines.filter(line => line.trim()).map(line => line.match(/^\s*/)[0].length));
+    return lines.map(line => line.slice(indent)).join("\n");
+}
+
+// Prints nodes as indented HTML, one element per line. Lists of more than LONG_LIST options are cut short after
+// SHORT_LIST of them, with a comment saying how many more there are.
+const VOID_ELEMENTS = new Set(["br", "hr", "img", "input", "link", "meta"]);
+const LONG_LIST = 7;
+const SHORT_LIST = 5;
+const escapeHTML = text => text.replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;" })[c]);
+
+function printHTML(nodes, depth = 0) {
+    const pad = "  ".repeat(depth);
+    const lines = [];
+
+    for (const node of nodes) {
+        if (node.nodeType === Node.TEXT_NODE) {
+            if (node.data.trim()) lines.push(pad + escapeHTML(node.data.trim()));
+        } else if (node.nodeType === Node.COMMENT_NODE) {
+            lines.push(`${pad}<!--${node.data}-->`);
+        } else if (node.nodeType === Node.ELEMENT_NODE) {
+            const name = node.localName;
+            const attributes = [...node.attributes]
+                .map(({ name, value }) => value === "" ? ` ${name}` : ` ${name}="${escapeHTML(value)}"`).join("");
+            const children = [...node.childNodes];
+
+            if (VOID_ELEMENTS.has(name)) {
+                lines.push(`${pad}<${name}${attributes}>`);
+            } else if (children.every(child => child.nodeType === Node.TEXT_NODE)) {
+                const text = node.textContent.trim();
+                lines.push(`${pad}<${name}${attributes}>${name === "script" ? text : escapeHTML(text)}</${name}>`);
+            } else {
+                const options = children.filter(child => child.localName === "option");
+                let shown = children;
+
+                if (options.length > LONG_LIST) {
+                    shown = children.filter(child => child.localName !== "option" || options.indexOf(child) < SHORT_LIST);
+                    shown.splice(shown.indexOf(options[SHORT_LIST - 1]) + 1, 0,
+                        document.createComment(` ${options.length - SHORT_LIST} more options `));
+                }
+
+                lines.push(`${pad}<${name}${attributes}>`, printHTML(shown, depth + 1), `${pad}</${name}>`);
+            }
+        }
+    }
+
+    return lines.filter(Boolean).join("\n");
+}
+
+const token = (kind, text) => `<span class="tok-${kind}">${escapeHTML(text)}</span>`;
+
+function highlightHTML(text) {
+    return text.replace(/(<!--[\s\S]*?-->)|(<\/?[\w-]+)([^>]*?)(\/?>)|[^<]+|</g, (match, comment, open, attributes, close) => {
+        if (comment) return token("comment", comment);
+        if (!open) return escapeHTML(match);
+
+        const highlighted = attributes.replace(/([^\s=]+)(?:=("[^"]*"))?/g, (_, name, value) =>
+            token("attr", name) + (value ? "=" + token("value", value) : ""));
+        return token("tag", open) + highlighted + token("tag", close);
+    });
+}
+
+// Comments and strings, which is enough for the short JS, CSS and shell snippets on this page.
+function highlightCode(text) {
+    return text.replace(/(\/\*[\s\S]*?\*\/|\/\/[^\n]*)|("[^"\n]*"|'[^'\n]*')|[^/"']+|[\s\S]/g, (match, comment, string) =>
+        comment ? token("comment", comment) : string ? token("value", string) : escapeHTML(match));
+}
+
+// The version badge in the header comes from package.json.
+function setupVersion() {
+    const badge = document.getElementById("version");
+
+    fetch("../package.json")
+        .then(response => response.json())
+        .then(({ version }) => {
+            badge.textContent = version;
+            badge.hidden = false;
+        })
+        .catch(() => {
+        });
+}
+
+// ---------------------------------------------------------------------------
+// Side navigation. The current section is the last one whose top has scrolled past the line just under the header,
+// or the last one on the page once it's scrolled to the bottom.
+// ---------------------------------------------------------------------------
+
+function setupNavigation() {
+    const links = [...document.querySelectorAll(".sidenav a")];
+    const sections = links.map(link => document.getElementById(link.hash.slice(1)));
+
+    const update = () => {
+        const line = document.querySelector(".topbar").offsetHeight + 24;
+        const bottom = innerHeight + scrollY >= document.documentElement.scrollHeight - 2;
+        const current = bottom ? sections.at(-1) : sections.findLast(section => section.getBoundingClientRect().top <= line) ?? sections[0];
+
+        links.forEach((link, index) => {
+            if (sections[index] === current) link.setAttribute("aria-current", "location");
+            else link.removeAttribute("aria-current");
+        });
+    };
+
+    addEventListener("scroll", update, { passive: true });
+    addEventListener("resize", update);
+    update();
+}
+
+// ---------------------------------------------------------------------------
+// Theme toggle, version and browser support notice
 // ---------------------------------------------------------------------------
 
 function setupTheme() {
-    document.getElementById(`theme-${themePreference}`).checked = true;
+    document.querySelector(`input[name=theme][value=${themePreference}]`).checked = true;
 
     for (const radio of document.querySelectorAll("input[name=theme]")) {
         radio.addEventListener("change", () => {
@@ -93,7 +305,7 @@ function setupTheme() {
 function setupSupportNotice() {
     const supported = CSS.supports("appearance", "base-select");
 
-    document.getElementById("no-support").classList.toggle("d-none", supported);
+    document.getElementById("no-support").hidden = supported;
     document.getElementById("benchmark-run").disabled = !supported;
 }
 
