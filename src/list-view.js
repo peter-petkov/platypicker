@@ -2,23 +2,6 @@
 
 import { addClasses, toggleClasses } from "./classes.js";
 
-// Emoji, plus the characters that glue them together: skin tones, flags, joiners, variation selectors, keycaps, tags.
-const EMOJI = /[\p{Extended_Pictographic}\p{Emoji_Modifier}\p{Regional_Indicator}\u200d\ufe0f\u20e3\u{e0020}-\u{e007f}]/gu;
-
-/** The text type-ahead matches against: lowercase, with emoji removed so "🧀 Cheese" is found by typing "ch". */
-function typeAheadText(label) {
-    return label.replace(EMOJI, "").replace(/\s+/g, " ").trim().toLowerCase();
-}
-
-// Rows are rendered in batches of the configured size, and a batch size of 0 turns batching off. With batching off the
-// list streams in steps of STREAM_CHUNK_SIZE rows instead. A scan step takes at most SCAN_BUDGET milliseconds.
-const DEFAULT_BATCH_SIZE = 50;
-const STREAM_CHUNK_SIZE = 100;
-const SCAN_BUDGET = 8;
-
-/** Lets the browser handle input and paint before the next step. */
-const yieldToMain = () => globalThis.scheduler?.yield?.() ?? new Promise(resolve => setTimeout(resolve));
-
 /**
  * The popover: a search box with select all / none buttons, and the list of entries.
  *
@@ -26,6 +9,26 @@ const yieldToMain = () => globalThis.scheduler?.yield?.() ?? new Promise(resolve
  * is given (activate, selectAll, selectNone, close, loadMore). It never touches the select itself.
  */
 export default class ListView {
+    // Rows are rendered in batches of the configured size, and a batch size of 0 turns batching off. With batching off
+    // the list streams in steps of #streamChunkSize rows instead. A scan step takes at most #scanBudget milliseconds.
+    static #defaultBatchSize = 50;
+    static #streamChunkSize = 100;
+    static #scanBudget = 8;
+
+    // Emoji, plus the characters that glue them together: skin tones, flags, joiners, variation selectors, keycaps,
+    // tags.
+    static #emoji = /[\p{Extended_Pictographic}\p{Emoji_Modifier}\p{Regional_Indicator}\u200d\ufe0f\u20e3\u{e0020}-\u{e007f}]/gu;
+
+    /** The text type-ahead matches against: lowercase, with emoji removed so "🧀 Cheese" is found by typing "ch". */
+    static #typeAheadText(label) {
+        return label.replace(ListView.#emoji, "").replace(/\s+/g, " ").trim().toLowerCase();
+    }
+
+    /** Lets the browser handle input and paint before the next step. */
+    static #yieldToMain() {
+        return globalThis.scheduler?.yield?.() ?? new Promise(resolve => setTimeout(resolve));
+    }
+
     #source;
     #highlighter;
     #actions;
@@ -214,12 +217,12 @@ export default class ListView {
     }
 
     get #isBatched() {
-        return (this.#config.batchSize ?? DEFAULT_BATCH_SIZE) > 0;
+        return (this.#config.batchSize ?? ListView.#defaultBatchSize) > 0;
     }
 
     /** How many rows the next step renders. */
     get #stepSize() {
-        return this.#config.batchSize || (this.#config.batchSize === 0 ? STREAM_CHUNK_SIZE : DEFAULT_BATCH_SIZE);
+        return this.#config.batchSize || (this.#config.batchSize === 0 ? ListView.#streamChunkSize : ListView.#defaultBatchSize);
     }
 
     // -----------------------------------------------------------------
@@ -268,7 +271,7 @@ export default class ListView {
 
         try {
             while (view.hasMore) {
-                await yieldToMain();
+                await ListView.#yieldToMain();
                 if (this.#view !== view || this.#signal.aborted) return;
 
                 this.#renderMore(this.#stepSize);
@@ -279,7 +282,7 @@ export default class ListView {
     }
 
     /** Renders the next `count` matches, or fewer if the scan runs out of time or of entries. */
-    #renderMore(count, budget = SCAN_BUDGET) {
+    #renderMore(count, budget = ListView.#scanBudget) {
         this.#appendRows(this.#view, this.#view.pull(count, budget));
         this.#syncTail();
     }
@@ -689,7 +692,7 @@ export default class ListView {
     }
 
     #findTypeAheadMatch(buffer) {
-        const isCandidate = entry => this.isSelectable(entry) && typeAheadText(entry.label).startsWith(buffer);
+        const isCandidate = entry => this.isSelectable(entry) && ListView.#typeAheadText(entry.label).startsWith(buffer);
 
         const current = this.#source.firstSelected;
         return this.#source.entries.find(entry => entry !== current && isCandidate(entry)) ??

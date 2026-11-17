@@ -2,10 +2,6 @@
 
 import { addClasses } from "./classes.js";
 
-// At most this many badges are made. More than fit on one line is pointless, and select all on a long list
-// mustn't make thousands of them.
-const MAX_TAGS = 20;
-
 /**
  * The badges shown over a closed multiple select: one per selected option, on one line, with a "+N" count for
  * those that don't fit. Each badge has a remove button, except the last one left on a required select.
@@ -15,6 +11,10 @@ const MAX_TAGS = 20;
  * the layer is hidden from assistive technology, which reads the selection from the select itself.
  */
 export default class TagsView {
+    // At most this many badges are made. More than fit on one line is pointless, and select all on a long list
+    // mustn't make thousands of them.
+    static #maxTags = 20;
+
     #select;
     #actions;
     #root;
@@ -79,7 +79,7 @@ export default class TagsView {
             if (option.hidden || option.parentElement?.hidden) continue;
 
             total++;
-            if (options.length < MAX_TAGS) options.push(option);
+            if (options.length < TagsView.#maxTags) options.push(option);
         }
 
         // The last selected option of a required select can't be removed here.
