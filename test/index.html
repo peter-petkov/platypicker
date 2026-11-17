@@ -22,9 +22,12 @@
         <a href="https://github.com/peter-petkov/platypicker">GitHub</a>
         <a href="https://www.npmjs.com/package/platypicker">npm</a>
     </nav>
-    <platy-picker class="skin-switch">
-        <select aria-label="Skin" data-skin-switch></select>
-    </platy-picker>
+    <span class="skin-switch">
+        <img class="skin-switch-icon" alt="" data-skin-icon>
+        <platy-picker>
+            <select aria-label="Skin" data-skin-switch></select>
+        </platy-picker>
+    </span>
     <div class="segmented" role="radiogroup" aria-label="Color theme">
         <label><input type="radio" name="theme" value="light">Light</label>
         <label><input type="radio" name="theme" value="dark">Dark</label>
@@ -447,6 +450,10 @@
     </main>
 </div>
 
-<script type="module" src="../src/platypicker.js"></script>
+<script type="module">
+    // A skin goes first, so that the pickers in the examples are created with its classes.
+    if (skin.module) await import(skin.module);
+    await import("../src/platypicker.js");
+</script>
 </body>
 </html>

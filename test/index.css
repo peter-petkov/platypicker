@@ -477,38 +477,43 @@ p {
     border: 0;
 }
 
-/* Examples shown in a skin run in a frame, which fits its content (see fitFrame). */
-.stage-framed {
-    display: block;
-    padding: 0;
-
-    > .log {
-        padding: 0 1.5rem 1.25rem;
-    }
-}
-
-.example-frame {
-    display: block;
-    width: 100%;
-    height: 6rem;
-    border: 0;
-}
-
-.stage-extras {
-    display: flex;
-    flex-direction: column;
-    gap: .75rem;
-    padding: 0 1.5rem 1.5rem;
+/* In a skin, an example runs in a shadow root on this host, and sits on the stage as it would without one. */
+.skin-stage {
+    display: contents;
 }
 
 .skin-toolbar {
     margin-bottom: 1.5rem;
 }
 
-/* The skin switch in the header, as small as the theme switch beside it. */
-.skin-switch > select {
-    padding: .2rem 1.75rem .2rem .6rem;
-    font-size: .8rem;
+/* The skin switch in the header, as small as the theme switch beside it, with each skin's icon (see setupSkinSwitch). */
+.skin-switch {
+    position: relative;
+    display: inline-flex;
+
+    select {
+        padding: .2rem 1.75rem .2rem 1.9rem;
+        font-size: .8rem;
+    }
+
+    .pp-item::before {
+        content: "";
+        flex: none;
+        width: 1rem;
+        height: 1rem;
+        background: center / contain no-repeat;
+    }
+}
+
+.skin-switch-icon {
+    position: absolute;
+    top: 50%;
+    left: .55rem;
+    width: 1rem;
+    height: 1rem;
+    object-fit: contain;
+    translate: 0 -50%;
+    pointer-events: none;
 }
 
 .reference {

@@ -20,8 +20,9 @@ function applyTheme() {
 applyTheme();
 
 // ---------------------------------------------------------------------------
-// Skin. With one other than Base, the examples run in frames that load it (see skins.js and frame.html), since a
-// framework's stylesheet would restyle this page too. ?skin= in the address wins over the saved choice.
+// Skin. With one other than Base, each example runs in a shadow root of its own that has the framework's stylesheet
+// (see skins.js and skinStage), so the framework dresses the examples and leaves the rest of the page alone, and
+// popovers still open over the page. ?skin= in the address wins over the saved choice.
 // ---------------------------------------------------------------------------
 
 let skinName = "base";
@@ -35,7 +36,7 @@ skinName = new URLSearchParams(location.search).get("skin") ?? skinName;
 if (!Object.hasOwn(PLATY_SKINS, skinName)) skinName = "base";
 
 const skin = PLATY_SKINS[skinName];
-const framed = skinName !== "base";
+const skinned = skinName !== "base";
 
 // ---------------------------------------------------------------------------
 // Page setup. The "interactive" ready state comes after parsing but BEFORE deferred module scripts run, so the
@@ -52,7 +53,9 @@ function init() {
     setupSkins();
     setupCodeBlocks();
     setupSkinSwitch();
+    setupPagePickers();
     setupTheme();
+    setupSkinTheme();
     setupVersion();
     setupPhoneNavigation();
     setupNavigation();
@@ -124,20 +127,18 @@ function setupExamples() {
             tabs.push({ label: "HTML", text: printHTML(template.content.childNodes), html: true });
         }
 
-        // stageReady resolves to the element that holds the example's pickers: the stage, or in a skin, the frame's.
-        // Page controls for the example (marked .stage-extra) go on the stage under the pickers, and aren't printed.
-        if (template && framed) {
-            const wrapper = document.createElement("div");
+        // stageReady resolves to the element that holds the example's pickers: the stage, or in a skin, the root in
+        // its shadow root. Page controls for the example (marked .stage-extra) go on the stage under the pickers, and
+        // aren't printed.
+        if (template && skinned) {
+            const host = document.createElement("div");
 
-            stage.classList.add("stage-framed");
-            example.stageReady = createFrame(stage).then(({ doc, root }) => {
-                root.append(doc.importNode(template.content, true));
+            host.className = "skin-stage";
+            stage.append(host, ...extras);
+            example.stageReady = skinStage(host).then(root => {
+                root.append(document.importNode(template.content, true));
                 return root;
             });
-
-            wrapper.className = "stage-extras";
-            wrapper.append(...extras);
-            if (extras.length) stage.append(wrapper);
         } else {
             if (template) stage.append(template.content.cloneNode(true));
             stage.append(...extras);
@@ -153,45 +154,71 @@ function setupExamples() {
     }
 }
 
-// A frame that loads the current skin, at the start of the container. Resolves once it has loaded, with its
-// document and the element to put the example in.
-function createFrame(container) {
-    const frame = document.createElement("iframe");
+// Gives the host a shadow root dressed in the current skin, and resolves with the element to put an example in, once
+// the styles are there. That element is display: contents, as is the host when it's a .skin-stage, so the example
+// sits on the stage as it would without a skin. It carries the framework's dark mode switch and what the framework
+// sets on <body>.
+const skinRoots = [];
+let skinSheets;
 
-    frame.className = "example-frame";
-    frame.title = `Example with the ${skin.label} skin`;
-    frame.src = `./frame.html?skin=${encodeURIComponent(skinName)}`;
-    container.prepend(frame);
+async function skinStage(host) {
+    const shadow = host.attachShadow({ mode: "open" });
+    const root = document.createElement("div");
 
-    return new Promise(resolve => frame.addEventListener("load", () => {
-        const doc = frame.contentDocument;
-        fitFrame(frame);
-        resolve({ doc, root: doc.querySelector(".frame-stage") });
-    }, { once: true }));
+    root.className = "skin-root";
+    shadow.append(root);
+    skinRoots.push(root);
+    syncSkinTheme();
+
+    shadow.adoptedStyleSheets = await (skinSheets ??= loadSkinSheets());
+    return root;
 }
 
-// A frame is as tall as its content, and taller while a popover is open, so that the popover isn't cut off.
-function fitFrame(frame) {
-    const doc = frame.contentDocument;
-    const observer = new ResizeObserver(() => fit());
+// The framework's stylesheets, platypicker.css and the skin's own rules, each parsed once and shared by every stage.
+async function loadSkinSheets() {
+    const load = async href => new CSSStyleSheet().replace(await (await fetch(href)).text());
+    const stage = new CSSStyleSheet();
 
-    const fit = () => {
-        let height = doc.body.scrollHeight;
-        for (const menu of doc.querySelectorAll(".pp-menu:popover-open")) {
-            height = Math.max(height, menu.getBoundingClientRect().bottom + 24);
+    stage.replaceSync(`
+        .skin-root {
+            display: contents;
+            ${skin.rootCss ?? ""}
         }
-        frame.style.height = `${Math.ceil(height)}px`;
-    };
 
-    doc.addEventListener("toggle", event => {
-        if (!event.target.matches?.(".pp-menu")) return;
-        if (event.newState === "open") observer.observe(event.target);
-        else observer.unobserve(event.target);
-        fit();
-    }, true);
+        select[multiple] {
+            width: 20rem;
+            max-width: 100%;
+        }`);
 
-    observer.observe(doc.body);
-    fit();
+    const sheets = await Promise.all([...skin.stylesheets ?? [], "../src/platypicker.css"].map(load));
+
+    // The skin adopts its rules into the page when it loads, which is before <platy-picker> is defined.
+    await customElements.whenDefined("platy-picker");
+    return [...sheets, ...document.adoptedStyleSheets, stage];
+}
+
+// The stages follow the page's theme switch, through the framework's own dark mode switch.
+function syncSkinTheme() {
+    const theme = document.documentElement.dataset.theme ?? (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+    for (const root of skinRoots) skin.setTheme?.(root, theme === "dark");
+}
+
+function setupSkinTheme() {
+    if (!skinned) return;
+    new MutationObserver(syncSkinTheme).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+    matchMedia("(prefers-color-scheme: dark)").addEventListener("change", syncSkinTheme);
+}
+
+// The page's own pickers (the skin switch, the playground's and the benchmark's) keep the base look in a skin. The
+// framework's classes would mean nothing out here, where its stylesheet isn't, so they only drop the host plug that
+// would turn the base look off.
+function unskin(picker) {
+    const plug = String(customElements.get("platy-picker").classes.host ?? "").split(/\s+/).filter(Boolean);
+    picker.classList.remove(...plug);
+}
+
+function setupPagePickers() {
+    customElements.whenDefined("platy-picker").then(() => document.querySelectorAll("platy-picker").forEach(unskin));
 }
 
 // ---------------------------------------------------------------------------
@@ -201,7 +228,16 @@ function fitFrame(frame) {
 function setupSkinSwitch() {
     const select = document.querySelector("[data-skin-switch]");
 
+    const icon = document.querySelector("[data-skin-icon]");
+    const style = document.createElement("style");
+
     for (const [name, { label }] of Object.entries(PLATY_SKINS)) select.add(new Option(label, name, false, name === skinName));
+
+    // Each skin's icon, on the closed switch and on its row.
+    icon.src = skin.icon;
+    style.textContent = Object.values(PLATY_SKINS).map((entry, index) =>
+        `.skin-switch .pp-list > li:nth-child(${index + 1}) > .pp-item::before { background-image: url("${entry.icon}"); }`).join("\n");
+    document.head.append(style);
 
     // Reloads the page in the chosen skin, at the same place.
     select.addEventListener("change", () => {
@@ -266,9 +302,8 @@ function setupSkins() {
     }
 
     // In a skin, the sections that work differently say so.
-    if (framed) {
+    if (skinned) {
         note("#theming .example", `The ${skin.label} skin takes its look from ${skin.label}'s classes, so most of these variables only change the base look. The accent (the check mark) and the search match still apply.`);
-        note("#benchmark .stage", "The benchmark runs with the base look, in this page rather than in a frame.");
     }
 }
 
@@ -721,8 +756,8 @@ async function setupBatchCount() {
     const picker = (await output.closest(".example").stageReady).querySelector("platy-picker");
     const select = picker.querySelector("select");
 
-    // The list only exists once the element has been defined, in the frame's window when there is one.
-    picker.ownerDocument.defaultView.customElements.whenDefined("platy-picker").then(() => {
+    // The list only exists once the element has been defined.
+    customElements.whenDefined("platy-picker").then(() => {
         const list = picker.querySelector(".pp-list");
         const update = () => output.textContent =
             `${list.querySelectorAll(".pp-item").length.toLocaleString()} of ${select.options.length.toLocaleString()} options rendered`;
@@ -792,10 +827,10 @@ async function setupPlayground() {
     };
 
     const build = () => {
-        const previous = place.root.querySelector("select");
+        const previous = stage.querySelector("select");
         const kept = new Set(previous ? [...previous.selectedOptions].map(option => option.value) : []);
-        const picker = place.doc.createElement("platy-picker");
-        const select = place.doc.createElement("select");
+        const picker = document.createElement("platy-picker");
+        const select = document.createElement("select");
         const list = form.elements.list.value;
 
         for (const [name, relevant] of Object.entries(PLAYGROUND_RELEVANT)) form.elements[name].disabled = !relevant(form);
@@ -829,7 +864,7 @@ async function setupPlayground() {
             write(`change: ${chosen || "nothing selected"}`);
         });
 
-        place.root.replaceChildren(picker);
+        stage.replaceChildren(picker);
     };
 
     form.addEventListener("input", event => {
@@ -844,9 +879,7 @@ async function setupPlayground() {
     });
     form.addEventListener("submit", event => event.preventDefault());
 
-    // In a skin, the picker is built in a frame's document, so the frame's skinned platypicker takes it.
-    if (framed) host.closest(".stage").classList.add("stage-framed");
-    const place = framed ? await createFrame(host) : { doc: document, root: host };
+    const stage = skinned ? await skinStage(host) : host;
 
     build();
 }
@@ -914,6 +947,7 @@ function setupBenchmark() {
 
         let start = performance.now();
         host.append(picker);
+        unskin(picker);
         await nextPaint();
         const build = performance.now() - start;
 
