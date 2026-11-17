@@ -12,12 +12,5 @@
   },
   "files": [
     "src"
-  ],
-  "devDependencies": {
-    "@tailwindcss/cli": "^4.3.5",
-    "tailwindcss": "^4.3.5"
-  },
-  "scripts": {
-    "build:tailwind": "tailwindcss -i test/tailwind.input.css -o test/tailwind.css --minify"
-  }
+  ]
 }

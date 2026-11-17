@@ -213,7 +213,7 @@ import "platypicker";
 
 There's no extra stylesheet to link: the skin adds its few rules itself. Imported after `platypicker`, it warns in the console. The [docs page](https://peter-petkov.github.io/platypicker/) can show all its examples in each skin.
 
-Platypicker's look has two halves. **Layout**, how the parts sit (the row with its subtext and check mark, the sticky search bar, the badges in one line), stays. **Paint**, the colors, borders, spacing and type, steps aside for a skinned picker, which has the `pp-skin` class, and leaves it to the framework's classes, whichever stylesheet loads first. The skin adds rules of its own only for what the framework has no class for, and your `--platypicker-*` variables still apply to those.
+Platypicker's look has two halves. **Layout**, how the parts sit (the row with its subtext and check mark, the sticky search bar, the badges in one line), always stays. **Paint**, the colors, borders, spacing and type, steps aside for a picker with the `pp-skin` class, as the Bootstrap skin gives it, and leaves it to the framework's classes, whichever stylesheet loads first. The skin adds rules of its own only for what the framework has no class for, and your `--platypicker-*` variables still apply to those.
 
 ### Bootstrap
 
@@ -234,26 +234,24 @@ So the select's sizes (`form-select-sm`, `form-select-lg`) and validation classe
 
 ### Tailwind
 
-For Tailwind 4, in utilities: gray with an indigo accent, the look of Tailwind's own form examples, with `dark:` variants so dark mode follows your Tailwind setup. Rows turn indigo under the pointer, and the check mark and search matches are indigo too.
+For Tailwind 4. Tailwind has no component classes, but it publishes its theme as CSS variables, so this skin keeps Platypicker's own look and paints it with Tailwind's: gray with an indigo accent, as in Tailwind's form examples, with its `--radius-md` and `--shadow-lg`.
 
 ```js
 import "platypicker/src/skins/tailwind.js";
 import "platypicker";
 ```
 
-Two lines in your Tailwind stylesheet go with it. Tailwind generates only the classes it finds in your sources and skips `node_modules`, so point it at the skin. And Tailwind puts its utilities in a cascade layer, which loses to any CSS outside layers, so import platypicker.css into its `components` layer, below the utilities, rather than linking it:
+There's nothing to set up in Tailwind. Where your theme changes a value, such as `--color-indigo-600`, the picker follows; where your build hasn't output a variable, the skin uses Tailwind's default. Dark mode follows `color-scheme`, like the base look, so set `color-scheme: dark` wherever your Tailwind dark mode turns on. For other colors, set the [`--platypicker-*` variables](#theming), which win over the skin:
 
 ```css
-@import "tailwindcss";
-@import "platypicker/src/platypicker.css" layer(components);
-@source "../node_modules/platypicker/src/skins/tailwind.js";
+platy-picker {
+  --platypicker-accent-color: light-dark(#059669, #34d399); /* Tailwind's emerald-600 and -400 */
+}
 ```
-
-The `@source` path is relative to the stylesheet. For other colors, copy `src/skins/tailwind.js` into your project, change its classes and its import of `../classes.js` to `platypicker/src/classes.js`, and import and `@source` your copy instead. Tailwind needs to see every class written out in full, so changing the class names from script wouldn't work.
 
 ### Your own skin
 
-To make a skin of your own, fill the plugs with your framework's classes, include `pp-skin` in the `host` plug, and import it before `platypicker`. `src/skins/bootstrap.js` and `src/skins/tailwind.js` are short examples.
+A skin is a module imported before `platypicker`, of one of two kinds. One that dresses the picker in a framework's classes fills the plugs with them and includes `pp-skin` in the `host` plug, as `src/skins/bootstrap.js` does. One that only changes the colors, radius and shadow keeps the base look and sets its variables, as `src/skins/tailwind.js` does.
 
 ## JavaScript API
 

@@ -1,7 +1,0 @@
-/* The Tailwind skin's classes, for the docs page's Tailwind examples. After changing the skin, rebuild tailwind.css
-   with: npm run build:tailwind */
-@import "tailwindcss" source(none);
-@source "../src/skins/tailwind.js";
-
-/* The docs page turns on dark mode with a class, as it switches its theme. */
-@custom-variant dark (&:where(.dark, .dark *));
