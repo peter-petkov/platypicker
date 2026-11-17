@@ -63,8 +63,8 @@ const css = `
             color: inherit;
         }
 
-        .pp-item:active > .pp-item-check {
-            background: currentColor;
+        .pp-item[aria-pressed="true"]:active > .pp-item-check {
+            background-color: currentColor;
         }
 
         .pp-tags {
