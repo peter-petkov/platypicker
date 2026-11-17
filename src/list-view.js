@@ -53,6 +53,7 @@ export default class ListView {
     #groupItems = new Map();            // option group -> its <li role="group">, as rendered right now
     #dividerItems = new Map();          // entry -> the <li> of the divider rendered right before it
     #setSize = null;                    // The aria-setsize the rows carry.
+    #tabStop = null;                    // The one row Tab stops at; the arrow keys move between rows.
     #recordsByButton = new WeakMap();
     #tail = [];                         // The <li>s after the last row, present while more rows are to come.
     #typeAheadBuffer = "";
@@ -153,6 +154,11 @@ export default class ListView {
             if (!record || record.entry.disabled) return;
 
             this.#actions.activate(record.entry);
+        }, { signal: this.#signal });
+
+        // The row that takes focus, however it got it, becomes the one Tab stops at.
+        this.#list.addEventListener("focusin", e => {
+            if (this.#recordsByButton.has(e.target)) this.#setTabStop(e.target);
         }, { signal: this.#signal });
     }
 
@@ -323,6 +329,7 @@ export default class ListView {
         for (const [group, rows] of groups) group.lastElementChild.append(...rows);
         this.#list.insertBefore(this.#fragmentOf(items), this.#tail[0] ?? null);
         this.#syncSetSize(view);
+        this.#syncTabStop();
         this.#highlightItems(view, entries);
     }
 
@@ -357,6 +364,7 @@ export default class ListView {
         this.#place(this.#list, items);
         for (const [group, rows] of groups) this.#place(group.lastElementChild, rows);
         this.#syncSetSize(view);
+        this.#syncTabStop();
         this.#highlightItems(view, entries);
         this.#syncTail();
 
@@ -476,6 +484,24 @@ export default class ListView {
     }
 
     /**
+     * Tab stops at one row of the list, as in a native listbox: the row last focused while it's still shown,
+     * otherwise the selected row, otherwise the first.
+     */
+    #syncTabStop() {
+        if (this.#tabStop?.isConnected) return;
+
+        const selected = this.#source.firstSelected;
+        this.#setTabStop((this.#recordsByEntry.get(selected) ?? this.#rows[0])?.button ?? null);
+    }
+
+    #setTabStop(button) {
+        if (this.#tabStop === button) return;
+        if (this.#tabStop) this.#tabStop.tabIndex = -1;
+        this.#tabStop = button;
+        if (button) button.tabIndex = 0;
+    }
+
+    /**
      * Puts the items in a list (the list itself or a group's) in the given order, ahead of the tail. Items that are no
      * longer wanted are removed, and the rest only move when their order changed, since moving a node takes focus
      * away from it.
@@ -513,6 +539,7 @@ export default class ListView {
         const button = document.createElement("button");
         button.type = "button";
         button.setAttribute("role", "option");
+        button.tabIndex = -1;
         addClasses(button, "item");
 
         const label = document.createElement("span");
@@ -776,17 +803,32 @@ export default class ListView {
     }
 
     // -----------------------------------------------------------------
-    // Arrow key navigation (moves focus only, exactly like Tab / Shift+Tab,
-    // and never changes the selection)
+    // Keyboard navigation. Moves focus only, and never changes the selection.
     // -----------------------------------------------------------------
 
     #wireKeyboardNavigation() {
-        // Same elements, in the same order, that Tab would visit inside the popover.
+        // The elements the arrow keys go through, in order: the search box, the buttons, then the rows.
         const focusableElements = () => [...this.#popover.querySelectorAll(
             "input:not([hidden]), .pp-bar button:not([hidden], :disabled), li > .pp-item:not(:disabled)")];
 
         this.#popover.addEventListener("keydown", e => {
+            // Alt+Up closes, as on a native select, and puts focus back on it.
+            if (e.altKey && e.code === "ArrowUp" && !e.ctrlKey && !e.metaKey) {
+                e.preventDefault();
+                this.#actions.close();
+                return;
+            }
+
             if (e.ctrlKey || e.altKey || e.metaKey || e.shiftKey) return;
+
+            // Home and End go to the first and last row, Page Up and Page Down a popover's height. Only from a row,
+            // so that they still move the caret in the search box.
+            const jump = { Home: -Infinity, End: Infinity, PageUp: -1, PageDown: 1 }[e.code];
+            if (jump && this.#recordsByButton.has(e.target)) {
+                e.preventDefault();
+                this.#jump(e.target, jump);
+                return;
+            }
 
             const step = { ArrowDown: 1, ArrowUp: -1 }[e.code];
             if (!step) return;
@@ -805,5 +847,25 @@ export default class ListView {
             const index = focusable.indexOf(e.target);
             focusable[Math.min(Math.max(index + step, 0), focusable.length - 1)].focus();
         }, { signal: this.#signal });
+    }
+
+    /**
+     * Moves focus from a row by pages (-1 or 1, as many rows as fit in the popover) or to an end (-Infinity or
+     * Infinity). Rows that aren't rendered yet are rendered first, so End reaches the last match of a long list.
+     */
+    #jump(from, pages) {
+        const index = this.#rows.findIndex(record => record.button === from);
+        const room = this.#popover.clientHeight - (this.#form.hidden ? 0 : this.#form.offsetHeight);
+        const pageSize = Math.max(1, Math.floor(room / from.offsetHeight) - 1);
+        const wanted = Number.isFinite(pages) ? index + pages * pageSize : pages;
+
+        while (wanted >= this.#rows.length && this.#view?.hasMore)
+            this.#renderMore(wanted === Infinity ? Infinity : this.#stepSize, Infinity);
+
+        const target = this.#rows[Math.min(Math.max(wanted, 0), this.#rows.length - 1)]?.button;
+        if (!target) return;
+
+        target.focus({ preventScroll: true });
+        this.#reveal(target, false);
     }
 }

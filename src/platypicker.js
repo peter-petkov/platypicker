@@ -403,9 +403,16 @@ export default class PlatyPicker extends HTMLElement {
         this.#select.addEventListener("click", () => this.#togglePopover(), { signal });
 
         this.#select.addEventListener("keydown", e => {
-            if (e.code === "Enter" || e.code === "Space" || e.code === "ArrowDown")
+            if (["Enter", "Space", "ArrowDown", "ArrowUp"].includes(e.code))
                 this.#togglePopover(true);
         }, { capture: true, signal });
+
+        // The popover closes when focus leaves the picker, as by Tab past its end. Back to the select it stays open,
+        // so that clicking the select toggles it rather than closing and reopening it. Focus going nowhere (another
+        // window, or a click on the page, which the click listener below handles) leaves it open too.
+        popover.addEventListener("focusout", e => {
+            if (e.relatedTarget && !this.contains(e.relatedTarget)) popover.hidePopover();
+        }, { signal });
 
         this.#select.addEventListener("change", async () => {
             if (!this.#select.options.length) return;
