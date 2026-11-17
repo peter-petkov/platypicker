@@ -34,6 +34,7 @@ function init() {
     setupTheme();
     setupSupportNotice();
     setupLiveDemo();
+    setupBatchDemo();
     setupBenchmark();
 }
 
@@ -52,13 +53,16 @@ const DATA = {
 };
 
 function fillSelects() {
-    for (const select of document.querySelectorAll("select[data-fill]")) {
-        const [key, withSubtext] = select.dataset.fill.split(":");
+    for (const select of document.querySelectorAll("select[data-fill], select[data-cars]")) {
+        const [key, withSubtext] = (select.dataset.fill ?? "").split(":");
 
-        select.insertAdjacentHTML("beforeend", DATA[key].map(item => {
+        if (DATA[key]) select.insertAdjacentHTML("beforeend", DATA[key].map(item => {
             const [label, subtext] = Array.isArray(item) ? item : [item];
             return `<option${withSubtext && subtext ? ` data-subtext="${subtext}"` : ""}>${label}</option>`;
         }).join(""));
+
+        // data-cars asks for that many generated car options, for lists that are long enough to need batches.
+        if (select.dataset.cars) select.insertAdjacentHTML("beforeend", carOptions(Number(select.dataset.cars), false));
 
         // data-pick holds the indexes of the options to preselect.
         select.dataset.pick?.split(",").forEach(index => select.options[index].selected = true);
@@ -133,6 +137,26 @@ function setupLiveDemo() {
 }
 
 // ---------------------------------------------------------------------------
+// Batches
+// ---------------------------------------------------------------------------
+
+function setupBatchDemo() {
+    const picker = document.getElementById("batch-demo");
+    const select = picker.querySelector("select");
+    const output = document.getElementById("batch-count");
+
+    // The list only exists once the element has been defined.
+    customElements.whenDefined("platy-picker").then(() => {
+        const list = picker.querySelector(".dropdown-menu ul");
+        const update = () => output.textContent =
+            `${list.querySelectorAll(".dropdown-item").length.toLocaleString()} of ${select.options.length.toLocaleString()} options rendered`;
+
+        new MutationObserver(update).observe(list, { childList: true });
+        update();
+    });
+}
+
+// ---------------------------------------------------------------------------
 // Large list benchmark
 // ---------------------------------------------------------------------------
 
@@ -199,7 +223,7 @@ function setupBenchmark() {
         const build = performance.now() - start;
 
         // The list may keep rendering in the background (it is marked aria-busy while it does). Wait for it, so the
-        // timings below are not mixed with that work. Older versions never set it and are ready at once.
+        // timings below are not mixed with that work. Older versions never set it, and are ready at once.
         const list = picker.querySelector(".dropdown-menu ul");
         while (list.getAttribute("aria-busy") === "true") await nextPaint();
         const rendered = performance.now() - start;

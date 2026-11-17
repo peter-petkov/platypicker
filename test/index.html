@@ -136,12 +136,32 @@
     <section class="py-4 border-top">
         <div class="row gy-3">
             <div class="col-md-5">
-                <h2 class="h5">Placeholders</h2>
-                <p class="text-body-secondary">Skeleton rows after the last option, as a loading hint.</p>
-                <code>placeholders="4"</code>
+                <h2 class="h5">Batches</h2>
+                <p class="text-body-secondary">Long lists are rendered a batch at a time, and the next batch follows as you scroll down. Searching still covers every option. A batch size of 0 renders everything.</p>
+                <div class="d-flex flex-wrap gap-2">
+                    <code>batch-size="20"</code>
+                    <code>batch-size="0"</code>
+                </div>
             </div>
             <div class="col-md-7">
-                <platy-picker placeholders="4"><select class="form-select" aria-label="Drink" data-fill="drinks"></select></platy-picker>
+                <platy-picker id="batch-demo" search batch-size="20"><select class="form-select" aria-label="Car" data-cars="2000"></select></platy-picker>
+                <output id="batch-count" class="d-block form-text mt-2"></output>
+            </div>
+        </div>
+    </section>
+
+    <section class="py-4 border-top">
+        <div class="row gy-3">
+            <div class="col-md-5">
+                <h2 class="h5">Placeholders</h2>
+                <p class="text-body-secondary">Skeleton rows after the last rendered option, for as long as more are still to come. With a local list they only flash by, because the next batch is rendered before you reach it.</p>
+                <div class="d-flex flex-wrap gap-2">
+                    <code>placeholders="4"</code>
+                    <code>batch-size="4"</code>
+                </div>
+            </div>
+            <div class="col-md-7">
+                <platy-picker placeholders="4" batch-size="4"><select class="form-select" aria-label="Drink" data-fill="drinks"></select></platy-picker>
             </div>
         </div>
     </section>
