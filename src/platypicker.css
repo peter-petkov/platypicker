@@ -27,10 +27,17 @@
             white-space: nowrap;
             min-width: max-content;
 
-            /* Keeps the select's height when nothing is selected. */
-            &:not(:has(option:checked))::after {
-                content: "\00a0";
-                visibility: hidden;
+            /* Keeps the select's height when nothing is selected, using the min-heights Bootstrap gives .form-control.
+               Not :not(:has(option:checked)): Firefox re-checks that for every option whose selection changes, so
+               selecting all of a long list took seconds. */
+            min-height: calc(1.5em + .75rem + calc(var(--bs-border-width) * 2));
+
+            &.form-select-sm {
+                min-height: calc(1.5em + .5rem + calc(var(--bs-border-width) * 2));
+            }
+
+            &.form-select-lg {
+                min-height: calc(1.5em + 1rem + calc(var(--bs-border-width) * 2));
             }
 
             &:not([multiple]) {
@@ -84,28 +91,9 @@
             min-width: anchor-size();
             max-height: 45vh;
 
-            /* Controls bar: the search box and the select all / none buttons. Each is shown or hidden with .d-none. */
+            /* Controls bar: the search box and the select all / none buttons. Each is shown or hidden with .d-none, and
+               the corners are set in script (see ListView). Rules with :has() would make long lists very slow. */
             .input-group {
-                &:not(:has(> :not(.d-none))) {
-                    display: none;
-                }
-
-                /* Bootstrap rounds only the first and last child, hidden or not, so round the visible ones instead.
-                   !important because Bootstrap's selectors for this are very specific. */
-                > :not(.d-none) {
-                    border-radius: var(--bs-border-radius-sm) !important;
-
-                    &:has(~ :not(.d-none)) {
-                        border-top-right-radius: 0 !important;
-                        border-bottom-right-radius: 0 !important;
-                    }
-
-                    & ~ :not(.d-none) {
-                        border-top-left-radius: 0 !important;
-                        border-bottom-left-radius: 0 !important;
-                    }
-                }
-
                 > button:not(.d-none) + button:not(.d-none) {
                     border-left-width: 0;
                 }

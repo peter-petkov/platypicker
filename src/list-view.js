@@ -30,6 +30,7 @@ export default class ListView {
     #signal;
 
     #popover;
+    #form;
     #search;
     #selectAllButton;
     #selectNoneButton;
@@ -89,7 +90,7 @@ export default class ListView {
     #buildControls() {
         const signal = this.#signal;
 
-        const form = document.createElement("form");
+        const form = this.#form = document.createElement("form");
         form.classList.add("input-group", "p-2", "bg-body-tertiary", "border-bottom", "sticky-top");
         form.addEventListener("submit", e => e.preventDefault(), { signal });
         this.#popover.append(form);
@@ -166,6 +167,31 @@ export default class ListView {
         this.#selectAllButton.classList.toggle("d-none",
             !controls || !this.#source.multiple || !this.#source.canSelectAll);
         this.#selectNoneButton.classList.toggle("d-none", !controls || this.#source.required);
+
+        this.#styleBar();
+    }
+
+    /**
+     * The search box and the buttons are shown and hidden with .d-none, but Bootstrap rounds only the first and last
+     * child of an input group, shown or not. So the corners are set here, with Bootstrap's utility classes, and the
+     * bar itself is hidden when it has nothing to show.
+     *
+     * This is done in script and not in CSS on purpose. Rules with :has() and sibling combinators make the browser
+     * so slow at changing which options of a long multiple select are selected that select all needs half a minute.
+     */
+    #styleBar() {
+        const controls = [this.#search, this.#selectAllButton, this.#selectNoneButton];
+        const shown = controls.filter(control => !control.classList.contains("d-none"));
+
+        this.#form.classList.toggle("d-none", !shown.length);
+
+        for (const control of controls) {
+            const position = shown.indexOf(control);
+
+            control.classList.toggle("rounded-1", position >= 0);
+            control.classList.toggle("rounded-end-0", position >= 0 && position < shown.length - 1);
+            control.classList.toggle("rounded-start-0", position > 0);
+        }
     }
 
     get #isBatched() {
