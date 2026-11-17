@@ -176,8 +176,10 @@ async function skinStage(host) {
 
 // The framework's stylesheets, platypicker.css and the skin's own rules, each parsed once and shared by every stage.
 // A skin can ask for platypicker.css in a cascade layer, as Tailwind does so that its utilities win over the layout.
+// A shadow root has no :root, so the framework's :root rules (Bootstrap's base variables, which its dark theme doesn't
+// repeat) go to the shadow root's host instead.
 async function loadSkinSheets() {
-    const text = async href => (await fetch(href)).text();
+    const text = async href => (await fetch(href)).text().then(css => css.replace(/:root\b/g, ":host"));
     const load = async href => new CSSStyleSheet().replace(await text(href));
     const layer = skin.platypickerLayer;
     const platypicker = layer
