@@ -477,6 +477,10 @@ p {
     border: 0;
 }
 
+.frame-tall {
+    height: 28rem;
+}
+
 .reference {
     margin-bottom: 1.25rem;
 

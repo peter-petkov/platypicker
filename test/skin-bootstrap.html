@@ -15,6 +15,11 @@
         select[multiple] {
             min-width: 18rem;
         }
+
+        /* The docs page shows this in a short frame, where the usual 45vh would leave the list cramped. */
+        platy-picker {
+            --platypicker-max-height: 16rem;
+        }
     </style>
     <script>
         // Follows the docs page's theme switch when it's shown there, as Bootstrap's own data-bs-theme.
