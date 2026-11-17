@@ -191,9 +191,12 @@
         border-radius: var(--_pp-radius);
         cursor: pointer;
 
+        /* A multiple select's chevron is drawn by its badges instead (see .pp-tags::after), since pages and
+           frameworks often take the background image off multiple selects, which natively have no arrow. */
         &[multiple] {
             appearance: none;
             min-width: 14rem; /* Room for a few badges. */
+            background-image: none;
         }
 
         &:focus-visible {
@@ -447,12 +450,29 @@
             text-decoration: underline;
         }
 
-        /* Badges in a closed multiple select, with room on the right for the select's chevron. */
+        /* Badges in a closed multiple select, and the select's chevron on the right. */
         .pp-tags {
             gap: .25rem;
             padding: 0 2rem 0 .3125rem;
             font: inherit;
             color: var(--_pp-color);
+
+            &::after {
+                content: "";
+                position: absolute;
+                top: 50%;
+                right: .625rem;
+                width: .75rem;
+                height: .75rem;
+                translate: 0 -50%;
+                background-color: #888; /* The same gray as the single select's chevron. */
+                mask: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpath d='m3 6 5 5 5-5'/%3e%3c/svg%3e") center / contain no-repeat;
+            }
+        }
+
+        /* The badges are a sibling of the select, so they don't fade with it on their own. */
+        .pp-select:disabled + .pp-tags {
+            opacity: .6;
         }
 
         .pp-tag, .pp-tag-count {
