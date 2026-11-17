@@ -387,8 +387,9 @@ export default class PlatyPicker extends HTMLElement {
         // A form reset changes the selection without a change event, and only once the reset event has run.
         this.#select.form?.addEventListener("reset", () => setTimeout(() => this.#tags?.refresh()), { signal });
 
+        // By the composed path, so that a click on a picker inside a shadow root counts as a click on it.
         document.addEventListener("click", e => {
-            if (popover.matches(":popover-open") && !popover.contains(e.target) && !this.contains(e.target))
+            if (popover.matches(":popover-open") && !e.composedPath().includes(this))
                 popover.hidePopover();
         }, { signal });
 

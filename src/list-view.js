@@ -305,13 +305,18 @@ export default class ListView {
         this.#highlightItems(view, entries);
     }
 
+    /** The focused element, asked of the list's own root so that it's found inside a shadow root too. */
+    #focused() {
+        return this.#popover.getRootNode().activeElement;
+    }
+
     /**
      * Brings the rendered rows up to date after the source has read the select again, touching only what changed.
      * Rows of entries that are still shown are kept, so focus, scroll position and highlights carry over; new rows
      * are created and rows of entries that went away are removed. As many matches as before stay rendered.
      */
     reconcile() {
-        const focusedIndex = this.#rows.findIndex(record => record.button === document.activeElement);
+        const focusedIndex = this.#rows.findIndex(record => record.button === this.#focused());
         const keep = Math.max(this.#rows.length, this.#stepSize);
         const previous = { records: this.#recordsByEntry, headers: this.#headerItems, dividers: this.#dividerItems };
 
@@ -331,7 +336,7 @@ export default class ListView {
         this.#syncTail();
 
         // A focused row that went away hands focus to the row that took its place, or to the search box.
-        if (focusedIndex >= 0 && !this.#popover.contains(document.activeElement) &&
+        if (focusedIndex >= 0 && !this.#popover.contains(this.#focused()) &&
             this.#popover.matches(":popover-open")) {
             const next = this.#rows[Math.min(focusedIndex, this.#rows.length - 1)];
             (next && !next.button.disabled ? next.button : this.#firstFocusable())?.focus({ preventScroll: true });
