@@ -2,6 +2,8 @@
 
 A drop-in enhancement for the native `<select>` element: search-to-filter, select-all/none for multi-selects, badges for the selected options, and fast rendering of long option lists. It brings its own neutral look and needs no CSS framework.
 
+**[Docs and live examples](https://peter-petkov.github.io/platypicker/)**, with a playground to try every attribute.
+
 In browsers that don't yet support `appearance: base-select` (see [Browser support](#browser-support)), Platypicker falls back to the default `<select>` behaviour.
 
 ## Install
