@@ -240,18 +240,30 @@ export default class OptionSource {
         return new FilteredView(this.#entries, query);
     }
 
-    /** Calls back, debounced, after the select's options change in a way that affects the list. */
+    /**
+     * Calls back whenever the select's options change in a way that can show in the list: options or groups added,
+     * removed or moved, their text changed, or one of the attributes below. The call says only that something
+     * changed; rebuild() reads the new state. Several changes made in one go arrive as one call.
+     */
     observe(callback) {
         this.#observer?.disconnect();
 
-        let timeout;
-        this.#observer = new MutationObserver(() => {
-            clearTimeout(timeout);
-            timeout = setTimeout(() => {
-                if (this.rebuild()) callback();
-            }, 100);
+        this.#observer = new MutationObserver(() => callback());
+        this.#observer.observe(this.#select, {
+            childList: true,
+            subtree: true,
+            characterData: true,
+            attributes: true,
+            attributeFilter: ["disabled", "hidden", "label", "title", "data-subtext"],
         });
-        this.#observer.observe(this.#select, { childList: true, subtree: true });
+    }
+
+    /**
+     * Whether the options changed in a way the observer has not reported yet. The observer reports after the current
+     * task, so a change made just before a click would otherwise be missed by it.
+     */
+    takePendingChanges() {
+        return (this.#observer?.takeRecords().length ?? 0) > 0;
     }
 
     disconnect() {

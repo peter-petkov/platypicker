@@ -42,6 +42,8 @@ export default class ListView {
     #lastGroup = null;                  // The option group of the last row rendered.
     #rows = [];                         // The rendered records, in list order.
     #recordsByEntry = new WeakMap();    // Only the entries rendered right now.
+    #headerItems = new Map();           // option group -> the <li> of its header, as rendered right now
+    #dividerItems = new Map();          // entry -> the <li> of the divider rendered right before it
     #recordsByButton = new WeakMap();
     #tail = [];                         // The <li>s after the last row, present while more rows are to come.
     #typeAheadBuffer = "";
@@ -207,12 +209,9 @@ export default class ListView {
     // Rendering
     // -----------------------------------------------------------------
 
-    /**
-     * Renders the matches of the current search from scratch. As many rows as were rendered before are brought
-     * back, so a change to the options doesn't throw the list back to the top.
-     */
+    /** Renders the matches of the current search from scratch, starting with the first batch. */
     render() {
-        this.#showMatches(this.#query(), this.#rows.length);
+        this.#showMatches(this.#query());
     }
 
     /** Shows the entries matching a search, starting again from the first batch. An empty search shows them all. */
@@ -226,7 +225,7 @@ export default class ListView {
      * near. With batching off, the rest streams in step by step. Either way a newer search replaces the one
      * being shown.
      */
-    #showMatches(query, keep = 0) {
+    #showMatches(query) {
         const view = this.#view = this.#source.filter(query);
 
         this.#sentinelObserver?.disconnect();
@@ -234,11 +233,12 @@ export default class ListView {
         this.#lastGroup = null;
         this.#rows = [];
         this.#recordsByEntry = new WeakMap();
+        this.#headerItems = new Map();
+        this.#dividerItems = new Map();
         this.#list.replaceChildren();
         this.#tail = [];
 
         this.#renderMore(this.#stepSize);
-        while (this.#rows.length < keep && view.hasMore) this.#renderMore(this.#stepSize, Infinity);
 
         if (!this.#isBatched) {
             // noinspection JSIgnoredPromiseFromCall, The stream manages its own lifetime and doesn't need to be awaited.
@@ -283,74 +283,178 @@ export default class ListView {
     #appendRows(view, entries) {
         if (!entries.length) return;
 
-        const fragment = document.createDocumentFragment();
-        const records = [];
-        const matchingHeaders = [];
+        const items = this.#buildItems(view, entries);
+        this.#list.insertBefore(this.#fragmentOf(items), this.#tail[0] ?? null);
+        this.#highlightItems(view, entries);
+    }
+
+    /**
+     * Brings the rendered rows up to date after the source has read the select again, touching only what changed.
+     * Rows of entries that are still shown are kept, so focus, scroll position and highlights carry over; new rows
+     * are created and rows of entries that went away are removed. As many matches as before stay rendered.
+     */
+    reconcile() {
+        const focusedIndex = this.#rows.findIndex(record => record.button === document.activeElement);
+        const keep = Math.max(this.#rows.length, this.#stepSize);
+        const previous = { records: this.#recordsByEntry, headers: this.#headerItems, dividers: this.#dividerItems };
+
+        const view = this.#view = this.#source.filter(this.#query());
+
+        this.#sentinelObserver?.disconnect();
+        this.#highlighter.clear();
+        this.#lastGroup = null;
+        this.#rows = [];
+        this.#recordsByEntry = new WeakMap();
+        this.#headerItems = new Map();
+        this.#dividerItems = new Map();
+
+        const entries = view.pull(keep, Infinity);
+        this.#place(this.#buildItems(view, entries, previous));
+        this.#highlightItems(view, entries);
+        this.#syncTail();
+
+        // A focused row that went away hands focus to the row that took its place, or to the search box.
+        if (focusedIndex >= 0 && !this.#popover.contains(document.activeElement) &&
+            this.#popover.matches(":popover-open")) {
+            const next = this.#rows[Math.min(focusedIndex, this.#rows.length - 1)];
+            (next && !next.button.disabled ? next.button : this.#firstFocusable())?.focus({ preventScroll: true });
+        }
+
+        if (!this.#isBatched) {
+            // noinspection JSIgnoredPromiseFromCall, The stream manages its own lifetime and doesn't need to be awaited.
+            this.#stream(view);
+        }
+    }
+
+    /**
+     * Makes the list items for the given matches, in order: dividers, group headers and rows. With `reuse` (the
+     * maps of a previous render), items that are still needed are taken from there and brought up to date.
+     */
+    #buildItems(view, entries, reuse) {
+        const items = [];
 
         for (const entry of entries) {
             if (view.hasDividerBefore(entry)) {
-                const divider = document.createElement("hr");
-                divider.classList.add("dropdown-divider");
-                fragment.append(this.#wrapInListItem(divider));
+                let li = reuse?.dividers.get(entry);
+                if (!li) {
+                    const divider = document.createElement("hr");
+                    divider.classList.add("dropdown-divider");
+                    li = this.#wrapInListItem(divider);
+                }
+
+                this.#dividerItems.set(entry, li);
+                items.push(li);
             }
 
             if (entry.group !== this.#lastGroup) {
                 this.#lastGroup = entry.group;
 
-                if (entry.group) {
-                    const header = document.createElement("h6");
-                    header.classList.add("dropdown-header");
-                    header.textContent = entry.group.label;
-                    fragment.append(this.#wrapInListItem(header));
+                // A group shows up once per render, so its header can be keyed by the group.
+                if (entry.group && !this.#headerItems.has(entry.group)) {
+                    let li = reuse?.headers.get(entry.group);
+                    if (!li) {
+                        const header = document.createElement("h6");
+                        header.classList.add("dropdown-header");
+                        li = this.#wrapInListItem(header);
+                    }
 
-                    if (view.groupMatches(entry.group) && !view.textMatches(entry)) matchingHeaders.push(header);
+                    const header = li.firstElementChild;
+                    if (header.textContent !== entry.group.label) header.textContent = entry.group.label;
+
+                    this.#headerItems.set(entry.group, li);
+                    items.push(li);
                 }
             }
 
-            const record = this.#createRecord(entry);
-            records.push(record);
-            fragment.append(this.#wrapInListItem(record.button));
+            const old = reuse?.records.get(entry);
+            const record = old ? this.#updateRecord(old) : this.#createRecord(entry);
+            this.#recordsByEntry.set(entry, record);
+            this.#rows.push(record);
+            items.push(old ? record.button.parentElement : this.#wrapInListItem(record.button));
         }
 
-        this.#rows.push(...records);
-        this.#list.insertBefore(fragment, this.#tail[0] ?? null);
+        return items;
+    }
 
-        // Ranges are made once the rows are in the document: moving a node collapses the ranges inside it.
+    #fragmentOf(items) {
+        const fragment = document.createDocumentFragment();
+        fragment.append(...items);
+        return fragment;
+    }
+
+    /**
+     * Puts the items in the list in the given order, ahead of the tail. Items that are no longer wanted are removed,
+     * and the rest only move when their order changed, since moving a node takes focus away from it.
+     */
+    #place(items) {
+        const wanted = new Set(items);
+        for (const child of [...this.#list.children])
+            if (!wanted.has(child) && !this.#tail.includes(child)) child.remove();
+
+        let cursor = this.#list.firstElementChild;
+        for (const item of items) {
+            if (item === cursor) cursor = cursor.nextElementSibling;
+            else this.#list.insertBefore(item, cursor);
+        }
+    }
+
+    /** Highlights the query in the rows of these entries and in the headers of groups matched by name. */
+    #highlightItems(view, entries) {
+        // Ranges are made once the items are in the document: moving a node collapses the ranges inside it.
         if (!view.query) return;
 
-        for (const header of matchingHeaders) {
-            if (this.#highlighter.isFull) break;
-            this.#highlighter.apply(header, "text", header.firstChild, view.query);
-        }
+        for (const entry of entries) {
+            if (this.#highlighter.isFull) return;
 
-        for (const record of records)
-            if (view.textMatches(record.entry)) this.#highlightMatch(record, view.query);
+            const header = entry.group && this.#headerItems.get(entry.group)?.firstElementChild;
+            if (header && view.groupMatches(entry.group) && !view.textMatches(entry))
+                this.#highlighter.apply(header, "text", header.firstChild, view.query);
+
+            const record = this.#recordsByEntry.get(entry);
+            if (record && view.textMatches(entry)) this.#highlightMatch(record, view.query);
+        }
     }
 
     #createRecord(entry) {
         const button = document.createElement("button");
         button.type = "button";
         button.classList.add("dropdown-item", "rounded-2");
-        if (entry.title) button.title = entry.title;
-        if (this.#source.isSelected(entry) && !entry.ownDisabled) button.classList.add("active");
-        if (entry.disabled) {
-            button.classList.add("disabled");
-            button.disabled = true; // Takes the item out of the Tab order.
-        }
 
-        const text = document.createTextNode(entry.label);
-
+        const text = document.createTextNode("");
         const small = document.createElement("small");
         small.classList.add("text-body-tertiary");
-        small.textContent = entry.subtext;
-
         button.append(text, small);
 
-        const record = { entry, button, text, small };
-        this.#recordsByEntry.set(entry, record);
+        const record = { entry, button, text, small, active: undefined };
         this.#recordsByButton.set(button, record);
 
+        return this.#updateRecord(record);
+    }
+
+    /** Brings a row up to date with its entry, writing only what differs. */
+    #updateRecord(record) {
+        const { entry, button, text, small } = record;
+
+        if (text.data !== entry.label) text.data = entry.label;
+        if (small.textContent !== entry.subtext) small.textContent = entry.subtext;
+        if (button.title !== entry.title) button.title = entry.title;
+
+        if (button.disabled !== entry.disabled) {
+            button.classList.toggle("disabled", entry.disabled);
+            button.disabled = entry.disabled; // Takes the item out of the Tab order.
+        }
+
+        this.#syncActive(record);
         return record;
+    }
+
+    /** Marks the row as selected or not. A selected option that is disabled on its own is not marked. */
+    #syncActive(record) {
+        const active = this.#source.isSelected(record.entry) && !record.entry.ownDisabled;
+        if (record.active === active) return;
+
+        record.active = active;
+        record.button.classList.toggle("active", active);
     }
 
     #wrapInListItem(element) {
@@ -421,28 +525,12 @@ export default class ListView {
         this.#sentinelObserver.observe(this.#tail[0]);
     }
 
-    /** Brings the rows up to date with the select: label and subtext changes, and which entries are selected. */
+    /**
+     * Brings the rendered rows up to date with which options are selected. Changes to the options themselves (their
+     * text, attributes, or which options there are) go through reconcile() instead.
+     */
     refresh() {
-        const query = this.#query();
-
-        for (const record of this.#rows) {
-            const { entry, button, text, small } = record;
-            let changed = false;
-
-            if (text.data !== entry.label) {
-                text.data = entry.label;
-                changed = true;
-            }
-
-            if (small.textContent !== entry.subtext) {
-                small.textContent = entry.subtext;
-                changed = true;
-            }
-
-            button.classList.toggle("active", this.#source.isSelected(entry));
-
-            if (changed && query) this.#highlightMatch(record, query);
-        }
+        for (const record of this.#rows) this.#syncActive(record);
     }
 
     // -----------------------------------------------------------------
@@ -495,6 +583,10 @@ export default class ListView {
             ? selectedButton
             : this.#popover.querySelector(".dropdown-item:not(.disabled, :disabled)");
         target?.focus({ preventScroll: target === selectedButton });
+    }
+
+    #firstFocusable() {
+        return this.#popover.querySelector("input:not(.d-none), .dropdown-item:not(.disabled, :disabled)");
     }
 
     scrollIntoView(entry) {

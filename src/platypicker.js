@@ -4,6 +4,12 @@ import Highlighter from "./highlighter.js";
 import ListView from "./list-view.js";
 import OptionSource from "./option-source.js";
 
+// While the popover is open, changes to the options are applied once they pause for RECONCILE_DELAY milliseconds,
+// and at least every RECONCILE_MAX_WAIT milliseconds while they keep coming.
+const RECONCILE_DELAY = 50;
+const RECONCILE_MAX_WAIT = 250;
+
+
 export default class PlatyPicker extends HTMLElement {
     static #registry = new WeakMap(); // <select> -> PlatyPicker instance
 
@@ -46,6 +52,9 @@ export default class PlatyPicker extends HTMLElement {
     #highlighter;
     #view;
     #abort;
+    #stale = false;             // Whether the options changed since the list last caught up with them.
+    #staleSince = null;         // When the first of those changes came in.
+    #reconcileTimer;
 
     constructor() {
         super();
@@ -93,7 +102,7 @@ export default class PlatyPicker extends HTMLElement {
         this.#view.render();
 
         this.#wireSelect();
-        this.#source.observe(() => this.#view.render());
+        this.#source.observe(() => this.#optionsChanged());
 
         PlatyPicker.#registry.set(this.#select, this);
     }
@@ -102,6 +111,7 @@ export default class PlatyPicker extends HTMLElement {
         if (!this.#select || !PlatyPicker.#registry.has(this.#select)) return;
 
         this.#abort.abort();
+        clearTimeout(this.#reconcileTimer);
         this.#source.disconnect();
         this.#highlighter.clear();
         this.#view.destroy();
@@ -239,8 +249,9 @@ export default class PlatyPicker extends HTMLElement {
     }
 
     #selectAll() {
-        this.#source.select(this.#source.entries.filter(entry => this.#view.isSelectable(entry)));
+        this.#catchUp(); // A change to the options may still be waiting, and select all must see it.
 
+        this.#source.select(this.#source.entries.filter(entry => this.#view.isSelectable(entry)));
         this.#select.dispatchEvent(new Event("change", { bubbles: true }));
     }
 
@@ -285,6 +296,14 @@ export default class PlatyPicker extends HTMLElement {
                 popover.hidePopover();
         }, { signal });
 
+        // Runs right before the popover shows, whatever opened it, so it never shows a stale list.
+        popover.addEventListener("beforetoggle", e => {
+            if (e.newState !== "open") return;
+
+            this.#catchUp();
+            this.#view.refresh(); // Picks up selection changes that fire no change event, like select.value = x.
+        }, { signal });
+
         popover.addEventListener("toggle", e => {
             this.#internals.states[e.newState === "open" ? "add" : "delete"]("open");
 
@@ -293,6 +312,40 @@ export default class PlatyPicker extends HTMLElement {
                 this.#view.focusInitial();
             }
         }, { signal });
+    }
+
+    // -----------------------------------------------------------------
+    // Keeping up with changes to the options
+    // -----------------------------------------------------------------
+
+    /**
+     * Called for every change to the options. While the popover is closed nothing is done until it opens. While it
+     * is open, a burst of changes is applied once it pauses, and at least every RECONCILE_MAX_WAIT milliseconds.
+     */
+    #optionsChanged() {
+        this.#stale = true;
+        if (!this.#view.popover.matches(":popover-open")) return;
+
+        const now = performance.now();
+        this.#staleSince ??= now;
+
+        clearTimeout(this.#reconcileTimer);
+        this.#reconcileTimer = setTimeout(() => this.#catchUp(),
+            Math.max(0, Math.min(RECONCILE_DELAY, this.#staleSince + RECONCILE_MAX_WAIT - now)));
+    }
+
+    /** Applies pending changes to the options, if there are any. */
+    #catchUp() {
+        clearTimeout(this.#reconcileTimer);
+        this.#staleSince = null;
+
+        if (!this.#view) return;
+        if (this.#source.takePendingChanges()) this.#stale = true;
+        if (!this.#stale) return;
+
+        this.#stale = false;
+        this.#source.rebuild();
+        this.#view.reconcile();
     }
 
     #togglePopover(forceOpen = false) {
