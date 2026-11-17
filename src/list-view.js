@@ -23,7 +23,7 @@ const yieldToMain = () => globalThis.scheduler?.yield?.() ?? new Promise(resolve
  * The popover: a search box with select all / none buttons, and the list of entries.
  *
  * It renders what an OptionSource holds, a batch at a time, and reports what the user does through the `actions` it
- * is given (activate, selectAll, selectNone, close). It never touches the select itself.
+ * is given (activate, selectAll, selectNone, close, loadMore). It never touches the select itself.
  */
 export default class ListView {
     #source;
@@ -145,11 +145,12 @@ export default class ListView {
 
     /**
      * Applies the element's settings: { search, controls, searchPlaceholder, selectAllLabel, selectNoneLabel,
-     * placeholders, batchSize }. Safe to call again whenever any of them changes. A new batch size is used for the
-     * batches that come after, and the rows already rendered stay.
+     * placeholders, batchSize, loading }. Safe to call again whenever any of them changes. A new batch size is used
+     * for the batches that come after, and the rows already rendered stay.
      */
     configure(config) {
         const placeholdersChanged = config.placeholders !== this.#config.placeholders;
+        const loadingChanged = Boolean(config.loading) !== Boolean(this.#config.loading);
         this.#config = config;
 
         this.#search.hidden = !config.search;
@@ -158,7 +159,8 @@ export default class ListView {
         this.#selectNoneButton.textContent = config.selectNoneLabel;
         this.syncControls();
 
-        if (placeholdersChanged) this.#syncTail(true);
+        if (placeholdersChanged || loadingChanged) this.#syncTail(placeholdersChanged);
+        if (loadingChanged) this.#list.setAttribute("aria-busy", Boolean(config.loading));
     }
 
     /**
@@ -262,7 +264,7 @@ export default class ListView {
     }
 
     async #stream(view) {
-        this.#list.setAttribute("aria-busy", view.hasMore);
+        this.#list.setAttribute("aria-busy", view.hasMore || Boolean(this.#config.loading));
 
         try {
             while (view.hasMore) {
@@ -272,7 +274,7 @@ export default class ListView {
                 this.#renderMore(this.#stepSize);
             }
         } finally {
-            if (this.#view === view) this.#list.setAttribute("aria-busy", false);
+            if (this.#view === view) this.#list.setAttribute("aria-busy", Boolean(this.#config.loading));
         }
     }
 
@@ -494,11 +496,13 @@ export default class ListView {
 
     /**
      * The tail marks the end of the list while more rows are to come: the skeleton rows if there are any
-     * configured, otherwise a single empty item. With batching on, the browser tells us when it comes near the
-     * visible part of the list, and that is when the next batch is rendered.
+     * configured, otherwise a single empty item. More rows are to come while some matches aren't rendered yet, or
+     * while the page says it's loading more options. With batching on, or while loading, the browser tells us when
+     * the tail comes near the visible part of the list. That is when the next batch is rendered, or once they all
+     * are, when the page is asked for more.
      */
     #syncTail(rebuild = false) {
-        const wanted = Boolean(this.#view?.hasMore);
+        const wanted = Boolean(this.#view?.hasMore || this.#config.loading);
 
         if (this.#tail.length && (!wanted || rebuild)) {
             this.#sentinelObserver?.disconnect();
@@ -509,7 +513,7 @@ export default class ListView {
         if (!wanted) return;
 
         if (!this.#tail.length) this.#createTail();
-        if (this.#isBatched) this.#watchTail();
+        if (this.#isBatched || this.#config.loading) this.#watchTail();
     }
 
     #createTail() {
@@ -545,7 +549,10 @@ export default class ListView {
 
     #watchTail() {
         this.#sentinelObserver ??= new IntersectionObserver(entries => {
-            if (this.#view?.hasMore && entries.some(entry => entry.isIntersecting)) this.#renderMore(this.#stepSize);
+            if (!entries.some(entry => entry.isIntersecting)) return;
+
+            if (this.#view?.hasMore) this.#renderMore(this.#stepSize);
+            else if (this.#config.loading) this.#actions.loadMore(this.#search.value.trim());
         }, { root: this.#popover, rootMargin: "0px 0px 100% 0px" }); // Starts a batch a popover's height early.
 
         // Observing again makes the browser report where the tail is now, so a batch that still leaves it

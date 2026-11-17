@@ -62,6 +62,7 @@ For multi-select, add `multiple` and `size="1"`. The closed select then shows th
 | `placeholder`        | string  | none                  | Text shown in a multiple select while nothing is selected.                                                                                                                      |
 | `batch-size`         | number  | `50`                  | How many options are rendered at a time; the next batch loads as you scroll near the end of the list. `0` renders the whole list. A missing or invalid value uses the default.  |
 | `placeholders`       | number  | off / `10`            | Shows skeleton rows at the end of the list while more options are still to come. If present without a valid non-negative integer value, renders 10 of them.                    |
+| `loading`            | boolean | off                   | Says more options are on their way. The end of the list stays marked, and a `loadmore` event fires as it comes near. See [Loading as you scroll](#loading-as-you-scroll).        |
 | `search-placeholder` | string  | `"Type to filter..."` | Placeholder text for the search input.                                                                                                                                          |
 | `select-all-label`   | string  | `"All"`               | Label for select all. Only appears when the `<select>` has `multiple`.                                                                                                          |
 | `select-none-label`  | string  | `"None"`              | Label for select none. Only appears if the `<select>` does not have the `required` attribute.                                                                                   |
@@ -72,8 +73,8 @@ All attributes are reflected as properties too (e.g. `picker.search = true`, `pi
 <platy-picker search controls
               batch-size="100"
               search-placeholder="Filter fruits..."
-              select-all-label="All"
-              select-none-label="None">
+              select-all-label="Every fruit"
+              select-none-label="No fruit">
   ...
 </platy-picker>
 ```
@@ -90,7 +91,7 @@ All attributes are reflected as properties too (e.g. `picker.search = true`, `pi
 - **Focus on open** - opening the popover scrolls to the selected option. Focus goes to the search input if there is one, otherwise to the selected option.
 - **Anchored, overflow-aware popover** - positioned via CSS anchor positioning; flips above the control automatically if there is no room below.
 - **Live DOM sync** – add, remove, reorder or edit `<option>`/`<optgroup>` elements on the underlying `<select>` at any time, including their `disabled`, `hidden`, `label`, `title` and `data-subtext` attributes, and the popover updates to match. Only what changed is updated, so focus and scroll position survive. While the popover is closed, updates wait until it opens; the badges follow right away.
-- **Placeholder rows** – add the `placeholders` attribute to show skeleton rows at the end of the list while more options are still to come. With a local list they only flash by, since the next batch renders before you reach it.
+- **Loading as you scroll** – for options that come from a server, `loading` and the `loadmore` event let you fetch them a page at a time, with `placeholders` showing skeleton rows while you wait. See below.
 - **Accessible state** - selected rows carry `aria-pressed="true"`, so screen readers announce which options are selected.
 - **`:state(open)`** - the `<platy-picker>` host exposes a custom state while its popover is open, so you can style around it without a class:
 ```css
@@ -98,6 +99,36 @@ All attributes are reflected as properties too (e.g. `picker.search = true`, `pi
     /* ... */
   }
 ```
+
+## Loading as you scroll
+
+When the options come from a server, add them to the `<select>` as they arrive. Set `loading` while there are more to come: the end of the list stays marked, with skeleton rows if `placeholders` is set, and the picker fires a `loadmore` event whenever that end comes near. That includes opening on a list too short to fill the popover. Fetch the next page then, append its options, and remove `loading` once there's nothing left:
+
+```html
+<platy-picker search placeholders="3" loading>
+  <select name="car"></select>
+</platy-picker>
+```
+
+```js
+const picker = document.querySelector("platy-picker");
+const select = picker.querySelector("select");
+let page = 0;
+let fetching = false;
+
+picker.addEventListener("loadmore", async () => {
+  if (fetching) return;
+  fetching = true;
+
+  const { cars, more } = await fetch(`/cars?page=${++page}`).then(response => response.json());
+  select.append(...cars.map(car => new Option(car.name, car.id)));
+  picker.loading = more;
+
+  fetching = false;
+});
+```
+
+The event fires again each time the end of the list comes near, including right after new options are added if the end is still in view, so ignore it while a fetch is running. It bubbles, and `event.detail.search` holds the text in the search box, in case the server should filter too. Without `loading`, the skeleton rows rarely show on a local list: the next batch is rendered before you reach the end.
 
 ## Theming
 

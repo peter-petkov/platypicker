@@ -60,6 +60,7 @@ export default class PlatyPicker extends HTMLElement {
         "placeholders",
         "batch-size",
         "placeholder",
+        "loading",
     ];
 
     #internals;
@@ -113,6 +114,7 @@ export default class PlatyPicker extends HTMLElement {
                 selectAll: () => this.#selectAll(),
                 selectNone: () => this.#selectNone(),
                 close: () => this.#close(),
+                loadMore: search => this.dispatchEvent(new CustomEvent("loadmore", { bubbles: true, detail: { search } })),
             },
         });
 
@@ -225,6 +227,19 @@ export default class PlatyPicker extends HTMLElement {
         this.setAttribute("batch-size", value);
     }
 
+    /**
+     * Says that more options are on their way, as when the page fetches them as the user scrolls. While it's set,
+     * the end of the list stays marked (with the skeleton rows, if there are any), and a loadmore event fires
+     * whenever that end comes near.
+     */
+    get loading() {
+        return this.hasAttribute("loading");
+    }
+
+    set loading(value) {
+        this.toggleAttribute("loading", Boolean(value));
+    }
+
     /** Shown in a multiple select while nothing is selected. */
     get placeholder() {
         return this.getAttribute("placeholder") ?? "";
@@ -267,6 +282,7 @@ export default class PlatyPicker extends HTMLElement {
             selectNoneLabel: this.selectNoneLabel,
             placeholders: this.placeholders,
             batchSize: this.batchSize,
+            loading: this.loading,
         };
     }
 
