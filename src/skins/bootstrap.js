@@ -33,9 +33,9 @@ const plugs = {
     divider: "dropdown-divider",
     placeholder: "placeholder-glow",
     placeholderBar: "placeholder col-8",
-    tag: "badge fw-normal text-secondary-emphasis bg-secondary-subtle border border-secondary-subtle",
+    tag: "badge text-secondary-emphasis bg-secondary-subtle border border-secondary-subtle",
     tagRemove: "btn-close p-0",
-    tagCount: "badge fw-normal text-body-secondary border",
+    tagCount: "badge text-body-secondary border",
     tagsPlaceholder: "text-body-secondary",
 };
 
