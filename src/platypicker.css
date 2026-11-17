@@ -6,10 +6,13 @@
  *
  * The file has two parts:
  *   - Structure: what makes the picker work (positioning, the hidden native picker). Don't override it.
- *   - Look: a neutral style meant to sit well in most pages. Its selectors mostly have the specificity of a single
- *     class, so a framework class added through PlatyPicker.classes and loaded later wins. The select's own look
- *     has no specificity, apart from its states, so the page's classes on the select win. Pages that use cascade
- *     layers can import this file into one:
+ *   - Look: a neutral style meant to sit well in most pages, in two halves.
+ *       Layout says how the parts sit: the row with its subtext and check mark, the sticky search bar, the badges.
+ *       Its selectors are one notch above a single class, so framework classes on the parts don't break it.
+ *       Paint is the colors, borders, spacing and type. It has the specificity of a single class, and the select's
+ *       paint has none, so the page's classes on the select win. A skin (src/skins) turns paint off and leaves it
+ *       to its framework's classes, in whatever order the stylesheets load.
+ *     Pages that use cascade layers can import this file into one:
  *     @import url("platypicker.css") layer(components);
  *
  * Variables you can set on platy-picker or any ancestor (colors follow the page's color-scheme):
@@ -183,55 +186,16 @@
             0 2px 6px light-dark(rgb(0 0 0 / .08), rgb(0 0 0 / .3))));
     }
 
-    /* The select: a plain field with a chevron. No specificity at all, so the page's own select styles win. */
-    :where(platy-picker > select.pp-select) {
-        box-sizing: border-box;
-        padding: .375rem 2rem .375rem .625rem;
-        font: inherit;
-        line-height: 1.5;
-        color: var(--_pp-color);
-        background: var(--_pp-bg) no-repeat right .625rem center / .75rem;
-        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23888' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpath d='m3 6 5 5 5-5'/%3e%3c/svg%3e");
-        border: 1px solid var(--_pp-field-border);
-        border-radius: var(--_pp-radius);
-        cursor: pointer;
-
-        /* A multiple select's chevron is drawn by its badges instead (see .pp-tags::after), since pages and
-           frameworks often take the background image off multiple selects, which natively have no arrow. */
-        &[multiple] {
+    /* Layout: how the parts sit, which a skin keeps. One notch above a single class, so a framework class on a part
+       (say, one that makes it display: block) can't break it, whichever stylesheet loads first. */
+    platy-picker {
+        /* A multiple select shows badges rather than a list box. No specificity, like the select's paint below. */
+        :where(& > select.pp-select[multiple]) {
             appearance: none;
             min-width: 14rem; /* Room for a few badges. */
-            background-image: none;
         }
 
-        &:focus-visible {
-            outline: 2px solid var(--_pp-accent);
-            outline-offset: 1px;
-        }
-
-        &:user-invalid {
-            border-color: var(--_pp-danger);
-        }
-
-        &:disabled {
-            opacity: .6;
-            cursor: default;
-        }
-    }
-
-    :where(platy-picker) {
-        .pp-menu {
-            box-sizing: border-box;
-            padding: 0;
-            font: inherit;
-            color: var(--_pp-color);
-            background: var(--_pp-bg);
-            border: 1px solid var(--_pp-field-border);
-            border-radius: var(--_pp-menu-radius);
-            box-shadow: var(--_pp-shadow);
-        }
-
-        /* The search box with select all / none as links beside it. Sticky, so it stays while the list scrolls. */
+        /* The search box with select all / none beside it. Sticky, so it stays while the list scrolls. */
         .pp-bar {
             position: sticky;
             top: 0;
@@ -240,56 +204,17 @@
             align-items: center;
             gap: .25rem;
             margin: 0;
-            padding: .5rem;
-            background: var(--_pp-bg);
-            border-bottom: 1px solid var(--_pp-border);
         }
 
         .pp-search {
             flex: 1;
             min-width: 8rem;
             box-sizing: border-box;
-            margin: 0 .25rem 0 0;
-            padding: .25rem .5rem;
-            font: inherit;
-            font-size: .875em;
-            line-height: 1.5;
-            color: var(--_pp-color);
-            background: var(--_pp-bg);
-            border: 1px solid var(--_pp-field-border);
-            border-radius: var(--_pp-radius);
-
-            &::placeholder {
-                color: var(--_pp-muted);
-            }
-
-            &:focus-visible {
-                outline: 2px solid var(--_pp-accent);
-                outline-offset: -1px;
-            }
+            width: auto;
         }
 
         .pp-button {
-            margin: 0;
-            padding: .25rem;
-            font: inherit;
-            font-size: .875em;
-            line-height: 1.5;
-            color: var(--_pp-accent);
             white-space: nowrap;
-            background: none;
-            border: 0;
-            border-radius: var(--_pp-radius);
-            cursor: pointer;
-
-            &:hover {
-                text-decoration: underline;
-            }
-
-            &:focus-visible {
-                outline: 2px solid var(--_pp-accent);
-                outline-offset: -2px;
-            }
 
             /* While a long select all or select none runs, its button shows a spinner in place of its label and
                keeps its width. The spinner turns with a transform, which browsers can keep animating while the page
@@ -324,9 +249,7 @@
         .pp-list {
             display: grid;
             grid-template-columns: minmax(0, 1fr); /* Long labels are cut short instead of widening the rows. */
-            gap: 1px;
             margin: 0;
-            padding: .25rem;
             list-style: none;
 
             > li {
@@ -342,32 +265,8 @@
             align-items: center;
             gap: .5rem;
             width: 100%;
-            margin: 0;
-            padding: .3125rem .5rem .3125rem .625rem;
-            font: inherit;
-            line-height: 1.5;
-            color: inherit;
             text-align: start;
-            background: none;
-            border: 0;
-            border-radius: var(--_pp-radius);
-            cursor: pointer;
             scroll-margin-block: 3.5rem; /* Keeps a scrolled-to row clear of the sticky bar. */
-
-            &:hover, &:focus-visible {
-                background: var(--_pp-hover);
-            }
-
-            &:focus-visible {
-                outline: 2px solid var(--_pp-accent);
-                outline-offset: -2px;
-            }
-
-            &:disabled {
-                color: var(--_pp-disabled);
-                background: none;
-                cursor: default;
-            }
         }
 
         .pp-item-label {
@@ -379,18 +278,11 @@
         }
 
         .pp-item-subtext {
-            font-size: .8125em;
-            font-weight: 400;
-            color: var(--_pp-muted);
             white-space: nowrap;
 
             &:empty {
                 display: none;
             }
-        }
-
-        .pp-item:disabled .pp-item-subtext {
-            color: inherit;
         }
 
         .pp-item-check {
@@ -404,39 +296,9 @@
             mask: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3e%3cpath d='m5 12 5 5 10-10'/%3e%3c/svg%3e") center / contain no-repeat;
         }
 
-        .pp-header {
-            margin: 0;
-            padding: .5rem .625rem .125rem;
-            font-size: .75em;
-            font-weight: 400;
-            line-height: 1.5;
-            color: var(--_pp-header);
-        }
-
-        .pp-divider {
-            height: 0;
-            margin: .25rem .375rem;
-            border: 0;
-            border-top: 1px solid var(--_pp-border);
-            opacity: 1;
-        }
-
         /* Skeleton rows, shown at the end of the list while more rows are to come. */
         .pp-placeholder {
             flex: 1;
-        }
-
-        .pp-placeholder-bar {
-            display: block;
-            height: .75em;
-            margin-block: .375em;
-            background: var(--_pp-border);
-            border-radius: 999px;
-            animation: platypicker-pulse 1.5s ease-in-out infinite;
-
-            @media (prefers-reduced-motion: reduce) {
-                animation: none;
-            }
         }
 
         /* Search matches. In a disabled row a match is only underlined, so the row doesn't look clickable. */
@@ -451,12 +313,11 @@
             text-decoration: underline;
         }
 
-        /* Badges in a closed multiple select, and the select's chevron on the right. */
+        /* Badges in a closed multiple select, and the select's chevron on the right. Multiple selects natively have
+           no arrow, and pages and frameworks often take the background image off them, so the badges draw it. */
         .pp-tags {
             gap: .25rem;
             padding: 0 2rem 0 .3125rem;
-            font: inherit;
-            color: var(--_pp-color);
 
             &::after {
                 content: "";
@@ -480,28 +341,214 @@
             display: inline-flex;
             align-items: center;
             box-sizing: border-box;
+            white-space: nowrap;
+        }
+
+        .pp-tag {
+            gap: .125rem;
+        }
+
+        .pp-tag-remove {
+            flex: none;
+            cursor: pointer;
+        }
+
+        .pp-tag-count {
+            flex: none;
+        }
+    }
+
+    /* Paint: colors, borders, spacing and type. A skin (which adds the pp-skin class to platy-picker) leaves these to
+       its framework's classes. The select's paint has no specificity at all, so the page's own select styles win;
+       the rest has the specificity of a single class. */
+    :where(platy-picker:not(.pp-skin) > select.pp-select) {
+        box-sizing: border-box;
+        padding: .375rem 2rem .375rem .625rem;
+        font: inherit;
+        line-height: 1.5;
+        color: var(--_pp-color);
+        background: var(--_pp-bg) no-repeat right .625rem center / .75rem;
+        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23888' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpath d='m3 6 5 5 5-5'/%3e%3c/svg%3e");
+        border: 1px solid var(--_pp-field-border);
+        border-radius: var(--_pp-radius);
+        cursor: pointer;
+
+        &[multiple] {
+            background-image: none; /* The badges draw a multiple select's chevron. */
+        }
+
+        &:focus-visible {
+            outline: 2px solid var(--_pp-accent);
+            outline-offset: 1px;
+        }
+
+        &:user-invalid {
+            border-color: var(--_pp-danger);
+        }
+
+        &:disabled {
+            opacity: .6;
+            cursor: default;
+        }
+    }
+
+    :where(platy-picker:not(.pp-skin)) {
+        .pp-menu {
+            box-sizing: border-box;
+            padding: 0;
+            font: inherit;
+            color: var(--_pp-color);
+            background: var(--_pp-bg);
+            border: 1px solid var(--_pp-field-border);
+            border-radius: var(--_pp-menu-radius);
+            box-shadow: var(--_pp-shadow);
+        }
+
+        .pp-bar {
+            padding: .5rem;
+            background: var(--_pp-bg);
+            border-bottom: 1px solid var(--_pp-border);
+        }
+
+        .pp-search {
+            margin: 0 .25rem 0 0;
+            padding: .25rem .5rem;
+            font: inherit;
+            font-size: .875em;
+            line-height: 1.5;
+            color: var(--_pp-color);
+            background: var(--_pp-bg);
+            border: 1px solid var(--_pp-field-border);
+            border-radius: var(--_pp-radius);
+
+            &::placeholder {
+                color: var(--_pp-muted);
+            }
+
+            &:focus-visible {
+                outline: 2px solid var(--_pp-accent);
+                outline-offset: -1px;
+            }
+        }
+
+        .pp-button {
+            margin: 0;
+            padding: .25rem;
+            font: inherit;
+            font-size: .875em;
+            line-height: 1.5;
+            color: var(--_pp-accent);
+            background: none;
+            border: 0;
+            border-radius: var(--_pp-radius);
+            cursor: pointer;
+
+            &:hover {
+                text-decoration: underline;
+            }
+
+            &:focus-visible {
+                outline: 2px solid var(--_pp-accent);
+                outline-offset: -2px;
+            }
+        }
+
+        .pp-list {
+            gap: 1px;
+            padding: .25rem;
+        }
+
+        .pp-item {
+            margin: 0;
+            padding: .3125rem .5rem .3125rem .625rem;
+            font: inherit;
+            line-height: 1.5;
+            color: inherit;
+            background: none;
+            border: 0;
+            border-radius: var(--_pp-radius);
+            cursor: pointer;
+
+            &:hover, &:focus-visible {
+                background: var(--_pp-hover);
+            }
+
+            &:focus-visible {
+                outline: 2px solid var(--_pp-accent);
+                outline-offset: -2px;
+            }
+
+            &:disabled {
+                color: var(--_pp-disabled);
+                background: none;
+                cursor: default;
+            }
+        }
+
+        .pp-item-subtext {
+            font-size: .8125em;
+            font-weight: 400;
+            color: var(--_pp-muted);
+        }
+
+        .pp-item:disabled .pp-item-subtext {
+            color: inherit;
+        }
+
+        .pp-header {
+            margin: 0;
+            padding: .5rem .625rem .125rem;
+            font-size: .75em;
+            font-weight: 400;
+            line-height: 1.5;
+            color: var(--_pp-header);
+        }
+
+        .pp-divider {
+            height: 0;
+            margin: .25rem .375rem;
+            border: 0;
+            border-top: 1px solid var(--_pp-border);
+            opacity: 1;
+        }
+
+        .pp-placeholder-bar {
+            display: block;
+            height: .75em;
+            margin-block: .375em;
+            background: var(--_pp-border);
+            border-radius: 999px;
+            animation: platypicker-pulse 1.5s ease-in-out infinite;
+
+            @media (prefers-reduced-motion: reduce) {
+                animation: none;
+            }
+        }
+
+        .pp-tags {
+            font: inherit;
+            color: var(--_pp-color);
+        }
+
+        .pp-tag, .pp-tag-count {
             padding: 0 .375rem;
             font-size: .875em;
             line-height: 1.5;
-            white-space: nowrap;
             border: 1px solid var(--_pp-tag-border);
             border-radius: calc(var(--_pp-radius) - 2px);
         }
 
         .pp-tag {
-            gap: .125rem;
             background: var(--_pp-tag-bg);
         }
 
         .pp-tag-remove {
-            flex: none;
             width: 1.125em;
             height: 1.125em;
             margin-right: -.1875rem;
             background-color: var(--_pp-muted);
             border-radius: 2px;
             mask: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'%3e%3cpath d='m4.5 4.5 7 7m0-7-7 7'/%3e%3c/svg%3e") center / .75em no-repeat;
-            cursor: pointer;
 
             &:hover {
                 background-color: var(--_pp-color);
@@ -509,7 +556,6 @@
         }
 
         .pp-tag-count {
-            flex: none;
             color: var(--_pp-muted);
             border-style: dashed;
         }
