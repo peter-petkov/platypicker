@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
     <link rel="stylesheet" href="./index.css">
     <link rel="stylesheet" href="../src/platypicker.css">
+    <script src="./skins.js"></script>
     <script src="./index.js"></script>
 </head>
 <body>
@@ -21,6 +22,9 @@
         <a href="https://github.com/peter-petkov/platypicker">GitHub</a>
         <a href="https://www.npmjs.com/package/platypicker">npm</a>
     </nav>
+    <platy-picker class="skin-switch">
+        <select aria-label="Skin" data-skin-switch></select>
+    </platy-picker>
     <div class="segmented" role="radiogroup" aria-label="Color theme">
         <label><input type="radio" name="theme" value="light">Light</label>
         <label><input type="radio" name="theme" value="dark">Dark</label>
@@ -338,20 +342,10 @@
 
         <section id="skins">
             <h2>Skins</h2>
-            <p>A skin fits Platypicker into a framework. Import it before <code>platypicker</code>, and the pickers look like the rest of the framework's forms. There's nothing extra to link: the skin brings its own few rules.</p>
-            <p>The Bootstrap skin gives the select Bootstrap's <code>form-select</code> class, so sizes like <code>form-select-sm</code> and validation classes like <code>is-invalid</code> work as on any select. The popover and the badges take their colors, radius and shadow from Bootstrap's variables, so they follow your theme and <code>data-bs-theme="dark"</code>, even on part of a page. Your own <code>--platypicker-*</code> variables still win. It needs Bootstrap 5.3 or later.</p>
-            <div class="example">
-                <iframe class="stage-extra frame frame-tall" src="./skin-bootstrap.html" title="Pickers with the Bootstrap skin"></iframe>
-                <template data-code="HTML">
-                    <link rel="stylesheet" href="bootstrap.min.css">
-                    <link rel="stylesheet" href="node_modules/platypicker/src/platypicker.css">
-                    <script type="module">
-                        import "platypicker/src/skins/bootstrap.js";
-                        import "platypicker";
-                    </script>
-                </template>
-            </div>
-            <p>Order matters here: the skin fills the class plugs, which the pickers read when they are created, and they are created as soon as <code>platypicker</code> is imported. A skin imported too late says so in the console.</p>
+            <p>A skin fits Platypicker into a CSS framework by dressing it in the framework's own classes, so the pickers look like the rest of its forms. Switch the skin at the top of the page to see every example on it in that framework.</p>
+            <p>Import the skin before <code>platypicker</code>: it fills the class plugs, which the pickers read when they are created, and they are created as soon as <code>platypicker</code> is imported. A skin imported too late says so in the console. There's no extra stylesheet to link.</p>
+            <p>Platypicker's own look has two halves. Layout, how the parts sit, stays. Paint, the colors, borders, spacing and type, steps aside for a skinned picker and leaves it to the framework's classes, whichever stylesheet loads first. The skin adds a few rules of its own for what the framework has no class for, like the check mark and search matches. Your own <code>--platypicker-*</code> variables still apply to those.</p>
+            <div data-skin-list></div>
         </section>
 
         <section id="benchmark">

@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Example</title>
+    <!-- A frame for the docs page's examples when it shows them in a skin: ?skin= names one from skins.js. The docs
+         page puts the example's markup into .frame-stage and sizes the frame to fit. -->
+    <script src="./skins.js"></script>
+    <script>
+        const skin = PLATY_SKINS[new URLSearchParams(location.search).get("skin")] ?? PLATY_SKINS.base;
+
+        for (const href of skin.stylesheets ?? []) {
+            const link = document.createElement("link");
+            link.rel = "stylesheet";
+            link.href = href;
+            document.head.append(link);
+        }
+
+        // Follows the docs page's theme switch, and tells the framework too.
+        try {
+            const root = parent.document.documentElement;
+            const dark = matchMedia("(prefers-color-scheme: dark)");
+            const sync = () => {
+                const theme = root.dataset.theme ?? (dark.matches ? "dark" : "light");
+                document.documentElement.style.colorScheme = theme;
+                skin.setTheme?.(document.documentElement, theme === "dark");
+            };
+            new MutationObserver(sync).observe(root, { attributes: true, attributeFilter: ["data-theme"] });
+            dark.addEventListener("change", sync);
+            sync();
+        } catch {
+        }
+    </script>
+    <link rel="stylesheet" href="../src/platypicker.css">
+    <style>
+        body {
+            margin: 0;
+            padding: 1.75rem 1.5rem;
+            background: transparent !important;
+        }
+
+        .frame-stage {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: flex-start;
+            gap: .75rem;
+        }
+
+        select[multiple] {
+            width: 20rem;
+            max-width: 100%;
+        }
+
+        /* The frame grows to fit an open popover, so the popover always opens below its select, at a fixed height
+           rather than one that depends on the frame's. */
+        platy-picker {
+            --platypicker-max-height: 18rem;
+        }
+
+        html platy-picker > .pp-menu[popover] {
+            position-try-fallbacks: none;
+        }
+    </style>
+</head>
+<body>
+<div class="frame-stage"></div>
+<script type="module">
+    if (skin.module) await import(skin.module);
+    await import("../src/platypicker.js");
+</script>
+</body>
+</html>

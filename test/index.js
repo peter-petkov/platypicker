@@ -20,6 +20,24 @@ function applyTheme() {
 applyTheme();
 
 // ---------------------------------------------------------------------------
+// Skin. With one other than Base, the examples run in frames that load it (see skins.js and frame.html), since a
+// framework's stylesheet would restyle this page too. ?skin= in the address wins over the saved choice.
+// ---------------------------------------------------------------------------
+
+let skinName = "base";
+
+try {
+    skinName = localStorage.getItem("pp-skin") || "base";
+} catch {
+}
+
+skinName = new URLSearchParams(location.search).get("skin") ?? skinName;
+if (!Object.hasOwn(PLATY_SKINS, skinName)) skinName = "base";
+
+const skin = PLATY_SKINS[skinName];
+const framed = skinName !== "base";
+
+// ---------------------------------------------------------------------------
 // Page setup. The "interactive" ready state comes after parsing but BEFORE deferred module scripts run, so the
 // demo selects are filled before the platypicker module defines <platy-picker> and reads their options.
 // ---------------------------------------------------------------------------
@@ -31,7 +49,9 @@ document.addEventListener("readystatechange", () => {
 function init() {
     fillSelects(document);
     setupExamples();
+    setupSkins();
     setupCodeBlocks();
+    setupSkinSwitch();
     setupTheme();
     setupVersion();
     setupPhoneNavigation();
@@ -94,18 +114,35 @@ function setupExamples() {
     for (const example of document.querySelectorAll(".example")) {
         const template = example.querySelector(":scope > template:not([data-code])");
         const stage = document.createElement("div");
+        const extras = [...example.querySelectorAll(":scope > .stage-extra")];
         const tabs = [];
 
         stage.className = "stage";
 
         if (template) {
             fillSelects(template.content);
-            stage.append(template.content.cloneNode(true));
             tabs.push({ label: "HTML", text: printHTML(template.content.childNodes), html: true });
         }
 
+        // stageReady resolves to the element that holds the example's pickers: the stage, or in a skin, the frame's.
         // Page controls for the example (marked .stage-extra) go on the stage under the pickers, and aren't printed.
-        stage.append(...example.querySelectorAll(":scope > .stage-extra"));
+        if (template && framed) {
+            const wrapper = document.createElement("div");
+
+            stage.classList.add("stage-framed");
+            example.stageReady = createFrame(stage).then(({ doc, root }) => {
+                root.append(doc.importNode(template.content, true));
+                return root;
+            });
+
+            wrapper.className = "stage-extras";
+            wrapper.append(...extras);
+            if (extras.length) stage.append(wrapper);
+        } else {
+            if (template) stage.append(template.content.cloneNode(true));
+            stage.append(...extras);
+            example.stageReady = Promise.resolve(stage);
+        }
 
         const blocks = [...example.querySelectorAll(":scope > [data-code]")];
         tabs.push(...blocks.map(codeTab));
@@ -114,6 +151,132 @@ function setupExamples() {
         example.replaceChildren(stage, panel);
         blocks.forEach(block => loadCode(block, panel));
     }
+}
+
+// A frame that loads the current skin, at the start of the container. Resolves once it has loaded, with its
+// document and the element to put the example in.
+function createFrame(container) {
+    const frame = document.createElement("iframe");
+
+    frame.className = "example-frame";
+    frame.title = `Example with the ${skin.label} skin`;
+    frame.src = `./frame.html?skin=${encodeURIComponent(skinName)}`;
+    container.prepend(frame);
+
+    return new Promise(resolve => frame.addEventListener("load", () => {
+        const doc = frame.contentDocument;
+        fitFrame(frame);
+        resolve({ doc, root: doc.querySelector(".frame-stage") });
+    }, { once: true }));
+}
+
+// A frame is as tall as its content, and taller while a popover is open, so that the popover isn't cut off.
+function fitFrame(frame) {
+    const doc = frame.contentDocument;
+    const observer = new ResizeObserver(() => fit());
+
+    const fit = () => {
+        let height = doc.body.scrollHeight;
+        for (const menu of doc.querySelectorAll(".pp-menu:popover-open")) {
+            height = Math.max(height, menu.getBoundingClientRect().bottom + 24);
+        }
+        frame.style.height = `${Math.ceil(height)}px`;
+    };
+
+    doc.addEventListener("toggle", event => {
+        if (!event.target.matches?.(".pp-menu")) return;
+        if (event.newState === "open") observer.observe(event.target);
+        else observer.unobserve(event.target);
+        fit();
+    }, true);
+
+    observer.observe(doc.body);
+    fit();
+}
+
+// ---------------------------------------------------------------------------
+// Skin switch in the header, and the Skins section's list, both from skins.js
+// ---------------------------------------------------------------------------
+
+function setupSkinSwitch() {
+    const select = document.querySelector("[data-skin-switch]");
+
+    for (const [name, { label }] of Object.entries(PLATY_SKINS)) select.add(new Option(label, name, false, name === skinName));
+
+    // Reloads the page in the chosen skin, at the same place.
+    select.addEventListener("change", () => {
+        const url = new URL(location.href);
+
+        try {
+            localStorage.setItem("pp-skin", select.value);
+        } catch {
+        }
+
+        if (select.value === "base") url.searchParams.delete("skin");
+        else url.searchParams.set("skin", select.value);
+        url.hash = document.querySelector(".sidenav [aria-current]")?.hash ?? url.hash;
+        location.assign(url);
+    });
+}
+
+function setupSkins() {
+    const list = document.querySelector("[data-skin-list]");
+
+    for (const [name, entry] of Object.entries(PLATY_SKINS)) {
+        if (name === "base") continue;
+
+        const heading = document.createElement("h3");
+        const description = document.createElement("p");
+        const file = entry.module.split("/").at(-1);
+        const install = [
+            `<link rel="stylesheet" href="${entry.stylesheetName}">`,
+            `<link rel="stylesheet" href="node_modules/platypicker/src/platypicker.css">`,
+            `<script type="module">`,
+            `  import "${entry.importPath}";`,
+            `  import "platypicker";`,
+            `</script>`,
+        ].join("\n");
+        const panel = codePanel([{ label: "HTML", text: install, html: true }, { label: file, text: "", html: false }]);
+        const toolbar = document.createElement("div");
+        const button = document.createElement("button");
+
+        heading.textContent = entry.label;
+        description.textContent = entry.description;
+
+        button.type = "button";
+        button.className = "button";
+        button.textContent = name === skinName ? `This page is showing ${entry.label}` : `Show this page in ${entry.label}`;
+        button.disabled = name === skinName;
+        button.addEventListener("click", () => {
+            const select = document.querySelector("[data-skin-switch]");
+            select.value = name;
+            select.dispatchEvent(new Event("change"));
+        });
+        toolbar.className = "toolbar skin-toolbar";
+        toolbar.append(button);
+
+        list.append(heading, description, panel, toolbar);
+
+        // The skin's own source, as it runs.
+        fetch(entry.module)
+            .then(response => response.text())
+            .then(text => panel.setCode(file, text.replace(/\r\n/g, "\n").trim()))
+            .catch(() => {
+            });
+    }
+
+    // In a skin, the sections that work differently say so.
+    if (framed) {
+        note("#theming .example", `The ${skin.label} skin takes its look from ${skin.label}'s classes, so most of these variables only change the base look. The accent (the check mark) and the search match still apply.`);
+        note("#benchmark .stage", "The benchmark runs with the base look, in this page rather than in a frame.");
+    }
+}
+
+function note(before, text) {
+    const element = document.createElement("p");
+    element.className = "notice";
+    element.textContent = text;
+    document.querySelector(before).before(element);
 }
 
 function setupCodeBlocks() {
@@ -396,9 +559,9 @@ function setupSupportNotice() {
 // Live changes
 // ---------------------------------------------------------------------------
 
-function setupLiveDemo() {
+async function setupLiveDemo() {
     const example = document.querySelector("[data-live]");
-    const picker = example.querySelector("platy-picker");
+    const picker = (await example.stageReady).querySelector("platy-picker");
     const select = picker.querySelector("select");
     const log = example.querySelector(".log");
     const extraOptions = ["🍰 Cake", "🥧 Pie", "🍪 Cookie", "🍫 Chocolate", "🍇 Grapes"];
@@ -451,9 +614,9 @@ function setupLiveDemo() {
 // Theming: the controls set variables on the example's stage, and the CSS tab shows the ones that changed
 // ---------------------------------------------------------------------------
 
-function setupTheming() {
+async function setupTheming() {
     const example = document.querySelector("[data-theming]");
-    const stage = example.querySelector(".stage");
+    const stage = await example.stageReady;
     const panel = example.querySelector(".code");
     const inputs = [...example.querySelectorAll("[data-var]")];
     const changed = new Set();
@@ -499,12 +662,12 @@ function setupTheming() {
 // Loading as you scroll: pages of cars "arrive" a little after the picker asks for them
 // ---------------------------------------------------------------------------
 
-function setupLoadingDemo() {
+async function setupLoadingDemo() {
     const PAGE_SIZE = 20;
     const TOTAL = 100; // roughly: the car generator spreads them evenly over the makes
     const DELAY = 800;
     const example = document.querySelector("[data-loading]");
-    const picker = example.querySelector("platy-picker");
+    const picker = (await example.stageReady).querySelector("platy-picker");
     const select = picker.querySelector("select");
     const output = example.querySelector("[data-loading-count]");
     let waiting = [];
@@ -521,7 +684,7 @@ function setupLoadingDemo() {
     };
 
     const startOver = () => {
-        const template = document.createElement("template");
+        const template = select.ownerDocument.createElement("template");
         template.innerHTML = carOptions(TOTAL, false);
         waiting = [...template.content.children];
         total = waiting.length;
@@ -553,13 +716,13 @@ function setupLoadingDemo() {
 // Batches: how many of the options are in the list so far
 // ---------------------------------------------------------------------------
 
-function setupBatchCount() {
+async function setupBatchCount() {
     const output = document.querySelector("[data-batch-count]");
-    const picker = output.closest(".stage").querySelector("platy-picker");
+    const picker = (await output.closest(".example").stageReady).querySelector("platy-picker");
     const select = picker.querySelector("select");
 
-    // The list only exists once the element has been defined.
-    customElements.whenDefined("platy-picker").then(() => {
+    // The list only exists once the element has been defined, in the frame's window when there is one.
+    picker.ownerDocument.defaultView.customElements.whenDefined("platy-picker").then(() => {
         const list = picker.querySelector(".pp-list");
         const update = () => output.textContent =
             `${list.querySelectorAll(".pp-item").length.toLocaleString()} of ${select.options.length.toLocaleString()} options rendered`;
@@ -603,7 +766,7 @@ const PLAYGROUND_RELEVANT = {
     "select-none-label": form => form.elements.controls.checked && !form.elements.required.checked,
 };
 
-function setupPlayground() {
+async function setupPlayground() {
     const root = document.querySelector("[data-playground]");
     const form = root.querySelector("form");
     const host = root.querySelector("[data-playground-host]");
@@ -629,10 +792,10 @@ function setupPlayground() {
     };
 
     const build = () => {
-        const previous = host.querySelector("select");
+        const previous = place.root.querySelector("select");
         const kept = new Set(previous ? [...previous.selectedOptions].map(option => option.value) : []);
-        const picker = document.createElement("platy-picker");
-        const select = document.createElement("select");
+        const picker = place.doc.createElement("platy-picker");
+        const select = place.doc.createElement("select");
         const list = form.elements.list.value;
 
         for (const [name, relevant] of Object.entries(PLAYGROUND_RELEVANT)) form.elements[name].disabled = !relevant(form);
@@ -666,7 +829,7 @@ function setupPlayground() {
             write(`change: ${chosen || "nothing selected"}`);
         });
 
-        host.replaceChildren(picker);
+        place.root.replaceChildren(picker);
     };
 
     form.addEventListener("input", event => {
@@ -680,6 +843,10 @@ function setupPlayground() {
         if (event.target.name === "list") build();
     });
     form.addEventListener("submit", event => event.preventDefault());
+
+    // In a skin, the picker is built in a frame's document, so the frame's skinned platypicker takes it.
+    if (framed) host.closest(".stage").classList.add("stage-framed");
+    const place = framed ? await createFrame(host) : { doc: document, root: host };
 
     build();
 }

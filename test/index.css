@@ -477,8 +477,38 @@ p {
     border: 0;
 }
 
-.frame-tall {
-    height: 28rem;
+/* Examples shown in a skin run in a frame, which fits its content (see fitFrame). */
+.stage-framed {
+    display: block;
+    padding: 0;
+
+    > .log {
+        padding: 0 1.5rem 1.25rem;
+    }
+}
+
+.example-frame {
+    display: block;
+    width: 100%;
+    height: 6rem;
+    border: 0;
+}
+
+.stage-extras {
+    display: flex;
+    flex-direction: column;
+    gap: .75rem;
+    padding: 0 1.5rem 1.5rem;
+}
+
+.skin-toolbar {
+    margin-bottom: 1.5rem;
+}
+
+/* The skin switch in the header, as small as the theme switch beside it. */
+.skin-switch > select {
+    padding: .2rem 1.75rem .2rem .6rem;
+    font-size: .8rem;
 }
 
 .reference {
