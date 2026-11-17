@@ -215,7 +215,7 @@ function setupBenchmark() {
         const picker = document.createElement("platy-picker");
         picker.setAttribute("search", "");
         if (multiple) picker.setAttribute("controls", "");
-        picker.innerHTML = `<select class="form-select" aria-label="Cars"${multiple ? ' multiple size="1"' : ""}>${carOptions(count, grouped)}</select>`;
+        picker.innerHTML = `<select aria-label="Cars"${multiple ? ' multiple size="1"' : ""}>${carOptions(count, grouped)}</select>`;
 
         let start = performance.now();
         host.append(picker);
@@ -250,7 +250,8 @@ function setupBenchmark() {
             domItems ||= popover.querySelectorAll(".pp-item, .dropdown-item").length;
 
             await measure("search", () => setSearch("an"));
-            await measure("pick", () => popover.querySelectorAll(".dropdown-item:not(.disabled):not(.d-none)")[20]?.click());
+            await measure("pick", () => popover.querySelectorAll(
+                ".pp-item:not(:disabled), .dropdown-item:not(.disabled):not(.d-none)")[20]?.click());
 
             // Reset for the next run. A multiple select stays open after picking.
             if (popover.matches(":popover-open")) select.click();
@@ -258,7 +259,7 @@ function setupBenchmark() {
             await nextPaint();
 
             if (multiple) {
-                const [selectAll, selectNone] = popover.querySelectorAll(".input-group button");
+                const [selectAll, selectNone] = popover.querySelectorAll(".pp-bar button, .input-group button");
                 await measure("selectAll", () => selectAll.click());
                 await measure("selectNone", () => selectNone.click());
             }

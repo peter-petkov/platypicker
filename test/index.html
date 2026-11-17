@@ -38,10 +38,10 @@
             <div class="col-md-5">
                 <h2 class="h5">Single select</h2>
                 <p class="text-body-secondary">A plain select wrapped in a platy-picker. Pick with the mouse or arrow keys, or type the first letters of an option.</p>
-                <code>&lt;platy-picker&gt;&lt;select class="form-select"&gt;&lt;/platy-picker&gt;</code>
+                <code>&lt;platy-picker&gt;&lt;select&gt;&lt;/platy-picker&gt;</code>
             </div>
             <div class="col-md-7">
-                <platy-picker><select class="form-select" aria-label="Food" data-fill="foods"></select></platy-picker>
+                <platy-picker><select aria-label="Food" data-fill="foods"></select></platy-picker>
             </div>
         </div>
     </section>
@@ -58,7 +58,7 @@
                 </div>
             </div>
             <div class="col-md-7">
-                <platy-picker search search-placeholder="Search cities…"><select class="form-select" aria-label="City" data-fill="cities:subtext"></select></platy-picker>
+                <platy-picker search search-placeholder="Search cities…"><select aria-label="City" data-fill="cities:subtext"></select></platy-picker>
             </div>
         </div>
     </section>
@@ -67,11 +67,11 @@
         <div class="row gy-3">
             <div class="col-md-5">
                 <h2 class="h5">Multiple</h2>
-                <p class="text-body-secondary">Click several options. The select shows everything chosen.</p>
+                <p class="text-body-secondary">Click several options. The closed select shows them as badges, as many as fit, then a count of the rest. The &times; on a badge removes it.</p>
                 <code>multiple size="1"</code>
             </div>
             <div class="col-md-7">
-                <platy-picker><select class="form-select" multiple size="1" aria-label="Plants" data-fill="plants" data-pick="0,1"></select></platy-picker>
+                <platy-picker><select multiple size="1" aria-label="Plants" data-fill="plants" data-pick="0,1,2,3,4"></select></platy-picker>
             </div>
         </div>
     </section>
@@ -80,15 +80,16 @@
         <div class="row gy-3">
             <div class="col-md-5">
                 <h2 class="h5">Select all and none</h2>
-                <p class="text-body-secondary">Select all acts on the options matching the current filter. Single selects only get Select none, and required selects hide it too.</p>
+                <p class="text-body-secondary">Select all acts on the options matching the current filter. Single selects only get Select none, and required selects hide it too. The placeholder shows while nothing is selected.</p>
                 <div class="d-flex flex-wrap gap-2">
                     <code>controls</code>
                     <code>select-all-label="Take them all"</code>
                     <code>select-none-label="Clear"</code>
+                    <code>placeholder="Pick some clothes"</code>
                 </div>
             </div>
             <div class="col-md-7">
-                <platy-picker search controls select-all-label="Take them all" select-none-label="Clear"><select class="form-select" multiple size="1" aria-label="Clothes" data-fill="clothes" data-pick="1"></select></platy-picker>
+                <platy-picker search controls select-all-label="Take them all" select-none-label="Clear" placeholder="Pick some clothes"><select multiple size="1" aria-label="Clothes" data-fill="clothes"></select></platy-picker>
             </div>
         </div>
     </section>
@@ -107,7 +108,7 @@
             </div>
             <div class="col-md-7">
                 <platy-picker search controls>
-                    <select class="form-select" multiple size="1" aria-label="Technology">
+                    <select multiple size="1" aria-label="Technology">
                         <option>💻 Laptop</option>
                         <option>📱 Phone</option>
                         <hr>
@@ -144,7 +145,7 @@
                 </div>
             </div>
             <div class="col-md-7">
-                <platy-picker id="batch-demo" search batch-size="20"><select class="form-select" aria-label="Car" data-cars="2000"></select></platy-picker>
+                <platy-picker id="batch-demo" search batch-size="20"><select aria-label="Car" data-cars="2000"></select></platy-picker>
                 <output id="batch-count" class="d-block form-text mt-2"></output>
             </div>
         </div>
@@ -161,7 +162,7 @@
                 </div>
             </div>
             <div class="col-md-7">
-                <platy-picker placeholders="4" batch-size="4"><select class="form-select" aria-label="Drink" data-fill="drinks"></select></platy-picker>
+                <platy-picker placeholders="4" batch-size="4"><select aria-label="Drink" data-fill="drinks"></select></platy-picker>
             </div>
         </div>
     </section>
@@ -169,28 +170,21 @@
     <section class="py-4 border-top">
         <div class="row gy-3">
             <div class="col-md-5">
-                <h2 class="h5">Sizes and validation</h2>
-                <p class="text-body-secondary">Bootstrap sizes and validation states carry over, including the feedback text.</p>
+                <h2 class="h5">Disabled, required and theming</h2>
+                <p class="text-body-secondary">A disabled select, and a required one whose last badge can't be removed. The third sets a few of the <code>--platypicker-*</code> variables on the picker.</p>
                 <div class="d-flex flex-wrap gap-2">
-                    <code>form-select-sm</code>
-                    <code>form-select-lg</code>
-                    <code>is-valid</code>
-                    <code>is-invalid</code>
+                    <code>disabled</code>
+                    <code>required</code>
+                    <code>--platypicker-accent-color</code>
+                    <code>--platypicker-radius</code>
                 </div>
             </div>
             <div class="col-md-7 d-grid gap-3">
-                <div><platy-picker><select class="form-select form-select-sm" aria-label="Small" data-fill="furniture"></select></platy-picker></div>
-                <div><platy-picker><select class="form-select form-select-lg" aria-label="Large" data-fill="furniture" data-pick="3"></select></platy-picker></div>
+                <div><platy-picker><select disabled aria-label="Disabled" data-fill="furniture" data-pick="3"></select></platy-picker></div>
+                <div><platy-picker controls><select multiple size="1" required aria-label="Required" data-fill="furniture" data-pick="2"></select></platy-picker></div>
                 <div>
-                    <platy-picker>
-                        <select class="form-select is-valid" aria-label="Valid" data-fill="furniture" data-pick="2"></select>
-                        <div class="valid-feedback">Looks comfortable.</div>
-                    </platy-picker>
-                </div>
-                <div>
-                    <platy-picker>
-                        <select class="form-select is-invalid" required aria-label="Invalid" data-fill="furniture"></select>
-                        <div class="invalid-feedback">Choose a piece of furniture to continue.</div>
+                    <platy-picker search controls style="--platypicker-accent-color: light-dark(#0b7a75, #3cc2b7); --platypicker-radius: 2px; --platypicker-menu-radius: 2px; --platypicker-highlight-bg: light-dark(#bfe9e3, #1f5c55); --platypicker-highlight-color: inherit">
+                        <select multiple size="1" aria-label="Themed" data-fill="furniture" data-pick="0,5"></select>
                     </platy-picker>
                 </div>
             </div>
@@ -208,7 +202,7 @@
                 </div>
             </div>
             <div class="col-md-7">
-                <platy-picker id="live" search controls><select class="form-select" multiple size="1" aria-label="Live demo" data-fill="foods" data-pick="0"></select></platy-picker>
+                <platy-picker id="live" search controls><select multiple size="1" aria-label="Live demo" data-fill="foods" data-pick="0"></select></platy-picker>
                 <div class="d-flex flex-wrap gap-2 mt-3">
                     <button type="button" class="btn btn-sm btn-outline-secondary" id="live-set-value">setValue</button>
                     <button type="button" class="btn btn-sm btn-outline-secondary" id="live-add">Add option</button>

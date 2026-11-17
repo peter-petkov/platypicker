@@ -19,3 +19,8 @@
     --bs-link-color-rgb: 60, 194, 183;
     --bs-code-color: #e3a56e;
 }
+
+/* Bootstrap only lays out the page; the pickers use Platypicker's own look. They fill their column. */
+main platy-picker > select {
+    width: 100%;
+}
