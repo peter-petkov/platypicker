@@ -89,6 +89,18 @@ All attributes are reflected as properties too (e.g. `picker.search = true`, `pi
 - **Subtext** - add `data-subtext="..."` to any `<option>` for a secondary text on the right of its label (also searchable).
 - **Keyboard type-ahead** - typing while the popover is open moves focus to the first option whose text starts with what you typed, mirroring native `<select>` behavior; <kbd>Enter</kbd> or <kbd>Space</kbd> then selects it. Emoji are ignored, so typing "ch" finds "🧀 Cheese", and options further down a long list are rendered as needed.
 - **Focus on open** - opening the popover scrolls to the selected option. Focus goes to the search input if there is one, otherwise to the selected option.
+- **Keyboard** - as on a native select:
+
+  | Key | Does |
+  |---|---|
+  | <kbd>Enter</kbd>, <kbd>Space</kbd>, <kbd>↓</kbd> or <kbd>↑</kbd> on the select | opens the popover |
+  | <kbd>↓</kbd> / <kbd>↑</kbd> | moves through the search box, the buttons and the rows |
+  | <kbd>Home</kbd> / <kbd>End</kbd> on a row | first / last row, rendering the rest of a long list if need be |
+  | <kbd>Page Up</kbd> / <kbd>Page Down</kbd> on a row | a popover's height up or down |
+  | <kbd>Enter</kbd> or <kbd>Space</kbd> on a row | picks it (a single select closes) |
+  | letters | type-ahead, see above |
+  | <kbd>Tab</kbd> | the search box, the buttons, then the list as one stop (the selected or last focused row); past the end, it closes the popover |
+  | <kbd>Esc</kbd> or <kbd>Alt</kbd>+<kbd>↑</kbd> | closes the popover, with focus back on the select |
 - **Anchored, overflow-aware popover** - positioned via CSS anchor positioning; flips above the control automatically if there is no room below.
 - **Live DOM sync** – add, remove, reorder or edit `<option>`/`<optgroup>` elements on the underlying `<select>` at any time, including their `disabled`, `hidden`, `label`, `title` and `data-subtext` attributes, and the popover updates to match. Only what changed is updated, so focus and scroll position survive. While the popover is closed, updates wait until it opens; the badges follow right away.
 - **Loading as you scroll** – for options that come from a server, `loading` and the `loadmore` event let you fetch them a page at a time, with `placeholders` showing skeleton rows while you wait. See below.
