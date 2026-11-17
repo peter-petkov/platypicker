@@ -34,6 +34,7 @@ function init() {
     setupCodeBlocks();
     setupTheme();
     setupVersion();
+    setupPhoneNavigation();
     setupNavigation();
     setupSupportNotice();
     setupLiveDemo();
@@ -296,6 +297,34 @@ function setupVersion() {
 }
 
 // ---------------------------------------------------------------------------
+// On narrow screens the side navigation becomes a picker at the top of the page, built from the same links.
+// ---------------------------------------------------------------------------
+
+function setupPhoneNavigation() {
+    const wrapper = document.createElement("div");
+    const select = document.createElement("select");
+    let group;
+
+    for (const child of document.querySelector(".sidenav nav").children) {
+        if (child.localName === "p") {
+            group = document.createElement("optgroup");
+            group.label = child.textContent;
+            select.append(group);
+        } else {
+            group.append(new Option(child.textContent, child.hash.slice(1)));
+        }
+    }
+
+    select.setAttribute("aria-label", "Go to section");
+    select.addEventListener("change", () => document.getElementById(select.value).scrollIntoView());
+
+    wrapper.className = "phone-nav";
+    wrapper.append(document.createElement("platy-picker"));
+    wrapper.firstChild.append(select);
+    document.querySelector("main").prepend(wrapper);
+}
+
+// ---------------------------------------------------------------------------
 // Side navigation. The current section is the last one whose top has scrolled past the line just under the header,
 // or the last one on the page once it's scrolled to the bottom.
 // ---------------------------------------------------------------------------
@@ -303,16 +332,26 @@ function setupVersion() {
 function setupNavigation() {
     const links = [...document.querySelectorAll(".sidenav a")];
     const sections = links.map(link => document.getElementById(link.hash.slice(1)));
+    const phonePicker = document.querySelector(".phone-nav platy-picker");
+    let shown;
 
     const update = () => {
-        const line = document.querySelector(".topbar").offsetHeight + 24;
+        const line = document.querySelector(".topbar").offsetHeight + phonePicker.parentElement.offsetHeight + 24;
         const bottom = innerHeight + scrollY >= document.documentElement.scrollHeight - 2;
         const current = bottom ? sections.at(-1) : sections.findLast(section => section.getBoundingClientRect().top <= line) ?? sections[0];
+
+        if (current === shown) return;
+        shown = current;
 
         links.forEach((link, index) => {
             if (sections[index] === current) link.setAttribute("aria-current", "location");
             else link.removeAttribute("aria-current");
         });
+
+        // setValue() doesn't fire change, so this doesn't scroll back. Before the element is defined, the plain
+        // select's value is enough.
+        if (phonePicker.setValue) phonePicker.setValue(current.id);
+        else phonePicker.querySelector("select").value = current.id;
     };
 
     addEventListener("scroll", update, { passive: true });
@@ -341,11 +380,15 @@ function setupTheme() {
     }
 }
 
+// The same test the stylesheet uses before it styles anything.
 function setupSupportNotice() {
-    const supported = CSS.supports("appearance", "base-select");
+    const supported = CSS.supports("appearance", "base-select") && CSS.supports("selector(::picker(select))");
 
     document.getElementById("no-support").hidden = supported;
     document.getElementById("benchmark-run").disabled = !supported;
+    document.querySelector("[data-support]").textContent = supported
+        ? "✓ This browser supports it, so the pickers on this page are enhanced."
+        : "✗ This browser doesn't support it, so the pickers on this page are plain selects.";
 }
 
 // ---------------------------------------------------------------------------

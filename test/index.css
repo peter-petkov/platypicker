@@ -581,14 +581,78 @@ p {
     }
 }
 
-/* Narrow screens get a single column for now. */
+.support-check {
+    padding: 0.6rem 0.9rem;
+    border: 1px solid var(--page-border);
+    border-radius: 8px;
+    background: var(--page-stage);
+    font-weight: 500;
+}
+
+ul {
+    padding-left: 1.25rem;
+    margin: 0 0 1rem;
+
+    li + li {
+        margin-top: 0.3rem;
+    }
+}
+
+/* Narrow screens: one column, and the side navigation becomes a picker under the header. */
+
+.phone-nav {
+    display: none;
+}
 
 @media (width < 900px) {
+    html {
+        scroll-padding-top: calc(var(--topbar-height) + 4rem);
+    }
+
+    .topbar {
+        gap: 1rem;
+        padding: 0 1rem;
+    }
+
     .layout {
         grid-template-columns: minmax(0, 1fr);
+        padding: 0 1rem;
     }
 
     .sidenav, .links {
+        display: none;
+    }
+
+    main {
+        padding-top: 0;
+    }
+
+    .phone-nav {
+        position: sticky;
+        top: var(--topbar-height);
+        z-index: 5;
+        display: block;
+        padding: 0.6rem 0;
+        margin-bottom: 0.5rem;
+        background: var(--page-bg);
+        border-bottom: 1px solid var(--page-border);
+
+        select {
+            width: 100%;
+        }
+    }
+
+    .stage {
+        padding: 1.25rem 1rem;
+    }
+
+    .playground-controls {
+        padding: 1rem;
+    }
+}
+
+@media (width < 480px) {
+    .version {
         display: none;
     }
 }
