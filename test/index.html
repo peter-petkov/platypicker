@@ -107,7 +107,7 @@
 
         <section id="controls">
             <h2>Select all / none</h2>
-            <p><code>controls</code> adds Select all and Select none beside the search box. Select all acts on the options that match the current filter. A single select only gets Select none, and a required one hides that too.</p>
+            <p><code>controls</code> adds All and None beside the search box, to select all or none of the options. All acts on the options that match the current filter. A single select only gets None, and a required one hides that too. The labels can be changed per picker, as here.</p>
             <div class="example">
                 <template>
                     <platy-picker search controls select-all-label="Take them all" select-none-label="Clear" placeholder="Pick some clothes">
@@ -317,12 +317,14 @@
             <p>Builds a car list, then times open, search and pick. Each action is timed up to the second frame after it, and the median of 3 runs is shown. Build is the time to the first rows, and Rendered is the time until the whole list is in the page. Runs stack so you can compare before and after a change.</p>
             <div class="stage stage-column">
                 <div class="toolbar">
-                    <select id="benchmark-count" class="field" aria-label="Number of options">
-                        <option>1000</option>
-                        <option>5000</option>
-                        <option selected>10000</option>
-                        <option>25000</option>
-                    </select>
+                    <platy-picker>
+                        <select id="benchmark-count" aria-label="Number of options">
+                            <option value="1000">1,000 options</option>
+                            <option value="5000">5,000 options</option>
+                            <option value="10000" selected>10,000 options</option>
+                            <option value="25000">25,000 options</option>
+                        </select>
+                    </platy-picker>
                     <label class="check"><input type="checkbox" id="benchmark-multiple">Multiple</label>
                     <label class="check"><input type="checkbox" id="benchmark-grouped">Group by make</label>
                     <button type="button" id="benchmark-run" class="button">Run benchmark</button>
@@ -354,7 +356,6 @@
             <p>Platypicker needs <code>appearance: base-select</code>, along with anchor positioning and CSS nesting.</p>
             <ul>
                 <li>Chrome and Edge 135 and later.</li>
-                <li>Safari 27 ships <code>appearance: base-select</code>, but Platypicker hasn't been tested there yet.</li>
                 <li>Firefox 149 has it behind preferences that are off by default (<code>customizable_select</code> and <code>appearance-base-select</code> in <code>about:config</code>).</li>
             </ul>
             <p class="support-check" data-support></p>
@@ -397,8 +398,8 @@
                         <legend>Text</legend>
                         <label class="field-row">placeholder <input class="field" name="placeholder" value="Pick a few"></label>
                         <label class="field-row">search-placeholder <input class="field" name="search-placeholder" placeholder="Type to filter..."></label>
-                        <label class="field-row">select-all-label <input class="field" name="select-all-label" placeholder="Select all"></label>
-                        <label class="field-row">select-none-label <input class="field" name="select-none-label" placeholder="Select none"></label>
+                        <label class="field-row">select-all-label <input class="field" name="select-all-label" placeholder="All"></label>
+                        <label class="field-row">select-none-label <input class="field" name="select-none-label" placeholder="None"></label>
                     </fieldset>
                 </form>
                 <div class="stage stage-column" data-playground-stage>
