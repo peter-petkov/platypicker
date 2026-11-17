@@ -164,8 +164,11 @@ code, pre {
     padding: 1.5rem 0;
     font-size: 0.9rem;
 
+    /* The labels are indented as far as the links' text, so the highlighted link's background fits inside the
+       scrolling nav instead of being cut off at its left edge. */
     p {
         margin: 1.1rem 0 0.3rem;
+        padding-left: 0.7rem;
         color: var(--page-muted);
         font-size: 0.72rem;
         font-weight: 600;
@@ -179,7 +182,6 @@ code, pre {
 
     a {
         padding: 0.2rem 0.7rem;
-        margin-left: -0.7rem;
         border-radius: 6px;
         color: var(--page-color);
 
