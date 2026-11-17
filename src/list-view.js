@@ -1,5 +1,7 @@
 "use strict";
 
+import { addClasses, toggleClasses } from "./classes.js";
+
 // Emoji, plus the characters that glue them together: skin tones, flags, joiners, variation selectors, keycaps, tags.
 const EMOJI = /[\p{Extended_Pictographic}\p{Emoji_Modifier}\p{Regional_Indicator}\u200d\ufe0f\u20e3\u{e0020}-\u{e007f}]/gu;
 
@@ -82,19 +84,19 @@ export default class ListView {
 
     #buildPopover(select) {
         this.#popover = document.createElement("div");
-        this.#popover.classList.add("dropdown-menu", "rounded-3", "shadow", "p-0");
+        addClasses(this.#popover, "menu");
         this.#popover.popover = "manual";
         select.insertAdjacentElement("afterend", this.#popover);
 
         this.#list = document.createElement("ul");
-        this.#list.classList.add("list-unstyled", "d-grid", "gap-1", "p-2", "mb-0");
+        addClasses(this.#list, "list");
     }
 
     #buildControls() {
         const signal = this.#signal;
 
         const form = this.#form = document.createElement("form");
-        form.classList.add("input-group", "p-2", "bg-body-tertiary", "border-bottom", "sticky-top");
+        addClasses(form, "bar");
         form.addEventListener("submit", e => e.preventDefault(), { signal });
         this.#popover.append(form);
 
@@ -102,7 +104,7 @@ export default class ListView {
         this.#search.type = "search";
         this.#search.name = "platypicker-search";
         this.#search.autofocus = true;
-        this.#search.classList.add("form-control", "form-control-sm");
+        addClasses(this.#search, "search");
         this.#search.addEventListener("input", () => this.filter(this.#search.value), { signal });
         this.#search.addEventListener("keydown", e => {
             if (e.code === "Escape") this.#actions.close();
@@ -122,7 +124,7 @@ export default class ListView {
     #buildActionButton(onClick) {
         const button = document.createElement("button");
         button.type = "button";
-        button.classList.add("btn", "btn-outline-secondary", "btn-sm");
+        addClasses(button, "button");
         button.addEventListener("click", onClick, { signal: this.#signal });
         return button;
     }
@@ -130,7 +132,7 @@ export default class ListView {
     #wireList() {
         // One listener for the whole list, instead of one per item.
         this.#list.addEventListener("click", e => {
-            const button = e.target.closest(".dropdown-item");
+            const button = e.target.closest(".pp-item");
             const record = button && this.#recordsByButton.get(button);
             if (!record || button.disabled) return;
 
@@ -151,7 +153,7 @@ export default class ListView {
         const placeholdersChanged = config.placeholders !== this.#config.placeholders;
         this.#config = config;
 
-        this.#search.classList.toggle("d-none", !config.search);
+        this.#search.hidden = !config.search;
         this.#search.placeholder = config.searchPlaceholder;
         this.#selectAllButton.textContent = config.selectAllLabel;
         this.#selectNoneButton.textContent = config.selectNoneLabel;
@@ -168,9 +170,8 @@ export default class ListView {
         const controls = Boolean(this.#config.controls);
 
         this.#selectAllButton.disabled = this.#selectNoneButton.disabled = !controls;
-        this.#selectAllButton.classList.toggle("d-none",
-            !controls || !this.#source.multiple || !this.#source.canSelectAll);
-        this.#selectNoneButton.classList.toggle("d-none", !controls || this.#source.required);
+        this.#selectAllButton.hidden = !controls || !this.#source.multiple || !this.#source.canSelectAll;
+        this.#selectNoneButton.hidden = !controls || this.#source.required;
 
         this.#styleBar();
     }
@@ -188,25 +189,26 @@ export default class ListView {
     }
 
     /**
-     * The search box and the buttons are shown and hidden with .d-none, but Bootstrap rounds only the first and last
-     * child of an input group, shown or not. So the corners are set here, with Bootstrap's utility classes, and the
-     * bar itself is hidden when it has nothing to show.
+     * Hides the bar when it has nothing to show, and marks where each shown control sits in it with data-position
+     * ("first", "middle", "last" or "only"), so CSS can join their corners without knowing which ones are hidden.
      *
      * This is done in script and not in CSS on purpose. Rules with :has() and sibling combinators make the browser
      * so slow at changing which options of a long multiple select are selected that select all needs half a minute.
      */
     #styleBar() {
         const controls = [this.#search, this.#selectAllButton, this.#selectNoneButton];
-        const shown = controls.filter(control => !control.classList.contains("d-none"));
+        const shown = controls.filter(control => !control.hidden);
 
-        this.#form.classList.toggle("d-none", !shown.length);
+        this.#form.hidden = !shown.length;
 
         for (const control of controls) {
             const position = shown.indexOf(control);
 
-            control.classList.toggle("rounded-1", position >= 0);
-            control.classList.toggle("rounded-end-0", position >= 0 && position < shown.length - 1);
-            control.classList.toggle("rounded-start-0", position > 0);
+            if (position < 0) delete control.dataset.position;
+            else if (shown.length === 1) control.dataset.position = "only";
+            else if (position === 0) control.dataset.position = "first";
+            else if (position === shown.length - 1) control.dataset.position = "last";
+            else control.dataset.position = "middle";
         }
     }
 
@@ -352,7 +354,7 @@ export default class ListView {
                 let li = reuse?.dividers.get(entry);
                 if (!li) {
                     const divider = document.createElement("hr");
-                    divider.classList.add("dropdown-divider");
+                    addClasses(divider, "divider");
                     li = this.#wrapInListItem(divider);
                 }
 
@@ -368,7 +370,7 @@ export default class ListView {
                     let li = reuse?.headers.get(entry.group);
                     if (!li) {
                         const header = document.createElement("h6");
-                        header.classList.add("dropdown-header");
+                        addClasses(header, "header");
                         li = this.#wrapInListItem(header);
                     }
 
@@ -432,12 +434,16 @@ export default class ListView {
     #createRecord(entry) {
         const button = document.createElement("button");
         button.type = "button";
-        button.classList.add("dropdown-item", "rounded-2");
+        addClasses(button, "item");
 
+        const label = document.createElement("span");
+        addClasses(label, "label");
         const text = document.createTextNode("");
+        label.append(text);
+
         const small = document.createElement("small");
-        small.classList.add("text-body-tertiary");
-        button.append(text, small);
+        addClasses(small, "subtext");
+        button.append(label, small);
 
         const record = { entry, button, text, small, active: undefined };
         this.#recordsByButton.set(button, record);
@@ -454,7 +460,7 @@ export default class ListView {
         if (button.title !== entry.title) button.title = entry.title;
 
         if (button.disabled !== entry.disabled) {
-            button.classList.toggle("disabled", entry.disabled);
+            toggleClasses(button, "itemDisabled", entry.disabled);
             button.disabled = entry.disabled; // Takes the item out of the Tab order.
         }
 
@@ -462,13 +468,17 @@ export default class ListView {
         return record;
     }
 
-    /** Marks the row as selected or not. A selected option that is disabled on its own is not marked. */
+    /**
+     * Marks the row as selected or not, with aria-pressed (which also tells screen readers) and the itemSelected
+     * plug. A selected option that is disabled on its own is not marked.
+     */
     #syncActive(record) {
         const active = this.#source.isSelected(record.entry) && !record.entry.ownDisabled;
         if (record.active === active) return;
 
         record.active = active;
-        record.button.classList.toggle("active", active);
+        record.button.setAttribute("aria-pressed", active);
+        toggleClasses(record.button, "itemSelected", active);
     }
 
     #wrapInListItem(element) {
@@ -510,15 +520,15 @@ export default class ListView {
 
         for (let i = 0; i < count; i++) {
             const wave = document.createElement("div");
-            wave.classList.add("placeholder-wave", "w-100");
+            addClasses(wave, "placeholder");
 
             const bar = document.createElement("span");
-            bar.classList.add("placeholder", "col-12", "rounded-pill");
+            addClasses(bar, "placeholderBar");
             wave.append(bar);
 
             const button = document.createElement("button");
             button.type = "button";
-            button.classList.add("dropdown-item", "rounded-2");
+            addClasses(button, "item");
             button.disabled = true;
             button.append(wave);
 
@@ -588,19 +598,19 @@ export default class ListView {
         const selectedButton = selected && this.ensureRendered(selected) ? this.#recordsByEntry.get(selected).button : null;
         selectedButton?.scrollIntoView({ block: "center" });
 
-        if (!this.#search.classList.contains("d-none")) {
+        if (!this.#search.hidden) {
             this.#search.focus({ preventScroll: true });
             return;
         }
 
         const target = selectedButton && !selectedButton.disabled
             ? selectedButton
-            : this.#popover.querySelector(".dropdown-item:not(.disabled, :disabled)");
+            : this.#popover.querySelector(".pp-item:not(:disabled)");
         target?.focus({ preventScroll: target === selectedButton });
     }
 
     #firstFocusable() {
-        return this.#popover.querySelector("input:not(.d-none), .dropdown-item:not(.disabled, :disabled)");
+        return this.#popover.querySelector("input:not([hidden]), .pp-item:not(:disabled)");
     }
 
     scrollIntoView(entry) {
@@ -657,7 +667,7 @@ export default class ListView {
     #wireKeyboardNavigation() {
         // Same elements, in the same order, that Tab would visit inside the popover.
         const focusableElements = () => [...this.#popover.querySelectorAll(
-            "input:not(.d-none), .input-group button:not(.d-none, :disabled), li > .dropdown-item:not(.disabled, :disabled)")];
+            "input:not([hidden]), .pp-bar button:not([hidden], :disabled), li > .pp-item:not(:disabled)")];
 
         this.#popover.addEventListener("keydown", e => {
             if (e.ctrlKey || e.altKey || e.metaKey || e.shiftKey) return;

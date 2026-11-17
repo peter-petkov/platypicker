@@ -1,5 +1,6 @@
 "use strict";
 
+import { addClasses, classes, removeClasses } from "./classes.js";
 import Highlighter from "./highlighter.js";
 import ListView from "./list-view.js";
 import OptionSource from "./option-source.js";
@@ -29,6 +30,12 @@ export default class PlatyPicker extends HTMLElement {
 
     /** How many rows are rendered at a time. A batch-size attribute on the element overrides it. */
     static defaultBatchSize = 50;
+
+    /**
+     * The extra classes each part gets, on top of its fixed pp-* class. A preset fills these with a framework's
+     * classes, and must be imported before any picker is created. See classes.js for the parts.
+     */
+    static classes = classes;
 
     static languageMap = {
         searchPlaceholder: "Type to filter...",
@@ -86,8 +93,8 @@ export default class PlatyPicker extends HTMLElement {
 
         this.#abort = new AbortController();
 
-        this.classList.add("dropdown");
-        this.#select.classList.add("platypicker");
+        addClasses(this, "host");
+        addClasses(this.#select, "select");
 
         this.#source = new OptionSource(this.#select);
         this.#highlighter = new Highlighter();
@@ -124,8 +131,8 @@ export default class PlatyPicker extends HTMLElement {
 
         PlatyPicker.#registry.delete(this.#select);
 
-        this.#select.classList.remove("platypicker");
-        this.classList.remove("dropdown");
+        removeClasses(this.#select, "select");
+        removeClasses(this, "host");
 
         this.#select = this.#source = this.#highlighter = this.#view = null;
     }

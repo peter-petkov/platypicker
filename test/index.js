@@ -147,9 +147,9 @@ function setupBatchDemo() {
 
     // The list only exists once the element has been defined.
     customElements.whenDefined("platy-picker").then(() => {
-        const list = picker.querySelector(".dropdown-menu ul");
+        const list = picker.querySelector(".pp-list, .dropdown-menu ul");
         const update = () => output.textContent =
-            `${list.querySelectorAll(".dropdown-item").length.toLocaleString()} of ${select.options.length.toLocaleString()} options rendered`;
+            `${list.querySelectorAll(".pp-item, .dropdown-item").length.toLocaleString()} of ${select.options.length.toLocaleString()} options rendered`;
 
         new MutationObserver(update).observe(list, { childList: true });
         update();
@@ -223,13 +223,13 @@ function setupBenchmark() {
         const build = performance.now() - start;
 
         // The list may keep rendering in the background (it is marked aria-busy while it does). Wait for it, so the
-        // timings below are not mixed with that work. Older versions never set it, and are ready at once.
-        const list = picker.querySelector(".dropdown-menu ul");
+        // timings below are not mixed with that work. Older versions never set it, and are ready at once. The selectors also match their class names.
+        const list = picker.querySelector(".pp-list, .dropdown-menu ul");
         while (list.getAttribute("aria-busy") === "true") await nextPaint();
         const rendered = performance.now() - start;
 
         const select = picker.querySelector("select");
-        const popover = picker.querySelector(".dropdown-menu");
+        const popover = picker.querySelector(".pp-menu, .dropdown-menu");
         const search = picker.querySelector("input[name=platypicker-search]");
         const times = { open: [], search: [], pick: [], selectAll: [], selectNone: [] };
         let domItems = 0;
@@ -247,7 +247,7 @@ function setupBenchmark() {
 
         for (let run = 0; run < 3; run++) {
             await measure("open", () => select.click());
-            domItems ||= popover.querySelectorAll(".dropdown-item").length;
+            domItems ||= popover.querySelectorAll(".pp-item, .dropdown-item").length;
 
             await measure("search", () => setSearch("an"));
             await measure("pick", () => popover.querySelectorAll(".dropdown-item:not(.disabled):not(.d-none)")[20]?.click());

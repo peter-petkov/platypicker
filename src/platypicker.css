@@ -22,7 +22,7 @@
         /* ------------------------------------------------------------------------------------------------------
            The select. It is styled with base-select, but its native picker stays hidden: the popover replaces it.
            ------------------------------------------------------------------------------------------------------ */
-        > select.platypicker {
+        > select.pp-select {
             anchor-name: --platypicker;
             white-space: nowrap;
             min-width: max-content;
@@ -73,7 +73,7 @@
         /* ------------------------------------------------------------------------------------------------------
            The popover: a Bootstrap .dropdown-menu anchored below the select, or above it when there's no room.
            ------------------------------------------------------------------------------------------------------ */
-        > .dropdown-menu[popover] {
+        > .pp-menu[popover] {
             /* Bootstrap fills the active item; here the selected item is marked by a bar and a check mark instead. */
             --bs-dropdown-link-active-color: var(--bs-dropdown-link-color);
             --bs-dropdown-link-active-bg: transparent;
@@ -91,10 +91,30 @@
             min-width: anchor-size();
             max-height: 45vh;
 
-            /* Controls bar: the search box and the select all / none buttons. Each is shown or hidden with .d-none, and
-               the corners are set in script (see ListView). Rules with :has() would make long lists very slow. */
-            .input-group {
-                > button:not(.d-none) + button:not(.d-none) {
+            /* Controls bar: the search box and the select all / none buttons. Each is shown or hidden with [hidden],
+               and script marks where the shown ones sit with data-position (see ListView), since rules with :has()
+               would make long lists very slow. Bootstrap rounds the first and last child of an input group whether
+               they're shown or not, hence the !important. */
+            .pp-bar {
+                > [data-position] {
+                    border-radius: var(--bs-border-radius-sm) !important;
+                }
+
+                > [data-position="first"] {
+                    border-start-end-radius: 0 !important;
+                    border-end-end-radius: 0 !important;
+                }
+
+                > [data-position="middle"] {
+                    border-radius: 0 !important;
+                }
+
+                > [data-position="last"] {
+                    border-start-start-radius: 0 !important;
+                    border-end-start-radius: 0 !important;
+                }
+
+                > button:not([hidden]) + button:not([hidden]) {
                     border-left-width: 0;
                 }
 
@@ -130,19 +150,19 @@
                 }
 
                 /* Without the search box the buttons share the bar. */
-                > input.d-none ~ button {
+                > input[hidden] ~ button {
                     flex-grow: 1;
                     flex-basis: 50%;
                 }
             }
 
             /* Search matches. */
-            :is(.dropdown-header, .dropdown-item, small)::highlight(platypicker-highlight) {
+            :is(.pp-header, .pp-item-label, .pp-item-subtext)::highlight(platypicker-highlight) {
                 background-color: var(--platypicker-highlight-bg, #fee6b1);
                 color: var(--platypicker-highlight-color, #000);
             }
 
-            .dropdown-item {
+            .pp-item {
                 position: relative;
                 display: flex;
                 align-items: center;
@@ -156,7 +176,7 @@
                 }
 
                 /* Selected: a bar on the popover's left edge (the list has .5rem of padding)... */
-                &:is(.active, :active)::before {
+                &:is([aria-pressed="true"], :active)::before {
                     content: "";
                     position: absolute;
                     top: 50%;
@@ -169,7 +189,7 @@
                 }
 
                 /* ...and a check mark, drawn in the text color so it follows the light and dark themes. */
-                &.active::after {
+                &[aria-pressed="true"]::after {
                     content: "";
                     height: .75rem;
                     aspect-ratio: 1;
