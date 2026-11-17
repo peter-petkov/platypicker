@@ -4,6 +4,7 @@ import { addClasses, classes, removeClasses } from "./classes.js";
 import Highlighter from "./highlighter.js";
 import ListView from "./list-view.js";
 import OptionSource from "./option-source.js";
+import TagsView from "./tags-view.js";
 
 // While the popover is open, changes to the options are applied once they pause for RECONCILE_DELAY milliseconds,
 // and at least every RECONCILE_MAX_WAIT milliseconds while they keep coming.
@@ -41,6 +42,7 @@ export default class PlatyPicker extends HTMLElement {
         searchPlaceholder: "Type to filter...",
         selectAllLabel: "Select all",
         selectNoneLabel: "Select none",
+        removeLabel: "Remove",
     };
 
     static get(select) {
@@ -57,6 +59,7 @@ export default class PlatyPicker extends HTMLElement {
         "select-none-label",
         "placeholders",
         "batch-size",
+        "placeholder",
     ];
 
     #internals;
@@ -64,6 +67,8 @@ export default class PlatyPicker extends HTMLElement {
     #source;
     #highlighter;
     #view;
+    #tags = null;               // The badges over a closed multiple select. Single selects have none.
+    #tagsTimer;
     #abort;
     #stale = false;             // Whether the options changed since the list last caught up with them.
     #staleSince = null;         // When the first of those changes came in.
@@ -114,6 +119,15 @@ export default class PlatyPicker extends HTMLElement {
         this.#view.configure(this.#viewConfig());
         this.#view.render();
 
+        if (this.#select.multiple && this.#select.size <= 1) {
+            this.#tags = new TagsView({
+                select: this.#select,
+                signal: this.#abort.signal,
+                actions: { remove: option => this.#remove(option) },
+            });
+            this.#tags.configure(this.#tagsConfig());
+        }
+
         this.#wireSelect();
         this.#source.observe(() => this.#optionsChanged());
 
@@ -125,22 +139,25 @@ export default class PlatyPicker extends HTMLElement {
 
         this.#abort.abort();
         clearTimeout(this.#reconcileTimer);
+        clearTimeout(this.#tagsTimer);
         this.#source.disconnect();
         this.#highlighter.clear();
         this.#view.destroy();
+        this.#tags?.destroy();
 
         PlatyPicker.#registry.delete(this.#select);
 
         removeClasses(this.#select, "select");
         removeClasses(this, "host");
 
-        this.#select = this.#source = this.#highlighter = this.#view = null;
+        this.#select = this.#source = this.#highlighter = this.#view = this.#tags = null;
     }
 
     attributeChangedCallback() {
         if (!this.#view) return; // not connected yet; the initial render reads the attributes directly
 
         this.#view.configure(this.#viewConfig());
+        this.#tags?.configure(this.#tagsConfig());
     }
 
     setValue(value) {
@@ -148,6 +165,7 @@ export default class PlatyPicker extends HTMLElement {
 
         this.#source.setValue(value);
         this.#view.refresh();
+        this.#tags?.refresh();
     }
 
     // -----------------------------------------------------------------
@@ -207,6 +225,15 @@ export default class PlatyPicker extends HTMLElement {
         this.setAttribute("batch-size", value);
     }
 
+    /** Shown in a multiple select while nothing is selected. */
+    get placeholder() {
+        return this.getAttribute("placeholder") ?? "";
+    }
+
+    set placeholder(value) {
+        this.setAttribute("placeholder", value);
+    }
+
     get searchPlaceholder() {
         return this.getAttribute("search-placeholder") ?? PlatyPicker.languageMap.searchPlaceholder;
     }
@@ -240,6 +267,13 @@ export default class PlatyPicker extends HTMLElement {
             selectNoneLabel: this.selectNoneLabel,
             placeholders: this.placeholders,
             batchSize: this.batchSize,
+        };
+    }
+
+    #tagsConfig() {
+        return {
+            placeholder: this.placeholder,
+            removeLabel: PlatyPicker.languageMap.removeLabel,
         };
     }
 
@@ -299,6 +333,14 @@ export default class PlatyPicker extends HTMLElement {
         }
     }
 
+    /** Deselects the option of a badge whose remove button was clicked. */
+    #remove(option) {
+        option.selected = false;
+        this.#tags.refresh();
+        this.#view.refresh();
+        this.#select.dispatchEvent(new Event("change", { bubbles: true }));
+    }
+
     #close() {
         this.#view.popover.hidePopover();
         this.#select.focus();
@@ -323,7 +365,11 @@ export default class PlatyPicker extends HTMLElement {
             if (!this.#select.options.length) return;
             await new Promise(resolve => requestAnimationFrame(resolve)); // let in-flight option mutations settle
             this.#view?.refresh();
+            this.#tags?.refresh();
         }, { signal });
+
+        // A form reset changes the selection without a change event, and only once the reset event has run.
+        this.#select.form?.addEventListener("reset", () => setTimeout(() => this.#tags?.refresh()), { signal });
 
         document.addEventListener("click", e => {
             if (popover.matches(":popover-open") && !popover.contains(e.target) && !this.contains(e.target))
@@ -345,6 +391,7 @@ export default class PlatyPicker extends HTMLElement {
 
         popover.addEventListener("toggle", e => {
             this.#internals.states[e.newState === "open" ? "add" : "delete"]("open");
+            this.#tags?.refresh(); // Catches selection changes that fire no change event, like select.value = x.
 
             if (e.newState === "open") {
                 this.#view.syncControls();
@@ -363,6 +410,7 @@ export default class PlatyPicker extends HTMLElement {
      */
     #optionsChanged() {
         this.#stale = true;
+        this.#scheduleTagsRefresh();
         if (!this.#view.popover.matches(":popover-open")) return;
 
         const now = performance.now();
@@ -371,6 +419,17 @@ export default class PlatyPicker extends HTMLElement {
         clearTimeout(this.#reconcileTimer);
         this.#reconcileTimer = setTimeout(() => this.#catchUp(),
             Math.max(0, Math.min(RECONCILE_DELAY, this.#staleSince + RECONCILE_MAX_WAIT - now)));
+    }
+
+    /**
+     * The badges show while the popover is closed, so unlike the list they can't wait for it to open. They read the
+     * select directly, and a burst of changes to the options updates them once.
+     */
+    #scheduleTagsRefresh() {
+        if (!this.#tags) return;
+
+        clearTimeout(this.#tagsTimer);
+        this.#tagsTimer = setTimeout(() => this.#tags?.refresh(), RECONCILE_DELAY);
     }
 
     /** Applies pending changes to the options, if there are any. */

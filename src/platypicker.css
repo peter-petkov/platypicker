@@ -25,6 +25,8 @@
  *   --platypicker-danger-color          an invalid select's border
  *   --platypicker-highlight-bg          search match background
  *   --platypicker-highlight-color       search match text
+ *   --platypicker-tag-bg                a badge in a multiple select
+ *   --platypicker-tag-border-color      a badge's border
  *   --platypicker-radius                the select, rows and the search box
  *   --platypicker-menu-radius           the popover
  *   --platypicker-shadow                the popover's shadow
@@ -64,9 +66,9 @@
         > select.pp-select {
             anchor-name: --platypicker;
             white-space: nowrap;
-            min-width: max-content;
 
             &:not([multiple]) {
+                min-width: max-content;
                 appearance: base-select !important;
                 column-gap: 0; /* base-select's gap is for the picker icon, which is hidden below. */
             }
@@ -105,6 +107,50 @@
             overflow: auto;
             overscroll-behavior: contain;
         }
+
+        /* The badges over a closed multiple select (see TagsView). They cover the select exactly and let clicks
+           through to it, so it still opens the popover and takes focus; only the remove buttons catch clicks. The
+           select's own text stays underneath, hidden, and keeps giving the select its height. */
+        > select.pp-select[multiple]:is(:not([size]), [size="1"]) {
+            color: transparent !important;
+        }
+
+        > .pp-tags {
+            position: absolute;
+            position-anchor: --platypicker;
+            inset: anchor(top) anchor(right) anchor(bottom) anchor(left);
+            box-sizing: border-box;
+            display: flex;
+            align-items: center;
+            margin: 0;
+            overflow: hidden;
+            pointer-events: none;
+        }
+
+        /* The first badge is cut short when even it doesn't fit, except while the badges are measured. */
+        .pp-tag {
+            flex: none;
+            min-width: 0;
+        }
+
+        .pp-tags-placeholder + .pp-tag {
+            flex-shrink: 1;
+        }
+
+        .pp-tags[data-measuring] .pp-tag {
+            flex-shrink: 0;
+        }
+
+        .pp-tag-label, .pp-tags-placeholder {
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .pp-tag-remove {
+            pointer-events: auto;
+        }
     }
 
     /* ==========================================================================================================
@@ -123,6 +169,8 @@
         --_pp-danger: var(--platypicker-danger-color, light-dark(#c62828, #f27373));
         --_pp-highlight-bg: var(--platypicker-highlight-bg, light-dark(#fde58a, #d99a1e));
         --_pp-highlight-color: var(--platypicker-highlight-color, light-dark(#1d1c1a, #16120a));
+        --_pp-tag-bg: var(--platypicker-tag-bg, light-dark(#efeeea, #303035));
+        --_pp-tag-border: var(--platypicker-tag-border-color, light-dark(#dedcd6, #414147));
         --_pp-radius: var(--platypicker-radius, 6px);
         --_pp-menu-radius: var(--platypicker-menu-radius, 8px);
         --_pp-shadow: var(--platypicker-shadow,
@@ -145,6 +193,7 @@
 
         &[multiple] {
             appearance: none;
+            min-width: 14rem; /* Room for a few badges. */
         }
 
         &:focus-visible {
@@ -396,6 +445,57 @@
             color: inherit;
             background-color: transparent;
             text-decoration: underline;
+        }
+
+        /* Badges in a closed multiple select, with room on the right for the select's chevron. */
+        .pp-tags {
+            gap: .25rem;
+            padding: 0 2rem 0 .3125rem;
+            font: inherit;
+            color: var(--_pp-color);
+        }
+
+        .pp-tag, .pp-tag-count {
+            display: inline-flex;
+            align-items: center;
+            box-sizing: border-box;
+            padding: 0 .375rem;
+            font-size: .875em;
+            line-height: 1.5;
+            white-space: nowrap;
+            border: 1px solid var(--_pp-tag-border);
+            border-radius: calc(var(--_pp-radius) - 2px);
+        }
+
+        .pp-tag {
+            gap: .125rem;
+            background: var(--_pp-tag-bg);
+        }
+
+        .pp-tag-remove {
+            flex: none;
+            width: 1.125em;
+            height: 1.125em;
+            margin-right: -.1875rem;
+            background-color: var(--_pp-muted);
+            border-radius: 2px;
+            mask: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'%3e%3cpath d='m4.5 4.5 7 7m0-7-7 7'/%3e%3c/svg%3e") center / .75em no-repeat;
+            cursor: pointer;
+
+            &:hover {
+                background-color: var(--_pp-color);
+            }
+        }
+
+        .pp-tag-count {
+            flex: none;
+            color: var(--_pp-muted);
+            border-style: dashed;
+        }
+
+        .pp-tags-placeholder {
+            padding-left: .3125rem;
+            color: var(--_pp-muted);
         }
     }
 }

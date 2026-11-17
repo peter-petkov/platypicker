@@ -26,6 +26,12 @@ export const classes = {
     divider: "",        // an <hr> between options
     placeholder: "",    // a skeleton row's content
     placeholderBar: "", // the bar inside it
+    tags: "",           // the badges over a closed multiple select
+    tag: "",            // a badge
+    tagLabel: "",       // a badge's label
+    tagRemove: "",      // a badge's remove button
+    tagCount: "",       // the "+N" count of the badges that don't fit
+    tagsPlaceholder: "", // shown instead of badges while nothing is selected
 };
 
 const fixed = {
@@ -43,6 +49,12 @@ const fixed = {
     divider: "pp-divider",
     placeholder: "pp-placeholder",
     placeholderBar: "pp-placeholder-bar",
+    tags: "pp-tags",
+    tag: "pp-tag",
+    tagLabel: "pp-tag-label",
+    tagRemove: "pp-tag-remove",
+    tagCount: "pp-tag-count",
+    tagsPlaceholder: "pp-tags-placeholder",
 };
 
 const plug = part => String(classes[part] ?? "").split(/\s+/).filter(Boolean);
