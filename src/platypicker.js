@@ -15,6 +15,9 @@ export default class PlatyPicker extends HTMLElement {
         Highlighter.maxHighlights = value;
     }
 
+    /** How many rows are rendered at a time. A batch-size attribute on the element overrides it. */
+    static defaultBatchSize = 50;
+
     static languageMap = {
         searchPlaceholder: "Type to filter...",
         selectAllLabel: "Select all",
@@ -34,6 +37,7 @@ export default class PlatyPicker extends HTMLElement {
         "select-all-label",
         "select-none-label",
         "placeholders",
+        "batch-size",
     ];
 
     #internals;
@@ -166,6 +170,20 @@ export default class PlatyPicker extends HTMLElement {
         this.setAttribute("placeholders", value);
     }
 
+    /**
+     * How many rows are rendered at a time, the next batch following as the user scrolls down. 0 turns batching off,
+     * and a missing or invalid value means the default.
+     */
+    get batchSize() {
+        const value = this.getAttribute("batch-size")?.trim();
+
+        return /^\d+$/.test(value ?? "") ? Number(value) : PlatyPicker.defaultBatchSize;
+    }
+
+    set batchSize(value) {
+        this.setAttribute("batch-size", value);
+    }
+
     get searchPlaceholder() {
         return this.getAttribute("search-placeholder") ?? PlatyPicker.languageMap.searchPlaceholder;
     }
@@ -198,6 +216,7 @@ export default class PlatyPicker extends HTMLElement {
             selectAllLabel: this.selectAllLabel,
             selectNoneLabel: this.selectNoneLabel,
             placeholders: this.placeholders,
+            batchSize: this.batchSize,
         };
     }
 

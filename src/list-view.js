@@ -8,8 +8,10 @@ function typeAheadText(label) {
     return label.replace(EMOJI, "").replace(/\s+/g, " ").trim().toLowerCase();
 }
 
-// Matches stream into the list in steps of these many rows, each scan step taking at most this many milliseconds.
-const CHUNK_SIZE = 100;
+// Rows are rendered in batches of the configured size, and a batch size of 0 turns batching off. With batching off the
+// list streams in steps of STREAM_CHUNK_SIZE rows instead. A scan step takes at most SCAN_BUDGET milliseconds.
+const DEFAULT_BATCH_SIZE = 50;
+const STREAM_CHUNK_SIZE = 100;
 const SCAN_BUDGET = 8;
 
 /** Lets the browser handle input and paint before the next step. */
@@ -18,8 +20,8 @@ const yieldToMain = () => globalThis.scheduler?.yield?.() ?? new Promise(resolve
 /**
  * The popover: a search box with select all / none buttons, and the list of entries.
  *
- * It renders what an OptionSource holds and reports what the user does through the `actions` it is given
- * (activate, selectAll, selectNone, close). It never touches the select itself.
+ * It renders what an OptionSource holds, a batch at a time, and reports what the user does through the `actions` it
+ * is given (activate, selectAll, selectNone, close). It never touches the select itself.
  */
 export default class ListView {
     #source;
@@ -35,12 +37,12 @@ export default class ListView {
 
     #config = {};
     #view = null;                       // The FilteredView being shown.
-    #busy = false;                      // Whether matches are still streaming in.
+    #sentinelObserver;                  // Loads the next batch when the end of the list comes near.
     #lastGroup = null;                  // The option group of the last row rendered.
     #rows = [];                         // The rendered records, in list order.
-    #recordsByEntry = new WeakMap();
+    #recordsByEntry = new WeakMap();    // Only the entries rendered right now.
     #recordsByButton = new WeakMap();
-    #tail = [];                         // The placeholder <li>s after the last entry.
+    #tail = [];                         // The <li>s after the last row, present while more rows are to come.
     #typeAheadBuffer = "";
     #typeAheadTimer;
 
@@ -63,6 +65,7 @@ export default class ListView {
 
     destroy() {
         clearTimeout(this.#typeAheadTimer);
+        this.#sentinelObserver?.disconnect();
         this.#popover.remove();
         this.#view = null;
         this.#rows = [];
@@ -136,7 +139,8 @@ export default class ListView {
 
     /**
      * Applies the element's settings: { search, controls, searchPlaceholder, selectAllLabel, selectNoneLabel,
-     * placeholders }. Safe to call again whenever any of them changes.
+     * placeholders, batchSize }. Safe to call again whenever any of them changes. A new batch size is used for the
+     * batches that come after, and the rows already rendered stay.
      */
     configure(config) {
         const placeholdersChanged = config.placeholders !== this.#config.placeholders;
@@ -148,75 +152,106 @@ export default class ListView {
         this.#selectNoneButton.textContent = config.selectNoneLabel;
         this.syncControls();
 
-        if (placeholdersChanged) this.#renderTail();
+        if (placeholdersChanged) this.#syncTail(true);
     }
 
     /**
-     * Shows or hides select all / none, and turns select all off while matches are still streaming in, since it
-     * would miss the ones not found yet. Also depends on the select (multiple, required),
+     * Shows or hides select all / none. Also depends on the select (multiple, required),
      * so it is inexpensive to repeat.
      */
     syncControls() {
         const controls = Boolean(this.#config.controls);
 
-        this.#selectAllButton.disabled = !controls || this.#busy;
-        this.#selectNoneButton.disabled = !controls;
+        this.#selectAllButton.disabled = this.#selectNoneButton.disabled = !controls;
         this.#selectAllButton.classList.toggle("d-none",
             !controls || !this.#source.multiple || !this.#source.canSelectAll);
         this.#selectNoneButton.classList.toggle("d-none", !controls || this.#source.required);
+    }
+
+    get #isBatched() {
+        return (this.#config.batchSize ?? DEFAULT_BATCH_SIZE) > 0;
+    }
+
+    /** How many rows the next step renders. */
+    get #stepSize() {
+        return this.#config.batchSize || (this.#config.batchSize === 0 ? STREAM_CHUNK_SIZE : DEFAULT_BATCH_SIZE);
     }
 
     // -----------------------------------------------------------------
     // Rendering
     // -----------------------------------------------------------------
 
-    /** Renders the matches of the current search from scratch. */
+    /**
+     * Renders the matches of the current search from scratch. As many rows as were rendered before are brought
+     * back, so a change to the options doesn't throw the list back to the top.
+     */
     render() {
-        this.#showMatches(this.#query());
+        this.#showMatches(this.#query(), this.#rows.length);
     }
 
-    /** Shows the entries matching a search. An empty one shows them all. */
+    /** Shows the entries matching a search, starting again from the first batch. An empty search shows them all. */
     filter(rawValue) {
         this.#showMatches(rawValue.trim().toLowerCase());
+        this.#popover.scrollTop = 0;
     }
 
     /**
-     * The first matches are rendered right away. The rest stream in step by step, so typing and scrolling stay
-     * responsive on a long list. A newer search replaces the one being shown, and the old one stops.
+     * The first batch is rendered right away. With batching on, the next ones follow as the end of the list comes
+     * near. With batching off, the rest streams in step by step. Either way a newer search replaces the one
+     * being shown.
      */
-    #showMatches(query) {
+    #showMatches(query, keep = 0) {
         const view = this.#view = this.#source.filter(query);
 
+        this.#sentinelObserver?.disconnect();
         this.#highlighter.clear();
         this.#lastGroup = null;
         this.#rows = [];
+        this.#recordsByEntry = new WeakMap();
         this.#list.replaceChildren();
-        this.#renderTail();
+        this.#tail = [];
 
-        this.#appendRows(view, view.pull(CHUNK_SIZE, SCAN_BUDGET));
-        // noinspection JSIgnoredPromiseFromCall, The stream manages its own lifetime and doesn't need to be awaited.
-        this.#stream(view);
+        this.#renderMore(this.#stepSize);
+        while (this.#rows.length < keep && view.hasMore) this.#renderMore(this.#stepSize, Infinity);
+
+        if (!this.#isBatched) {
+            // noinspection JSIgnoredPromiseFromCall, The stream manages its own lifetime and doesn't need to be awaited.
+            this.#stream(view);
+        }
     }
 
     async #stream(view) {
-        this.#setBusy(view.hasMore);
+        this.#list.setAttribute("aria-busy", view.hasMore);
 
         try {
             while (view.hasMore) {
                 await yieldToMain();
                 if (this.#view !== view || this.#signal.aborted) return;
 
-                this.#appendRows(view, view.pull(CHUNK_SIZE, SCAN_BUDGET));
+                this.#renderMore(this.#stepSize);
             }
         } finally {
-            if (this.#view === view) this.#setBusy(false);
+            if (this.#view === view) this.#list.setAttribute("aria-busy", false);
         }
     }
 
-    #setBusy(busy) {
-        this.#busy = busy;
-        this.#list.setAttribute("aria-busy", busy);
-        this.syncControls();
+    /** Renders the next `count` matches, or fewer if the scan runs out of time or of entries. */
+    #renderMore(count, budget = SCAN_BUDGET) {
+        this.#appendRows(this.#view, this.#view.pull(count, budget));
+        this.#syncTail();
+    }
+
+    /**
+     * Makes sure the entry has a row, rendering up to it if need be. Returns false when the entry doesn't
+     * match the current search.
+     */
+    ensureRendered(entry) {
+        const view = this.#view;
+        if (!view?.includes(entry)) return false;
+
+        while (!this.#recordsByEntry.has(entry) && view.hasMore) this.#renderMore(this.#stepSize, Infinity);
+
+        return this.#recordsByEntry.has(entry);
     }
 
     #appendRows(view, entries) {
@@ -299,16 +334,37 @@ export default class ListView {
     }
 
     /**
-     * The skeleton rows after the last entry. They are derived from the settings, so a re-render keeps them,
-     * and they are left out while a search is active.
+     * The tail marks the end of the list while more rows are to come: the skeleton rows if there are any
+     * configured, otherwise a single empty item. With batching on, the browser tells us when it comes near the
+     * visible part of the list, and that is when the next batch is rendered.
      */
-    #renderTail() {
-        for (const li of this.#tail) li.remove();
-        this.#tail = [];
+    #syncTail(rebuild = false) {
+        const wanted = Boolean(this.#view?.hasMore);
 
-        if (this.#view?.query) return;
+        if (this.#tail.length && (!wanted || rebuild)) {
+            this.#sentinelObserver?.disconnect();
+            for (const li of this.#tail) li.remove();
+            this.#tail = [];
+        }
 
-        for (let i = 0; i < (this.#config.placeholders ?? 0); i++) {
+        if (!wanted) return;
+
+        if (!this.#tail.length) this.#createTail();
+        if (this.#isBatched) this.#watchTail();
+    }
+
+    #createTail() {
+        const count = this.#config.placeholders ?? 0;
+
+        if (!count) {
+            const li = document.createElement("li");
+            li.setAttribute("aria-hidden", "true");
+            this.#list.append(li);
+            this.#tail.push(li);
+            return;
+        }
+
+        for (let i = 0; i < count; i++) {
             const wave = document.createElement("div");
             wave.classList.add("placeholder-wave", "w-100");
 
@@ -326,6 +382,17 @@ export default class ListView {
             this.#list.append(li);
             this.#tail.push(li);
         }
+    }
+
+    #watchTail() {
+        this.#sentinelObserver ??= new IntersectionObserver(entries => {
+            if (this.#view?.hasMore && entries.some(entry => entry.isIntersecting)) this.#renderMore(this.#stepSize);
+        }, { root: this.#popover, rootMargin: "0px 0px 100% 0px" }); // Starts a batch a popover's height early.
+
+        // Observing again makes the browser report where the tail is now, so a batch that still leaves it
+        // near the visible part is followed by the next one.
+        this.#sentinelObserver.disconnect();
+        this.#sentinelObserver.observe(this.#tail[0]);
     }
 
     /** Brings the rows up to date with the select: label and subtext changes, and which entries are selected. */
@@ -384,8 +451,24 @@ export default class ListView {
         return !entry.disabled && this.isVisible(entry);
     }
 
+    /**
+     * Called when the popover opens. The selected item is rendered if it wasn't yet and brought into view. Focus
+     * goes to the search box when there is one, otherwise to the selected item, otherwise to the first item.
+     */
     focusInitial() {
-        this.#popover.querySelector("input:not(.d-none), .dropdown-item:not(.disabled, :disabled)")?.focus();
+        const selected = this.#source.firstSelected;
+        const selectedButton = selected && this.ensureRendered(selected) ? this.#recordsByEntry.get(selected).button : null;
+        selectedButton?.scrollIntoView({ block: "center" });
+
+        if (!this.#search.classList.contains("d-none")) {
+            this.#search.focus({ preventScroll: true });
+            return;
+        }
+
+        const target = selectedButton && !selectedButton.disabled
+            ? selectedButton
+            : this.#popover.querySelector(".dropdown-item:not(.disabled, :disabled)");
+        target?.focus({ preventScroll: target === selectedButton });
     }
 
     scrollIntoView(entry) {
@@ -409,8 +492,8 @@ export default class ListView {
             this.#typeAheadBuffer += char;
             const match = this.#findTypeAheadMatch(this.#typeAheadBuffer);
 
-            if (match) {
-                this.#recordsByEntry.get(match)?.button.focus();
+            if (match && this.ensureRendered(match)) {
+                this.#recordsByEntry.get(match).button.focus();
 
                 requestAnimationFrame(() => this.scrollIntoView(match));
 
@@ -440,18 +523,26 @@ export default class ListView {
     // -----------------------------------------------------------------
 
     #wireKeyboardNavigation() {
+        // Same elements, in the same order, that Tab would visit inside the popover.
+        const focusableElements = () => [...this.#popover.querySelectorAll(
+            "input:not(.d-none), .input-group button:not(.d-none, :disabled), li > .dropdown-item:not(.disabled, :disabled)")];
+
         this.#popover.addEventListener("keydown", e => {
             if (e.ctrlKey || e.altKey || e.metaKey || e.shiftKey) return;
 
             const step = { ArrowDown: 1, ArrowUp: -1 }[e.code];
             if (!step) return;
 
-            // Same elements, in the same order, that Tab would visit inside the popover.
-            const focusable = [...this.#popover.querySelectorAll(
-                "input:not(.d-none), .input-group button:not(.d-none, :disabled), li > .dropdown-item:not(.disabled, :disabled)")];
+            let focusable = focusableElements();
             if (!focusable.length) return;
 
             e.preventDefault();
+
+            // On the last rendered item the next batch comes first, so the key never stalls at the end of a longer list.
+            if (step > 0 && e.target === focusable.at(-1) && this.#view?.hasMore) {
+                this.#renderMore(this.#stepSize, Infinity);
+                focusable = focusableElements();
+            }
 
             const index = focusable.indexOf(e.target);
             focusable[Math.min(Math.max(index + step, 0), focusable.length - 1)].focus();
