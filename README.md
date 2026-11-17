@@ -202,6 +202,19 @@ import "platypicker";
 
 The same object is `PlatyPicker.classes`, which is enough for pickers you create later from script.
 
+## Skins
+
+A skin fits Platypicker into a CSS framework. Import it before `platypicker`, since it fills the class plugs that the pickers read when they are created:
+
+```js
+import "platypicker/src/skins/bootstrap.js";
+import "platypicker";
+```
+
+There's no extra stylesheet to link: the skin adds its few rules itself. Imported after `platypicker`, it warns in the console.
+
+**Bootstrap** (5.3 or later) gives the `<select>` Bootstrap's `form-select` class, so it looks like the page's other selects, and sizes (`form-select-sm`, `form-select-lg`) and validation classes (`is-invalid`, `was-validated`) work as usual. The popover and the badges take their colors, radius and shadow from Bootstrap's variables (`--bs-body-bg`, `--bs-link-color`, `--bs-border-color` and so on), so they follow your theme, custom colors and `data-bs-theme="dark"`, on the whole page or part of it. Your own `--platypicker-*` variables still win over the skin.
+
 ## JavaScript API
 
 ```js
@@ -232,7 +245,7 @@ Changing the selection from script (`select.value = x`, `option.selected = true`
 
 Version 2 drops Bootstrap. If you used 1.x with Bootstrap:
 
-- **Bootstrap is no longer needed**, and no longer used: the popover has a look of its own, themed with the variables above. A `form-select` class on the `<select>` still styles the select itself.
+- **Bootstrap is no longer needed**, and no longer used: the popover has a look of its own, themed with the variables above. A `form-select` class on the `<select>` still styles the select itself, and the [Bootstrap skin](#skins) brings the popover in line with your Bootstrap theme.
 - **The popover's classes changed.** CSS written against `.dropdown-menu`, `.dropdown-item`, `.dropdown-header` or `.input-group` inside the picker should use the `pp-*` classes instead, or put those Bootstrap classes back through the class plugs. The select's own class changed from `platypicker` to `pp-select`.
 - **Selected rows** are marked with `aria-pressed="true"` instead of the `active` class, and hidden parts with the `hidden` attribute instead of `d-none`.
 - **Multi-selects show badges** instead of the browser's own text, and draw their own arrow.
