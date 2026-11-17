@@ -167,10 +167,10 @@
     platy-picker {
         --_pp-bg: var(--platypicker-bg, var(--_pp-skin-bg, light-dark(#ffffff, #222225)));
         --_pp-color: var(--platypicker-color, var(--_pp-skin-color, light-dark(#1d1c1a, #ececee)));
-        --_pp-muted: var(--platypicker-muted-color, var(--_pp-skin-muted-color, light-dark(#7d7b76, #93939a)));
+        --_pp-muted: var(--platypicker-muted-color, var(--_pp-skin-muted-color, light-dark(#6e6c68, #97979e)));
         --_pp-header: var(--platypicker-header-color, var(--_pp-skin-header-color, light-dark(#5f5e5a, #b0b0b6)));
         --_pp-border: var(--platypicker-border-color, var(--_pp-skin-border-color, light-dark(#e3e1dc, #36363b)));
-        --_pp-field-border: var(--platypicker-field-border-color, var(--_pp-skin-field-border-color, light-dark(#c4c1bb, #48484e)));
+        --_pp-field-border: var(--platypicker-field-border-color, var(--_pp-skin-field-border-color, light-dark(#95938e, #6b6b73)));
         --_pp-hover: var(--platypicker-hover-bg, var(--_pp-skin-hover-bg, light-dark(#f0efec, #2d2d31)));
         --_pp-accent: var(--platypicker-accent-color, var(--_pp-skin-accent-color, light-dark(#1f63d6, #7aaefc)));
         --_pp-disabled: var(--platypicker-disabled-color, var(--_pp-skin-disabled-color, light-dark(#b4b2ab, #5a5a60)));
@@ -359,6 +359,62 @@
         /* The badges are a sibling of the select, so they don't fade with it on their own. */
         .pp-select:disabled + .pp-tags {
             opacity: .6;
+        }
+
+        /* Forced colors, as in Windows High Contrast: the browser swaps every color for a system one. A forced
+           background would hide what is drawn as a mask over one (the check mark, the badges' remove cross and chevron, the
+           spinner) and the skeleton bars, so those draw in system colors of their own. A row under the pointer or
+           with keyboard focus takes the system highlight, since backgrounds don't show either. */
+        @media (forced-colors: active) {
+            :is(.pp-item[aria-selected="true"] > .pp-item-check, .pp-tag-remove),
+            .pp-tags::after {
+                forced-color-adjust: none;
+                background-color: CanvasText;
+            }
+
+            .pp-item:not(:disabled, [aria-disabled="true"]):is(:hover, :focus-visible) {
+                forced-color-adjust: none;
+                color: HighlightText;
+                background-color: Highlight;
+
+                > .pp-item-subtext {
+                    color: inherit;
+                }
+
+                &[aria-selected="true"] > .pp-item-check {
+                    background-color: HighlightText;
+                }
+            }
+
+            .pp-item[aria-disabled="true"] {
+                forced-color-adjust: none;
+                color: GrayText;
+                background-color: Canvas;
+
+                > .pp-item-subtext {
+                    color: inherit;
+                }
+            }
+
+            .pp-placeholder-bar {
+                forced-color-adjust: none;
+                background-color: GrayText;
+            }
+
+            .pp-button[aria-busy="true"] {
+                forced-color-adjust: none;
+                color: transparent;
+
+                &::after {
+                    border-color: CanvasText;
+                    border-right-color: transparent;
+                }
+            }
+
+            :is(.pp-header, .pp-item-label, .pp-item-subtext)::highlight(platypicker-highlight) {
+                color: MarkText;
+                background-color: Mark;
+            }
         }
 
         .pp-tag, .pp-tag-count {
