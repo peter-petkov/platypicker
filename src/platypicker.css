@@ -1,8 +1,8 @@
 /*
  * Platypicker
  *
- * Wraps a native <select> in a searchable popover. Needs a browser with anchor positioning, the popover attribute
- * and CSS nesting. Without them everything below is skipped and the plain select remains. `appearance: base-select`
+ * Wraps a native <select> in a searchable popover. Needs a browser with anchor positioning (and anchor-scope), the
+ * popover attribute and CSS nesting. Without them everything below is skipped and the plain select remains. `appearance: base-select`
  * is used where there is one; elsewhere the select is `appearance: none` and the script keeps its own dropdown shut.
  *
  * The file has two parts:
@@ -36,7 +36,7 @@
  *   --platypicker-shadow                the popover's shadow
  *   --platypicker-max-height            the popover's height limit
  */
-@supports (anchor-name: --platypicker) and selector(:popover-open) {
+@supports (anchor-scope: all) and selector(:popover-open) {
     /* Must live at the top level, not nested inside platy-picker. */
     @position-try --platypicker-above {
         top: auto;
@@ -128,7 +128,7 @@
 
             /* Without base-select (in Firefox) a multiple select is a one-row list box, not a button. None of the
                list shows, not its scrollbar nor its highlighted options, so the select looks like a field under the
-               badges. The script keeps its keys and presses from changing the selection. */
+               badges. The script stops its presses, and the keys Chrome's closed multiple select doesn't act on. */
             @supports not (appearance: base-select) {
                 overflow: hidden;
                 scrollbar-width: none;

@@ -66,17 +66,12 @@ export default class PlatyPicker extends HTMLElement {
         return PlatyPicker.#registry.get(select);
     }
 
-    // What the picker needs: anchor positioning and the popover attribute, as platypicker.css checks too. Browsers
-    // without them keep the plain select. base-select is used where there is one (see #wireSelect).
-    static #isSupported = CSS.supports("anchor-name", "--platypicker") && CSS.supports("selector(:popover-open)");
+    // What the picker needs: anchor positioning with anchor-scope, which keeps each popover on its own select, and
+    // the popover attribute, as platypicker.css checks too. Browsers without them keep the plain select. base-select
+    // is used where there is one (see #wireSelect).
+    static #isSupported = CSS.supports("anchor-scope", "all") && CSS.supports("selector(:popover-open)");
     static #hasBaseSelect = CSS.supports("appearance", "base-select");
 
-    /** Whether a key changes a list box's selection where it stands: Home, End, a page, a letter, select all. */
-    static #selectsInPlace(e) {
-        if (["Home", "End", "PageUp", "PageDown"].includes(e.code)) return true;
-        if ((e.ctrlKey || e.metaKey) && e.code === "KeyA") return true;
-        return e.key.length === 1 && e.key !== " " && !e.ctrlKey && !e.metaKey && !e.altKey;
-    }
 
     static observedAttributes = [
         "search",
@@ -460,8 +455,10 @@ export default class PlatyPicker extends HTMLElement {
         this.#select.addEventListener("click", () => this.#togglePopover(), { signal });
 
         this.#select.addEventListener("keydown", e => {
-            // Without base-select a multiple select is a list box, and these would change its selection directly.
-            if (!PlatyPicker.#hasBaseSelect && this.#select.multiple && PlatyPicker.#selectsInPlace(e)) {
+            // Without base-select a multiple select is a list box. Letters, Home, End and the page keys pick an
+            // option there in place, replacing the selection, as Chrome's closed multiple select does too, so
+            // they're left to it. Select all isn't something Chrome's does, so it's stopped.
+            if (!PlatyPicker.#hasBaseSelect && this.#select.multiple && (e.ctrlKey || e.metaKey) && e.code === "KeyA") {
                 e.preventDefault();
                 return;
             }

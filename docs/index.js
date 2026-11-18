@@ -585,7 +585,7 @@ function setupTheme() {
 
 // The same test the stylesheet uses before it styles anything.
 function setupSupportNotice() {
-    const supported = CSS.supports("anchor-name", "--platypicker") && CSS.supports("selector(:popover-open)");
+    const supported = CSS.supports("anchor-scope", "all") && CSS.supports("selector(:popover-open)");
 
     document.getElementById("no-support").hidden = supported;
     document.getElementById("benchmark-run").disabled = !supported;
