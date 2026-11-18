@@ -14,9 +14,11 @@
     "src"
   ],
   "devDependencies": {
+    "playwright-core": "^1.65.1",
     "puppeteer-core": "^25.18.1"
   },
   "scripts": {
-    "check:firefox": "node tools/browser-check.mjs firefox"
+    "check:firefox": "node tools/browser-check.mjs firefox",
+    "check:webkit": "node tools/browser-check.mjs webkit"
   }
 }

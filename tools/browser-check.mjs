@@ -1,17 +1,21 @@
-// Opens the docs page in your installed Firefox (or Chrome), headless and in a temporary profile, and reports what
-// that browser supports of what Platypicker uses. For checking Firefox from the command line.
+// Opens the docs page in your installed Firefox (or Chrome), or in Playwright's WebKit, headless and in a temporary
+// profile, and reports what that browser supports of what Platypicker uses. For checking Firefox, and WebKit as a
+// stand-in for Safari, from the command line.
 //
-//   node tools/browser-check.mjs [firefox|chrome] [--page docs/index.html#search] [--run script.js] [--shot out.png]
+//   node tools/browser-check.mjs [firefox|chrome|webkit] [--page docs/index.html#search] [--run script.js] [--shot out.png]
 //
 // --run evaluates a script in the page once it has loaded, and prints what it returns (it may await). --shot saves a
 // screenshot of the viewport. The browser is found where Windows installs it; set FIREFOX or CHROME to its path
-// otherwise. The repository is served on a free port for the run.
+// otherwise. WebKit is Playwright's own build, installed once with `npx playwright-core install webkit`. It is the
+// engine Safari uses, not Safari itself, so treat what it shows as a hint and confirm in a real Safari. The repository
+// is served on a free port for the run.
 import { createServer } from "node:http";
 import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { extname, join, normalize } from "node:path";
 import { fileURLToPath } from "node:url";
 import puppeteer from "puppeteer-core";
+import { webkit } from "playwright-core";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
 const args = process.argv.slice(2);
@@ -31,7 +35,9 @@ const paths = {
     chrome: [process.env.CHROME, "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe", "/usr/bin/google-chrome",
         "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"],
 };
-const executablePath = paths[browserName]?.find(path => path && existsSync(path));
+const isWebKit = browserName === "webkit";
+const executablePath = isWebKit ? webkit.executablePath() : paths[browserName]?.find(path => path && existsSync(path));
+if (isWebKit && !existsSync(executablePath)) throw new Error("No WebKit found. Run: npx playwright-core install webkit");
 if (!executablePath) throw new Error(`No ${browserName} found. Set ${browserName.toUpperCase()} to its path.`);
 
 const types = {
@@ -54,10 +60,15 @@ await new Promise(resolve => server.listen(0, resolve));
 
 // A separate instance, so a Firefox you have open is left alone.
 const extraArgs = browserName === "firefox" ? ["--new-instance", "--no-remote"] : [];
-const browser = await puppeteer.launch({ browser: browserName, executablePath, headless: !process.env.HEADED, args: extraArgs });
+const headless = !process.env.HEADED;
+const viewport = { width: 1280, height: 900 };
+const browser = isWebKit
+    ? await webkit.launch({ headless })
+    : await puppeteer.launch({ browser: browserName, executablePath, headless, args: extraArgs });
 try {
-    const tab = await browser.newPage();
-    await tab.setViewport({ width: 1280, height: 900 });
+    // Playwright and Puppeteer pages share the calls used below, apart from how the viewport is set.
+    const tab = isWebKit ? await browser.newPage({ viewport }) : await browser.newPage();
+    if (!isWebKit) await tab.setViewport(viewport);
     const errors = [];
     tab.on("pageerror", error => errors.push(error.message));
     tab.on("console", message => message.type() === "error" && errors.push(message.text()));
