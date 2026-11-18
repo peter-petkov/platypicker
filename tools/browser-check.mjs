@@ -54,7 +54,7 @@ await new Promise(resolve => server.listen(0, resolve));
 
 // A separate instance, so a Firefox you have open is left alone.
 const extraArgs = browserName === "firefox" ? ["--new-instance", "--no-remote"] : [];
-const browser = await puppeteer.launch({ browser: browserName, executablePath, headless: true, args: extraArgs });
+const browser = await puppeteer.launch({ browser: browserName, executablePath, headless: !process.env.HEADED, args: extraArgs });
 try {
     const tab = await browser.newPage();
     await tab.setViewport({ width: 1280, height: 900 });
