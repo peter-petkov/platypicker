@@ -60,6 +60,7 @@ export default class ListView {
     #prepared = [];                     // Matches scanned ahead a batch at a time, waiting to be shown.
     #topUpFrame = 0;                    // The animation frame that tops the list up, while one is scheduled.
     #askedForMore = false;              // Whether the page was asked for more options since it last added some.
+    #wasAtEnd = false;                  // Whether every match was shown and the end in view, as of the last top-up.
     #lastGroup = null;                  // The option group of the last row rendered.
     #rows = [];                         // The rendered records, in list order.
     #recordsByEntry = new WeakMap();    // Only the entries rendered right now.
@@ -404,8 +405,7 @@ export default class ListView {
 
     /**
      * Keeps a cushion of rendered rows below the visible part of the list, showing just enough to make up for what
-     * scrolled into view, so the list grows smoothly as it scrolls. Once every match is shown and the page says it's
-     * loading more, asks it for more, once each time the end comes near.
+     * scrolled into view, so the list grows smoothly as it scrolls. Then sees whether to ask the page for more.
      */
     #topUp() {
         const popover = this.#popover;
@@ -415,19 +415,35 @@ export default class ListView {
         const below = end - popover.scrollTop - popover.clientHeight;
         const wanted = popover.clientHeight * ListView.#cushion;
 
-        if (below >= wanted) {
-            this.#askedForMore = false;
-            return;
-        }
-
-        if (this.#hasMore && this.#isBatched) {
+        if (below < wanted && this.#hasMore && this.#isBatched) {
             const rowHeight = this.#rows.at(-1)?.button.offsetHeight || 32;
             this.#renderMore(Math.ceil((wanted - below) / rowHeight));
             this.#scheduleTopUp(); // Again next frame, in case the scan ran out of time or the rows are taller.
-        } else if (!this.#hasMore && this.#config.loading && !this.#askedForMore) {
-            this.#askedForMore = true;
-            this.#actions.loadMore(this.#search.value.trim());
         }
+
+        this.#askForMore(below < wanted);
+    }
+
+    /**
+     * While the page says it's loading more options, asks it for more before the list runs out: as soon as fewer
+     * than a batch of matches are left to show, so the next page has time to arrive. Once until the page adds
+     * options, and again whenever the end comes into view, in case a fetch got nowhere.
+     */
+    #askForMore(nearEnd) {
+        if (!this.#config.loading) {
+            this.#wasAtEnd = false;
+            return;
+        }
+
+        const unshown = this.#view.count() - this.#rows.length;
+        const atEnd = nearEnd && unshown <= 0;
+
+        if ((unshown < this.#stepSize && !this.#askedForMore) || (atEnd && !this.#wasAtEnd)) {
+            this.#askedForMore = true;
+            this.#actions.loadMore({ search: this.#search.value.trim(), batchSize: this.#stepSize });
+        }
+
+        this.#wasAtEnd = atEnd;
     }
 
     /**

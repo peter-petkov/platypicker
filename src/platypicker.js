@@ -134,10 +134,8 @@ export default class PlatyPicker extends HTMLElement {
                 selectAll: () => this.#selectAll(),
                 selectNone: () => this.#selectNone(),
                 close: () => this.#close(),
-                loadMore: search => this.dispatchEvent(new CustomEvent("loadmore", {
-                    bubbles: true,
-                    detail: { search }
-                })),
+                // detail: { search, batchSize }, the search the options are for and a sensible page size.
+                loadMore: detail => this.dispatchEvent(new CustomEvent("loadmore", { bubbles: true, detail })),
             },
         });
 
