@@ -71,6 +71,13 @@ export default class PlatyPicker extends HTMLElement {
     static #isSupported = CSS.supports("anchor-name", "--platypicker") && CSS.supports("selector(:popover-open)");
     static #hasBaseSelect = CSS.supports("appearance", "base-select");
 
+    /** Whether a key changes a list box's selection where it stands: Home, End, a page, a letter, select all. */
+    static #selectsInPlace(e) {
+        if (["Home", "End", "PageUp", "PageDown"].includes(e.code)) return true;
+        if ((e.ctrlKey || e.metaKey) && e.code === "KeyA") return true;
+        return e.key.length === 1 && e.key !== " " && !e.ctrlKey && !e.metaKey && !e.altKey;
+    }
+
     static observedAttributes = [
         "search",
         "controls",
@@ -453,6 +460,12 @@ export default class PlatyPicker extends HTMLElement {
         this.#select.addEventListener("click", () => this.#togglePopover(), { signal });
 
         this.#select.addEventListener("keydown", e => {
+            // Without base-select a multiple select is a list box, and these would change its selection directly.
+            if (!PlatyPicker.#hasBaseSelect && this.#select.multiple && PlatyPicker.#selectsInPlace(e)) {
+                e.preventDefault();
+                return;
+            }
+
             if (!["Enter", "Space", "ArrowDown", "ArrowUp", "F4"].includes(e.code)) return;
 
             // Without base-select these would open the select's own dropdown, or change its value in place.

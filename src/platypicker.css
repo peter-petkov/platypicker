@@ -125,6 +125,20 @@
            select's own text stays underneath, hidden, and keeps giving the select its height. */
         > select.pp-select[multiple]:is(:not([size]), [size="1"]) {
             color: transparent !important;
+
+            /* Without base-select (in Firefox) a multiple select is a one-row list box, not a button. None of the
+               list shows, not its scrollbar nor its highlighted options, so the select looks like a field under the
+               badges. The script keeps its keys and presses from changing the selection. */
+            @supports not (appearance: base-select) {
+                overflow: hidden;
+                scrollbar-width: none;
+
+                /* Transparent, as Firefox colors the selected ones in a focused list box with !important. Not
+                   visibility: hidden, which would take them from screen readers too. */
+                option {
+                    opacity: 0 !important;
+                }
+            }
         }
 
         > .pp-tags {
