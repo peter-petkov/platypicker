@@ -443,7 +443,7 @@ PlatyPicker.languages.pl = {
 
         <section id="benchmark">
             <h2>Benchmark</h2>
-            <p>Builds a car list, then times open, search and pick. Each action is timed up to the second frame after it, and the median of 3 runs is shown. Build is the time to the first rows, and Rendered is the time until the whole list is in the page. Runs stack so you can compare before and after a change.</p>
+            <p>Builds a car list, then times open, search and pick. Each action is timed up to the second frame after it, and the median of 3 runs is shown. Build is the time to the first rows, and Rendered the time until the list stops rendering on its own. Later rows are shown as you scroll, so the two are the same now; they differ for earlier versions, which went on to render the whole list in the background. Runs stack so you can compare before and after a change.</p>
             <div class="stage stage-column">
                 <div class="toolbar">
                     <platy-picker>

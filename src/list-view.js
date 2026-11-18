@@ -6,12 +6,14 @@ import Languages from "./languages.js";
 /**
  * The popover: a search box with select all / none buttons, and the list of entries.
  *
- * It renders what an OptionSource holds, a batch at a time, and reports what the user does through the `actions` it
- * is given (activate, selectAll, selectNone, close, loadMore). It never touches the select itself.
+ * It renders what an OptionSource holds, a few rows at a time as the list scrolls, and reports what the user does
+ * through the `actions` it is given (activate, selectAll, selectNone, close, loadMore). It never touches the select
+ * itself.
  */
 export default class ListView {
-    // Rows are rendered in batches of the configured size, and a batch size of 0 turns batching off. With batching off
-    // the list streams in steps of #streamChunkSize rows instead. A scan step takes at most #scanBudget milliseconds.
+    // The list starts with a batch of rows and searches ahead a batch at a time, of the configured size; a batch size
+    // of 0 turns batching off, and the list streams in steps of #streamChunkSize rows instead. A scan step takes at most
+    // #scanBudget milliseconds.
     static #defaultBatchSize = 50;
     static #streamChunkSize = 100;
     static #scanBudget = 8;
@@ -59,6 +61,7 @@ export default class ListView {
     #view = null;                       // The FilteredView being shown.
     #prepared = [];                     // Matches scanned ahead a batch at a time, waiting to be shown.
     #topUpFrame = 0;                    // The animation frame that tops the list up, while one is scheduled.
+    #resizeObserver;                    // Tops the list up when the popover changes size.
     #askedForMore = false;              // Whether the page was asked for more options since it last added some.
     #wasAtEnd = false;                  // Whether every match was shown and the end in view, as of the last top-up.
     #lastGroup = null;                  // The option group of the last row rendered.
@@ -94,6 +97,7 @@ export default class ListView {
         clearTimeout(this.#typeAheadTimer);
         clearTimeout(this.#announceTimer);
         cancelAnimationFrame(this.#topUpFrame);
+        this.#resizeObserver.disconnect();
         this.#popover.remove();
         this.#view = null;
         this.#rows = [];
@@ -193,8 +197,10 @@ export default class ListView {
             if (this.#recordsByButton.has(e.target)) this.#setTabStop(e.target);
         }, { signal: this.#signal });
 
-        // More rows as the list scrolls, at most once a frame.
+        // More rows as the list scrolls, or as the popover grows (say, with the window), at most once a frame.
         this.#popover.addEventListener("scroll", () => this.#scheduleTopUp(), { passive: true, signal: this.#signal });
+        this.#resizeObserver = new ResizeObserver(() => this.#scheduleTopUp());
+        this.#resizeObserver.observe(this.#popover);
     }
 
     // -----------------------------------------------------------------
@@ -204,7 +210,7 @@ export default class ListView {
     /**
      * Applies the element's settings: { search, controls, searchPlaceholder, selectAllLabel, selectNoneLabel,
      * placeholders, batchSize, loading }. Safe to call again whenever any of them changes. A new batch size is used
-     * for the batches that come after, and the rows already rendered stay.
+     * from the next batch on, and the rows already rendered stay.
      */
     configure(config) {
         const placeholdersChanged = config.placeholders !== this.#config.placeholders;

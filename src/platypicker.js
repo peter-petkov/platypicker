@@ -241,8 +241,9 @@ export default class PlatyPicker extends HTMLElement {
     }
 
     /**
-     * How many rows are rendered at a time, the next batch following as the user scrolls down. 0 turns batching off,
-     * and a missing or invalid value means the default.
+     * How many options the list works with at a time: the rows shown first, how far ahead it searches, and the page
+     * size loadmore suggests. More rows are shown a few at a time as the user scrolls. 0 turns batching off, and a
+     * missing or invalid value means the default.
      */
     get batchSize() {
         const value = this.getAttribute("batch-size")?.trim();
@@ -256,8 +257,8 @@ export default class PlatyPicker extends HTMLElement {
 
     /**
      * Says that more options are on their way, as when the page fetches them as the user scrolls. While it's set,
-     * the end of the list stays marked (with the skeleton rows, if there are any), and a loadmore event fires
-     * whenever that end comes near.
+     * the end of the list stays marked (with the skeleton rows, if there are any), and a loadmore event asks for more
+     * as soon as fewer than a batch are left to show, and again whenever the end comes into view.
      */
     get loading() {
         return this.hasAttribute("loading");
