@@ -716,4 +716,19 @@ ul {
     .version {
         display: none;
     }
+
+    /* The header is too wide for a phone with the name in it, and a page wider than the screen takes fixed elements
+       (like a picker's sheet) past its edge. The logo stays, and the name still names the link for screen readers. */
+    .topbar {
+        gap: 0.75rem;
+    }
+
+    .brand > span:not(.version) {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip-path: inset(50%);
+        white-space: nowrap;
+    }
 }
