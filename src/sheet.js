@@ -5,7 +5,7 @@
  *
  * The sheet opens at half height. The search box taking focus brings up the keyboard, so the sheet grows to full
  * height for the matches, and goes back to the height it had once the keyboard is put away: by Cancel (shown while
- * there's a search to clear), by scrolling the list, or by focus leaving the search box. Picking a row or select all / none while searching keeps focus in
+ * searching or while there's a search to clear), by scrolling the list, or by focus leaving the search box. Picking a row or select all / none while searching keeps focus in
  * the search box, and so the keyboard up.
  *
  * Phones put the keyboard over the page rather than shrinking it, so a sheet along the bottom of the layout viewport
@@ -88,9 +88,12 @@ export default class Sheet {
         this.#popover.dataset.height = this.#full ? "full" : "half";
     }
 
-    /** Cancel shows while there's a search to clear, in the sheet only. */
+    /**
+     * Cancel shows in the sheet while the search box has focus, as a way to put the keyboard away, and while there's
+     * a search to clear.
+     */
     #syncCancel() {
-        this.#cancel.hidden = !(this.#active && this.#search.value);
+        this.#cancel.hidden = !(this.#active && (this.#searching || this.#search.value));
     }
 
     #searchFocused() {
@@ -99,9 +102,11 @@ export default class Sheet {
         this.#restore ??= this.#full;
         this.#full = true;
         this.#apply();
+        this.#syncCancel();
     }
 
     #searchBlurred() {
+        this.#syncCancel();
         if (!this.#active || this.#restore === null) return;
 
         this.#full = this.#restore;
