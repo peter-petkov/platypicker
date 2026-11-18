@@ -443,7 +443,7 @@ PlatyPicker.languages.pl = {
 
         <section id="benchmark">
             <h2>Benchmark</h2>
-            <p>Builds a car list, then times open, search and pick. Each action is timed up to the second frame after it, and the median of 3 runs is shown. Build is the time to the first rows, and Rendered the time until the list stops rendering on its own. Later rows are shown as you scroll, so the two are the same now; they differ for earlier versions, which went on to render the whole list in the background. Runs stack so you can compare before and after a change.</p>
+            <p>Builds a car list, then times open, search and pick. Each action is timed up to the second frame after it, and the median of 3 runs is shown. Build is the time to the first rows, and Rendered the time until the list stops rendering on its own. Later rows are shown as you scroll, so the two are the same now; they differ for earlier versions, which went on to render the whole list in the background. Runs stack so you can compare before and after a change. A million options take a while to build, and the page may stop responding for some seconds while they do.</p>
             <div class="stage stage-column">
                 <div class="toolbar">
                     <platy-picker>
@@ -452,6 +452,8 @@ PlatyPicker.languages.pl = {
                             <option value="5000">5,000 options</option>
                             <option value="10000" selected>10,000 options</option>
                             <option value="25000">25,000 options</option>
+                            <option value="100000">100,000 options</option>
+                            <option value="1000000">1,000,000 options</option>
                         </select>
                     </platy-picker>
                     <label class="check"><input type="checkbox" id="benchmark-multiple">Multiple</label>

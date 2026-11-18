@@ -888,25 +888,36 @@ const MAKES = [
 const TRIMS = ["Base", "Sport", "Touring", "Limited"];
 const COLORS = ["Red", "Blue", "Black", "White", "Silver", "Green"];
 
-// Builds roughly n car options, spread evenly over the makes and optionally grouped by make.
+const YEARS = 2026 - 1990 + 1;
+
+// Builds roughly n car options, spread evenly over the makes and optionally grouped by make. Each make has 4,440
+// different cars (model, year, trim and color); past that, a long list repeats them as used cars, with their mileage
+// in the subtext.
 function carOptions(n, grouped) {
     const perMake = Math.ceil(n / MAKES.length);
+    const parts = [];
     let id = 0;
-    let html = "";
 
     for (const [make, models] of MAKES) {
-        let count = 0;
-        let makeHtml = "";
+        const cars = models.length * YEARS * TRIMS.length * COLORS.length;
+        const rows = [];
 
-        fill: for (const model of models) for (let year = 2026; year >= 1990; year--) for (const trim of TRIMS) for (const color of COLORS) {
-            if (count++ >= perMake) break fill;
-            makeHtml += `<option value="${id++}" data-subtext="${color}">${year} ${make} ${model} ${trim}</option>`;
+        for (let i = 0; i < perMake; i++) {
+            const car = i % cars;
+            const color = COLORS[car % COLORS.length];
+            const trim = TRIMS[Math.floor(car / COLORS.length) % TRIMS.length];
+            const year = 2026 - Math.floor(car / (COLORS.length * TRIMS.length)) % YEARS;
+            const model = models[Math.floor(car / (COLORS.length * TRIMS.length * YEARS))];
+            const round = Math.floor(i / cars);
+            const subtext = round ? `${color}, ${(round * 7500).toLocaleString("en")} km` : color;
+            rows.push(`<option value="${id++}" data-subtext="${subtext}">${year} ${make} ${model} ${trim}</option>`);
         }
 
-        html += grouped ? `<optgroup label="${make}">${makeHtml}</optgroup>` : makeHtml;
+        const makeHtml = rows.join("");
+        parts.push(grouped ? `<optgroup label="${make}">${makeHtml}</optgroup>` : makeHtml);
     }
 
-    return html;
+    return parts.join("");
 }
 
 // Resolves after the second animation frame, which is when the browser has painted the result of an action.
