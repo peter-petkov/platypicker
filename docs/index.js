@@ -265,6 +265,10 @@ function setupSkins() {
         if (name === "base") continue;
 
         const heading = document.createElement("h3");
+        heading.style.display = "flex";
+        heading.style.alignItems = "center";
+        heading.style.gap = "10px";
+
         const description = document.createElement("p");
         const file = entry.module.split("/").at(-1);
         const install = [
@@ -278,8 +282,11 @@ function setupSkins() {
         const panel = codePanel([{ label: "HTML", text: install, html: true }, { label: file, text: "", html: false }]);
         const toolbar = document.createElement("div");
         const button = document.createElement("button");
+        const icon = document.createElement("img");
+        icon.src = entry.icon;
+        icon.width = 32;
 
-        heading.textContent = entry.label;
+        heading.append(icon, entry.label);
         description.textContent = entry.description;
 
         button.type = "button";
