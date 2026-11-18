@@ -803,15 +803,12 @@ const PLAYGROUND_GROUPS = `
 
 // The form fields that become attributes of the same name. Checkboxes are boolean attributes, the rest are left off
 // while empty.
-const PICKER_ATTRIBUTES = ["search", "controls", "batch-size", "placeholders", "placeholder", "search-placeholder", "select-all-label", "select-none-label"];
+const PICKER_ATTRIBUTES = ["search", "controls", "batch-size", "placeholders", "placeholder"];
 const SELECT_ATTRIBUTES = ["multiple", "required", "disabled"];
 
 // Text fields that only matter with some of the switches. The others are disabled and left out of the markup.
 const PLAYGROUND_RELEVANT = {
     "placeholder": form => form.elements.multiple.checked,
-    "search-placeholder": form => form.elements.search.checked,
-    "select-all-label": form => form.elements.controls.checked && form.elements.multiple.checked,
-    "select-none-label": form => form.elements.controls.checked && !form.elements.required.checked,
 };
 
 async function setupPlayground() {

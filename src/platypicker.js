@@ -76,9 +76,6 @@ export default class PlatyPicker extends HTMLElement {
     static observedAttributes = [
         "search",
         "controls",
-        "search-placeholder",
-        "select-all-label",
-        "select-none-label",
         "placeholders",
         "batch-size",
         "placeholder",
@@ -284,38 +281,14 @@ export default class PlatyPicker extends HTMLElement {
         this.setAttribute("placeholder", value);
     }
 
-    get searchPlaceholder() {
-        return this.getAttribute("search-placeholder") ?? this.#text("searchPlaceholder");
-    }
-
-    set searchPlaceholder(value) {
-        this.setAttribute("search-placeholder", value);
-    }
-
-    get selectAllLabel() {
-        return this.getAttribute("select-all-label") ?? this.#text("selectAllLabel");
-    }
-
-    set selectAllLabel(value) {
-        this.setAttribute("select-all-label", value);
-    }
-
-    get selectNoneLabel() {
-        return this.getAttribute("select-none-label") ?? this.#text("selectNoneLabel");
-    }
-
-    set selectNoneLabel(value) {
-        this.setAttribute("select-none-label", value);
-    }
-
     #viewConfig() {
         return {
             search: this.search,
             controls: this.controls,
-            searchPlaceholder: this.searchPlaceholder,
+            searchPlaceholder: this.#text("searchPlaceholder"),
             searchLabel: this.#text("searchLabel"),
-            selectAllLabel: this.selectAllLabel,
-            selectNoneLabel: this.selectNoneLabel,
+            selectAllLabel: this.#text("selectAllLabel"),
+            selectNoneLabel: this.#text("selectNoneLabel"),
             noMatchesLabel: this.#text("noMatchesLabel"),
             matchesLabel: count => Languages.format(this.#text("matchesLabel"), count, this.#locale),
             placeholders: this.placeholders,

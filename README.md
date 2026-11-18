@@ -63,18 +63,11 @@ For multi-select, add `multiple` and `size="1"`. The closed select then shows th
 | `batch-size`         | number  | `50`                  | How many options the list works with at a time: the rows shown first, how far ahead it searches, and the page size it suggests to `loadmore`. More rows are shown a few at a time as you scroll. `0` renders the whole list. A missing or invalid value uses the default.  |
 | `placeholders`       | number  | off / `10`            | Shows skeleton rows at the end of the list while more options are still to come. If present without a valid non-negative integer value, renders 10 of them.                    |
 | `loading`            | boolean | off                   | Says more options are on their way. The end of the list stays marked, and a `loadmore` event asks for more before the list runs out. See [Loading as you scroll](#loading-as-you-scroll).        |
-| `search-placeholder` | string  | `"Type to filter..."` | Placeholder text for the search input.                                                                                                                                          |
-| `select-all-label`   | string  | `"All"`               | Label for select all. Only appears when the `<select>` has `multiple`.                                                                                                          |
-| `select-none-label`  | string  | `"None"`              | Label for select none. Only appears if the `<select>` does not have the `required` attribute.                                                                                   |
 
 All attributes are reflected as properties too (e.g. `picker.search = true`, `picker.batchSize = 100`), and are fully reactive – changing them after the element is connected updates the UI immediately. A new `batch-size` applies to the batches that follow; rows already rendered stay.
 
 ```html
-<platy-picker search controls
-              batch-size="100"
-              search-placeholder="Filter fruits..."
-              select-all-label="Every fruit"
-              select-none-label="No fruit">
+<platy-picker search controls batch-size="100" placeholder="Pick some fruit">
   ...
 </platy-picker>
 ```
@@ -340,7 +333,13 @@ PlatyPicker.languages.pl = {
 };
 ```
 
-Whatever a language leaves out comes from `PlatyPicker.languageMap`, English by default. The `search-placeholder`, `select-all-label` and `select-none-label` attributes still set those texts on a single picker, whatever its language.
+Whatever a language leaves out comes from `PlatyPicker.languageMap`, English by default. To change an English text, change it there:
+
+```js
+PlatyPicker.languageMap.searchPlaceholder = "Search...";
+```
+
+The texts are the same for every picker in a language. A picker that needs texts of its own can have a `lang` of its own, with those texts registered under it (`lang="en-x-cities"` with `PlatyPicker.languages["en-x-cities"]`).
 
 Search compares text the way the language does, ignoring case and accents: "zurich" finds "Zürich", "strasse" finds "Straße", and with `lang="tr"`, "izmir" finds "İzmir". Matches are highlighted in the original text, and type-ahead works the same way, in any script.
 
@@ -385,7 +384,7 @@ Version 2 drops Bootstrap. If you used 1.x with Bootstrap:
 - **Validation** is no longer tied to `.is-valid` / `.is-invalid`. An invalid select gets a red border through `:user-invalid`; Bootstrap's classes still style the select itself.
 - **Dark mode** follows `color-scheme`. Bootstrap's `data-bs-theme="dark"` already sets it.
 - **Texts follow the page's `lang`.** On a page with `lang` set to a language Platypicker translates, its translation is used rather than `languageMap`. To keep texts of your own, register them in `PlatyPicker.languages` under that language (see [Localization](#localization)).
-- **Select all and select none** are labelled "All" and "None" by default. `select-all-label`, `select-none-label` or `PlatyPicker.languageMap` bring the old labels back.
+- **The `search-placeholder`, `select-all-label` and `select-none-label` attributes are gone.** Every text comes from the picker's language: set your own in `PlatyPicker.languageMap` (English) or `PlatyPicker.languages` (see [Localization](#localization)). Select all and select none are now labelled "All" and "None" by default; `languageMap` brings the old labels back.
 
 ## Browser support
 

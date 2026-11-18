@@ -106,7 +106,7 @@
             <p><code>search</code> adds a filter box that matches as you type. It looks at the option text, the <code>data-subtext</code> shown on the right of a row, and group labels. Matches are highlighted.</p>
             <div class="example">
                 <template>
-                    <platy-picker search search-placeholder="Search cities…">
+                    <platy-picker search>
                         <select name="city" aria-label="City" data-fill="cities:subtext"></select>
                     </platy-picker>
                 </template>
@@ -134,10 +134,10 @@
 
         <section id="controls">
             <h2>Select all / none</h2>
-            <p><code>controls</code> adds All and None beside the search box, to select all or none of the options. All acts on the options that match the current filter. A single select only gets None, and a required one hides that too. The labels can be changed per picker, as here.</p>
+            <p><code>controls</code> adds All and None beside the search box, to select all or none of the options. All acts on the options that match the current filter. A single select only gets None, and a required one hides that too. Their labels, like every text, come from the picker's <a href="#localization">language</a>.</p>
             <div class="example">
                 <template>
-                    <platy-picker search controls select-all-label="Take them all" select-none-label="Clear" placeholder="Pick some clothes">
+                    <platy-picker search controls placeholder="Pick some clothes">
                         <select name="clothes" multiple size="1" aria-label="Clothes" data-fill="clothes"></select>
                     </platy-picker>
                 </template>
@@ -528,9 +528,6 @@ PlatyPicker.languages.pl = {
                     <fieldset>
                         <legend>Text</legend>
                         <label class="field-row">placeholder <input class="field" name="placeholder" value="Pick a few"></label>
-                        <label class="field-row">search-placeholder <input class="field" name="search-placeholder" placeholder="Type to filter..."></label>
-                        <label class="field-row">select-all-label <input class="field" name="select-all-label" placeholder="All"></label>
-                        <label class="field-row">select-none-label <input class="field" name="select-none-label" placeholder="None"></label>
                     </fieldset>
                 </form>
                 <div class="stage stage-column" data-playground-stage>
