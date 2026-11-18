@@ -1,0 +1,5 @@
+# Text files are stored with LF and checked out with CRLF, on every machine.
+* text=auto eol=crlf
+
+*.png binary
+*.ico binary
