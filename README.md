@@ -501,6 +501,20 @@ Without `appearance: base-select`, the select is an ordinary one styled with `ap
 - `<platy-picker>` is `display: contents`, so it doesn't change your layout: size and place the `<select>` as you would without it. A multiple select gets a minimum width of `14rem` to leave room for badges.
 - If you add your own CSS around Platypicker, avoid `:has()` selectors that depend on the options or on rows in the list (for example `select:has(option:checked)`). Browsers re-check them for every option whose state changes, and on a long list that turns "Select all" into seconds of work, in Firefox especially.
 
-## License
+## About
 
-MIT © Peter Petkov
+Platypicker is an open-source web component that enhances native selects, with no dependencies. It's developed here on GitHub and published to [npm](https://www.npmjs.com/package/platypicker). Bug reports and feature requests go to [GitHub issues](https://github.com/peter-petkov/platypicker/issues), and pull requests are welcome, including corrections to the translations.
+
+### License
+
+Platypicker is released under the [MIT License](LICENSE). You can use, copy, modify and distribute it, in commercial projects too, as long as the copyright notice and the license text come with it. It comes without warranty of any kind.
+
+### AI usage
+
+Platypicker started out as a small helper project years ago, written by hand. With 2.0, while much of the code has been written with the help of Claude, the engineering direction, code review, testing and feature ideas remain my own.
+
+This component was created in my spare time and is primarily used by me in my projects, but I'm happy to share it with the world. While I very much enjoy coding by hand and getting in that flow state, I have to admit that time constraints would make much of it impossible for me to maintain.
+
+### Author
+
+Made by Peter Petkov ([@peter-petkov](https://github.com/peter-petkov) on GitHub).
