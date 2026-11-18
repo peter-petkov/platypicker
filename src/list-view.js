@@ -16,6 +16,10 @@ export default class ListView {
     static #streamChunkSize = 100;
     static #scanBudget = 8;
 
+    // How much of the list stays rendered below its visible part, in popover heights. Rows are shown a few at a
+    // time as the list scrolls, keeping this much ahead, so the scrollbar shrinks smoothly instead of in steps.
+    static #cushion = 1;
+
     // Emoji, plus the characters that glue them together: skin tones, flags, joiners, variation selectors, keycaps,
     // tags.
     static #emoji = /[\p{Extended_Pictographic}\p{Emoji_Modifier}\p{Regional_Indicator}\u200d\ufe0f\u20e3\u{e0020}-\u{e007f}]/gu;
@@ -53,7 +57,9 @@ export default class ListView {
 
     #config = {};
     #view = null;                       // The FilteredView being shown.
-    #sentinelObserver;                  // Loads the next batch when the end of the list comes near.
+    #prepared = [];                     // Matches scanned ahead a batch at a time, waiting to be shown.
+    #topUpFrame = 0;                    // The animation frame that tops the list up, while one is scheduled.
+    #askedForMore = false;              // Whether the page was asked for more options since it last added some.
     #lastGroup = null;                  // The option group of the last row rendered.
     #rows = [];                         // The rendered records, in list order.
     #recordsByEntry = new WeakMap();    // Only the entries rendered right now.
@@ -85,7 +91,8 @@ export default class ListView {
 
     destroy() {
         clearTimeout(this.#typeAheadTimer);
-        this.#sentinelObserver?.disconnect();
+        clearTimeout(this.#announceTimer);
+        cancelAnimationFrame(this.#topUpFrame);
         this.#popover.remove();
         this.#view = null;
         this.#rows = [];
@@ -184,6 +191,9 @@ export default class ListView {
         this.#list.addEventListener("focusin", e => {
             if (this.#recordsByButton.has(e.target)) this.#setTabStop(e.target);
         }, { signal: this.#signal });
+
+        // More rows as the list scrolls, at most once a frame.
+        this.#popover.addEventListener("scroll", () => this.#scheduleTopUp(), { passive: true, signal: this.#signal });
     }
 
     // -----------------------------------------------------------------
@@ -208,7 +218,11 @@ export default class ListView {
         this.#selectNoneButton.textContent = config.selectNoneLabel;
         this.syncControls();
 
-        if (placeholdersChanged || loadingChanged) this.#syncTail(placeholdersChanged);
+        if (placeholdersChanged || loadingChanged) {
+            this.#askedForMore = false;
+            this.#syncTail(placeholdersChanged);
+            this.#scheduleTopUp();
+        }
         if (loadingChanged) {
             this.#list.setAttribute("aria-busy", Boolean(config.loading));
             this.#syncEmpty();
@@ -266,6 +280,11 @@ export default class ListView {
         }
     }
 
+    /** Whether more matches are to come: prepared and waiting to be shown, or not scanned yet. */
+    get #hasMore() {
+        return this.#prepared.length > 0 || Boolean(this.#view?.hasMore);
+    }
+
     get #isBatched() {
         return (this.#config.batchSize ?? ListView.#defaultBatchSize) > 0;
     }
@@ -313,18 +332,19 @@ export default class ListView {
     /** Shows "No matches" when a search has found nothing, and nothing more is coming. */
     #syncEmpty() {
         const view = this.#view;
-        this.#empty.hidden = !(view?.query && !view.hasMore && !this.#rows.length && !this.#config.loading);
+        this.#empty.hidden = !(view?.query && !this.#hasMore && !this.#rows.length && !this.#config.loading);
     }
 
     /**
-     * The first batch is rendered right away. With batching on, the next ones follow as the end of the list comes
-     * near. With batching off, the rest streams in step by step. Either way a newer search replaces the one
-     * being shown.
+     * The first batch is rendered right away. With batching on, more rows follow a few at a time as the list
+     * scrolls (see #topUp). With batching off, the rest streams in step by step. Either way a newer search replaces
+     * the one being shown.
      */
     #showMatches(query) {
         const view = this.#view = this.#source.filter(query, this.#config.locale);
 
-        this.#sentinelObserver?.disconnect();
+        this.#prepared = [];
+        this.#askedForMore = false;
         this.#highlighter.clear();
         this.#lastGroup = null;
         this.#setSize = null;
@@ -336,6 +356,7 @@ export default class ListView {
         this.#tail = [];
 
         this.#renderMore(this.#stepSize);
+        this.#scheduleTopUp();
 
         if (!this.#isBatched) {
             // noinspection JSIgnoredPromiseFromCall, The stream manages its own lifetime and doesn't need to be awaited.
@@ -347,7 +368,7 @@ export default class ListView {
         this.#list.setAttribute("aria-busy", view.hasMore || Boolean(this.#config.loading));
 
         try {
-            while (view.hasMore) {
+            while (this.#hasMore) {
                 await ListView.#yieldToMain();
                 if (this.#view !== view || this.#signal.aborted) return;
 
@@ -358,11 +379,55 @@ export default class ListView {
         }
     }
 
-    /** Renders the next `count` matches, or fewer if the scan runs out of time or of entries. */
+    /**
+     * Shows the next `count` matches, or fewer if the scan runs out of time or of entries. The scan prepares them a
+     * batch at a time (or as many as a bigger step needs), so that showing a few rows per frame never scans per
+     * frame.
+     */
     #renderMore(count, budget = ListView.#scanBudget) {
-        this.#appendRows(this.#view, this.#view.pull(count, budget));
+        if (this.#prepared.length < count && this.#view.hasMore) {
+            const pulled = this.#view.pull(Math.max(count - this.#prepared.length, this.#stepSize), budget);
+            this.#prepared = this.#prepared.concat(pulled);
+        }
+
+        this.#appendRows(this.#view, this.#prepared.splice(0, count));
         this.#syncTail();
         this.#syncEmpty();
+    }
+
+    #scheduleTopUp() {
+        this.#topUpFrame ||= requestAnimationFrame(() => {
+            this.#topUpFrame = 0;
+            this.#topUp();
+        });
+    }
+
+    /**
+     * Keeps a cushion of rendered rows below the visible part of the list, showing just enough to make up for what
+     * scrolled into view, so the list grows smoothly as it scrolls. Once every match is shown and the page says it's
+     * loading more, asks it for more, once each time the end comes near.
+     */
+    #topUp() {
+        const popover = this.#popover;
+        if (!this.#view || this.#signal.aborted || !popover.matches(":popover-open")) return;
+
+        const end = this.#tail[0]?.offsetTop ?? popover.scrollHeight;
+        const below = end - popover.scrollTop - popover.clientHeight;
+        const wanted = popover.clientHeight * ListView.#cushion;
+
+        if (below >= wanted) {
+            this.#askedForMore = false;
+            return;
+        }
+
+        if (this.#hasMore && this.#isBatched) {
+            const rowHeight = this.#rows.at(-1)?.button.offsetHeight || 32;
+            this.#renderMore(Math.ceil((wanted - below) / rowHeight));
+            this.#scheduleTopUp(); // Again next frame, in case the scan ran out of time or the rows are taller.
+        } else if (!this.#hasMore && this.#config.loading && !this.#askedForMore) {
+            this.#askedForMore = true;
+            this.#actions.loadMore(this.#search.value.trim());
+        }
     }
 
     /**
@@ -373,7 +438,7 @@ export default class ListView {
         const view = this.#view;
         if (!view?.includes(entry)) return false;
 
-        while (!this.#recordsByEntry.has(entry) && view.hasMore) this.#renderMore(this.#stepSize, Infinity);
+        while (!this.#recordsByEntry.has(entry) && this.#hasMore) this.#renderMore(this.#stepSize, Infinity);
 
         return this.#recordsByEntry.has(entry);
     }
@@ -406,7 +471,8 @@ export default class ListView {
 
         const view = this.#view = this.#source.filter(this.#query(), this.#config.locale);
 
-        this.#sentinelObserver?.disconnect();
+        this.#prepared = [];
+        this.#askedForMore = false;
         this.#highlighter.clear();
         this.#lastGroup = null;
         this.#setSize = null;
@@ -431,6 +497,8 @@ export default class ListView {
             const next = this.#rows[Math.min(focusedIndex, this.#rows.length - 1)];
             (next && !next.entry.disabled ? next.button : this.#firstFocusable())?.focus({ preventScroll: true });
         }
+
+        this.#scheduleTopUp();
 
         if (!this.#isBatched) {
             // noinspection JSIgnoredPromiseFromCall, The stream manages its own lifetime and doesn't need to be awaited.
@@ -662,16 +730,13 @@ export default class ListView {
 
     /**
      * The tail marks the end of the list while more rows are to come: the skeleton rows if there are any
-     * configured, otherwise a single empty item. More rows are to come while some matches aren't rendered yet, or
-     * while the page says it's loading more options. With batching on, or while loading, the browser tells us when
-     * the tail comes near the visible part of the list. That is when the next batch is rendered, or once they all
-     * are, when the page is asked for more.
+     * configured, otherwise a single empty item. More rows are to come while some matches aren't shown yet, or
+     * while the page says it's loading more options. #topUp shows them as the list scrolls.
      */
     #syncTail(rebuild = false) {
-        const wanted = Boolean(this.#view?.hasMore || this.#config.loading);
+        const wanted = this.#hasMore || Boolean(this.#config.loading);
 
         if (this.#tail.length && (!wanted || rebuild)) {
-            this.#sentinelObserver?.disconnect();
             for (const li of this.#tail) li.remove();
             this.#tail = [];
         }
@@ -679,7 +744,6 @@ export default class ListView {
         if (!wanted) return;
 
         if (!this.#tail.length) this.#createTail();
-        if (this.#isBatched || this.#config.loading) this.#watchTail();
     }
 
     #createTail() {
@@ -713,20 +777,6 @@ export default class ListView {
             this.#list.append(li);
             this.#tail.push(li);
         }
-    }
-
-    #watchTail() {
-        this.#sentinelObserver ??= new IntersectionObserver(entries => {
-            if (!entries.some(entry => entry.isIntersecting)) return;
-
-            if (this.#view?.hasMore) this.#renderMore(this.#stepSize);
-            else if (this.#config.loading) this.#actions.loadMore(this.#search.value.trim());
-        }, { root: this.#popover, rootMargin: "0px 0px 100% 0px" }); // Starts a batch a popover's height early.
-
-        // Observing again makes the browser report where the tail is now, so a batch that still leaves it
-        // near the visible part is followed by the next one.
-        this.#sentinelObserver.disconnect();
-        this.#sentinelObserver.observe(this.#tail[0]);
     }
 
     /**
@@ -775,6 +825,8 @@ export default class ListView {
      * goes to the search box when there is one, otherwise to the selected item, otherwise to the first item.
      */
     focusInitial() {
+        this.#scheduleTopUp(); // The popover has its size now, so the list can fill it.
+
         const selected = this.#source.firstSelected;
         const selectedButton = selected && this.ensureRendered(selected) ? this.#recordsByEntry.get(selected).button : null;
         if (selectedButton) this.#reveal(selectedButton, true);
@@ -897,7 +949,7 @@ export default class ListView {
             e.preventDefault();
 
             // On the last rendered item the next batch comes first, so the key never stalls at the end of a longer list.
-            if (step > 0 && e.target === focusable.at(-1) && this.#view?.hasMore) {
+            if (step > 0 && e.target === focusable.at(-1) && this.#hasMore) {
                 this.#renderMore(this.#stepSize, Infinity);
                 focusable = focusableElements();
             }
@@ -917,7 +969,7 @@ export default class ListView {
         const pageSize = Math.max(1, Math.floor(room / from.offsetHeight) - 1);
         const wanted = Number.isFinite(pages) ? index + pages * pageSize : pages;
 
-        while (wanted >= this.#rows.length && this.#view?.hasMore)
+        while (wanted >= this.#rows.length && this.#hasMore)
             this.#renderMore(wanted === Infinity ? Infinity : this.#stepSize, Infinity);
 
         const target = this.#rows[Math.min(Math.max(wanted, 0), this.#rows.length - 1)]?.button;
