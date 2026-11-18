@@ -65,7 +65,9 @@ For multi-select, add `multiple` and `size="1"`. The closed select then shows th
 | `placeholders`       | number  | off / `10`            | Shows skeleton rows at the end of the list while more options are still to come. If present without a valid non-negative integer value, renders 10 of them.                    |
 | `loading`            | boolean | off                   | Says more options are on their way. The end of the list stays marked, and a `loadmore` event asks for more before the list runs out. See [Loading as you scroll](#loading-as-you-scroll).        |
 
-All attributes are reflected as properties too (e.g. `picker.search = true`, `picker.batchSize = 100`), and are fully reactive – changing them after the element is connected updates the UI immediately. A new `batch-size` applies to the batches that follow; rows already rendered stay.
+All attributes are reflected as properties too (e.g. `picker.search = true`, `picker.batchSize = 100`), and are fully reactive – changing them after the element is connected updates the UI immediately. The boolean ones are booleans, `batchSize` is a number, and `placeholders` the number of skeleton rows, or `undefined` while off. A new `batch-size` applies to the batches that follow; rows already rendered stay.
+
+The texts, such as the search box's placeholder and the All / None labels, come from the picker's language rather than attributes. See [Localization](#localization).
 
 ```html
 <platy-picker search controls counter batch-size="100" placeholder="Pick some fruit">
@@ -81,6 +83,7 @@ All attributes are reflected as properties too (e.g. `picker.search = true`, `pi
 - **Batched rendering** - long lists start with a batch of rows (see `batch-size`), and more are shown a few at a time as you scroll, so the scrollbar shrinks smoothly instead of jumping. The list searches ahead a batch at a time. Opening, searching and selecting stay fast with tens of thousands of options.
 - **Counter** - with `counter`, a line at the bottom of the popover says how many rows are shown so far out of all the options, and counts up as more are shown while you scroll, so you can tell how far the end of a batched list is. With a search, it says how many options match.
 - **Option groups & separators** - `<optgroup>` and `<hr>` inside your `<select>` are mirrored into headers and dividers in the popover. A group's header only shows when something in the group does, and a divider only shows between two visible rows.
+- **Option attributes** - disabled options and groups stay in the list but can't be picked, `hidden` options are left out, an option's `label` is its row's text, and its `title` becomes a tooltip.
 - **Subtext** - add `data-subtext="..."` to any `<option>` for a secondary text on the right of its label (also searchable).
 - **Localization** - pickers follow the page's `lang`, with translations for 22 languages loaded only when needed, plural-aware texts, search that ignores case and accents, and right-to-left layouts. See below.
 - **Keyboard type-ahead** - typing while the popover is open moves focus to the first option whose text starts with what you typed, mirroring native `<select>` behavior; <kbd>Enter</kbd> or <kbd>Space</kbd> then selects it. Emoji are ignored, so typing "ch" finds "🧀 Cheese", and options further down a long list are rendered as needed.
@@ -372,9 +375,20 @@ PlatyPicker.languageMap.selectAllLabel = "Every one";
 // Languages of your own, or changes to Platypicker's translations. See Localization.
 PlatyPicker.languages.de = { noMatchesLabel: "Nichts gefunden" };
 
+// The extra classes each part gets. See Class plugs.
+PlatyPicker.classes.search = "input input-sm";
+
 // The most search matches highlighted at once, across the page.
 PlatyPicker.maxHighlights = 100;
 ```
+
+### Events
+
+| Event      | On           | When                                                                                             |
+|------------|--------------|--------------------------------------------------------------------------------------------------|
+| `change`   | the `<select>` | the user picks or unpicks an option, uses select all or none, or removes a badge. It bubbles, as the select's own does. |
+| `input`    | the `<select>` | also, with `change`, when a key on a closed multiple select in Firefox changes the selection.   |
+| `loadmore` | the picker   | more options are wanted, while `loading` is set. `detail` has `search` and `batchSize`. See [Loading as you scroll](#loading-as-you-scroll). |
 
 Changing the selection from script (`select.value = x`, `option.selected = true`) doesn't fire a `change` event, so the popover can't see it straight away. It catches up whenever it opens, and the badges whenever it opens or closes. Use `setValue()` when the picker should update immediately. A `form.reset()` updates the badges on its own.
 
@@ -413,6 +427,7 @@ Without `appearance: base-select`, the select is an ordinary one styled with `ap
 ## Notes
 
 - Platypicker renders its own popover for every select, single or multiple, rather than the browser's customizable one (`appearance: base-select`), so search and the controls work the same in every supported browser.
+- Pickers work inside shadow roots, where the stylesheet has to be linked (or adopted) too, since a page's styles don't reach into them.
 - Platypicker only enhances a direct-child `<select>` - `<platy-picker><select>...</select></platy-picker>`. Nesting it deeper isn't supported.
 - The `<select>` remains the source of truth for value and form submission; Platypicker doesn't introduce a separate form-associated value of its own.
 - `<platy-picker>` is `display: contents`, so it doesn't change your layout: size and place the `<select>` as you would without it. A multiple select gets a minimum width of `14rem` to leave room for badges.
