@@ -93,6 +93,8 @@ export default class PlatyPicker extends HTMLElement {
     #tags = null;               // The badges over a closed multiple select. Single selects have none.
     #tagsTimer;
     #abort;
+    #typed = "";                // What was typed on a closed multiple select in the last second (see #selectByKey).
+    #typedTimer;
     #locale = "";               // The picker's language: its nearest lang attribute.
     #texts = null;              // The texts for it, as far as they're loaded.
     #stale = false;             // Whether the options changed since the list last caught up with them.
@@ -426,6 +428,51 @@ export default class PlatyPicker extends HTMLElement {
     }
 
     /**
+     * The keys Chrome's closed multiple select acts on, done as it does them, for a multiple select without
+     * base-select. That's a list box with its options hidden (see platypicker.css), and a list box skips hidden
+     * options. A letter selects the next option starting with what was typed in the last second, the same letter
+     * again the one after; Home and End select the first and last option, the page keys the next and previous
+     * one. Each replaces the selection, firing input and change as the select would. Select all does nothing, as in
+     * Chrome. Returns whether the key was one of these.
+     */
+    #selectByKey(e) {
+        if ((e.ctrlKey || e.metaKey) && e.code === "KeyA") return true;
+
+        const entries = this.#source.entries.filter(entry => !entry.disabled);
+        const current = entries.findIndex(entry => entry.option.selected);
+        let target;
+
+        if (e.code === "Home") target = entries[0];
+        else if (e.code === "End") target = entries.at(-1);
+        else if (e.code === "PageDown") target = entries[Math.min(current + 1, entries.length - 1)];
+        else if (e.code === "PageUp") target = entries[Math.max(current - 1, 0)];
+        else if (e.key.length === 1 && e.key !== " " && !e.ctrlKey && !e.metaKey && !e.altKey) {
+            const key = e.key.toLocaleLowerCase(this.#locale || undefined);
+            clearTimeout(this.#typedTimer);
+            this.#typedTimer = setTimeout(() => this.#typed = "", 1000);
+            this.#typed += key;
+
+            // The same letter over and over moves through the options starting with it; more letters narrow down,
+            // starting at the selected option itself.
+            const repeated = [...this.#typed].every(letter => letter === key);
+            const prefix = repeated ? key : this.#typed;
+            const start = repeated ? current + 1 : Math.max(current, 0);
+            const startsWith = entry => entry.label.toLocaleLowerCase(this.#locale || undefined).startsWith(prefix);
+
+            target = entries.slice(start).find(startsWith) ?? entries.slice(0, start).find(startsWith);
+        } else {
+            return false;
+        }
+
+        if (!target || (target.option.selected && this.#select.selectedOptions.length === 1)) return true;
+
+        this.#source.selectOnly(target);
+        this.#select.dispatchEvent(new Event("input", { bubbles: true, composed: true }));
+        this.#select.dispatchEvent(new Event("change", { bubbles: true }));
+        return true;
+    }
+
+    /**
      * The select's label, for the popover's: from aria-labelledby, aria-label or its <label>s, in that order, as
      * screen readers name it. A picker inside a label adds none of its own text: not its options, popover or badges.
      */
@@ -455,10 +502,8 @@ export default class PlatyPicker extends HTMLElement {
         this.#select.addEventListener("click", () => this.#togglePopover(), { signal });
 
         this.#select.addEventListener("keydown", e => {
-            // Without base-select a multiple select is a list box. Letters, Home, End and the page keys pick an
-            // option there in place, replacing the selection, as Chrome's closed multiple select does too, so
-            // they're left to it. Select all isn't something Chrome's does, so it's stopped.
-            if (!PlatyPicker.#hasBaseSelect && this.#select.multiple && (e.ctrlKey || e.metaKey) && e.code === "KeyA") {
+            // Without base-select a multiple select is a list box whose own keys can't act (see #selectByKey).
+            if (!PlatyPicker.#hasBaseSelect && this.#select.multiple && this.#selectByKey(e)) {
                 e.preventDefault();
                 return;
             }

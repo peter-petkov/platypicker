@@ -334,22 +334,33 @@ export default class OptionSource {
         });
     }
 
-    /** Makes the entry the only selected one. */
+    /** Makes the entry the only selected one. A multiple select is cleared the fast way first (see clear()). */
     selectOnly(entry) {
-        this.#select.selectedIndex = -1;
+        if (this.#select.multiple) this.clear();
+        else this.#select.selectedIndex = -1;
         entry.option.selected = true;
     }
 
     /**
      * Deselects everything. A multiple select is cleared with selectedIndex = -1, which needs no value comparisons:
-     * assigning value = "" compares every option's value, which made select none on a long list slow in Firefox,
-     * and it would select an option whose value happens to be empty. A single select keeps value = "", so an option
-     * with an empty value still works as its placeholder.
+     * assigning value = "" compares every option's value, and it would select an option whose value happens to be
+     * empty. Even so, Firefox takes about a second to clear 25,000 selected options of a multiple select, one at a
+     * time, but clears them in one go when the select stops being multiple. So it isn't multiple for that moment,
+     * which costs Chrome next to nothing; no event fires and nothing is drawn in between. A single select keeps
+     * value = "", so an option with an empty value still works as its placeholder.
      */
     clear() {
+        const select = this.#select;
+
         this.#changeInBulk(() => {
-            if (this.#select.multiple) this.#select.selectedIndex = -1;
-            else this.#select.value = "";
+            if (!select.multiple) {
+                select.value = "";
+                return;
+            }
+
+            select.multiple = false;
+            select.selectedIndex = -1;
+            select.multiple = true;
         });
     }
 
