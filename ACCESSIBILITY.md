@@ -4,7 +4,7 @@ What to try by hand before a release, with a real screen reader and in High Cont
 
 ## Setup
 
-- **Browser**: Chrome or Edge, on the docs page: the published one, or `test/index.html` served from the repository.
+- **Browser**: Chrome or Edge, on the docs page: the published one, or `docs/index.html` served from the repository.
 - **NVDA** (free, [nvaccess.org](https://www.nvaccess.org/download/)): start it, then use the page with the keyboard only. <kbd>Insert</kbd>+<kbd>Q</kbd> quits.
 - **Narrator** (built into Windows): <kbd>Win</kbd>+<kbd>Ctrl</kbd>+<kbd>Enter</kbd> turns it on and off.
 - Do a pass in the Base skin, then a shorter one in Bootstrap (the skin switch at the top).

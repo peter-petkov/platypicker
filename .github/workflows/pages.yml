@@ -31,14 +31,14 @@ jobs:
         with:
           fetch-depth: 0
 
-      # The page lives in test/ and refers to the repository root as ../. On the site, test/ becomes the root and
+      # The page lives in docs/ and refers to the repository root as ../. On the site, docs/ becomes the root and
       # the files it uses sit beside it. The version comes from the latest tag, as publish.yml sets it.
       - name: Assemble the site
         run: |
           VERSION="$(git describe --tags --abbrev=0)"
 
           mkdir _site
-          cp test/* _site/
+          cp docs/* _site/
           cp -r src _site/src
           cp platylogo.png platylogo.ico _site/
           printf '{ "version": "%s" }\n' "${VERSION}" > _site/package.json
