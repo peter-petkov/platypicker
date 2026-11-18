@@ -315,6 +315,7 @@ export default class PlatyPicker extends HTMLElement {
             placeholders: this.placeholders,
             batchSize: this.batchSize,
             loading: this.loading,
+            locale: this.#locale,
         };
     }
 

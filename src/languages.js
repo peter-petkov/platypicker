@@ -34,6 +34,7 @@ export default class Languages {
     static #loading = new Map();  // shipped code -> the promise of its texts, while loading
     static #failed = new Set();   // shipped codes that couldn't load, which aren't tried again
     static #formats = new Map();  // locale -> { plurals, numbers }
+    static #validity = new Map(); // locale -> whether it's a valid tag
 
     /** The language of an element: its nearest lang attribute, also past shadow roots. "" when there is none. */
     static of(element) {
@@ -79,6 +80,56 @@ export default class Languages {
         return Languages.#formatsFor(locale).numbers.format(count);
     }
 
+    // Accents that searching ignores: those of Latin, Greek and Cyrillic, and the optional vowel marks of Arabic and
+    // Hebrew. Not every combining mark: the vowel signs of Indic scripts and the voicing marks of Japanese kana are
+    // as much a part of the letter as its shape.
+    static #accents = /[̀-ͯ᪰-᫿᷀-᷿⃐-⃿︠-ً︯-ٰٟ֑-ׇ]/g;
+
+    // Letters that have no accent to take off, but are searched for as their plain counterparts.
+    static #letters = { "ß": "ss", "æ": "ae", "œ": "oe", "ø": "o", "ł": "l", "đ": "d", "ð": "d", "þ": "th", "ς": "σ" };
+    static #lettersPattern = /[ßæœøłđðþς]/g;
+
+    /**
+     * A text as search compares it: lower case by the locale's rules (Turkish İ is i), without accents, so that
+     * "zurich" finds "Zürich", and with ß, ø, æ and the like spelled out plainly.
+     */
+    static fold(text, locale) {
+        return text.toLocaleLowerCase(Languages.#valid(locale))
+            .normalize("NFD")
+            .replace(Languages.#accents, "")
+            .replace(Languages.#lettersPattern, letter => Languages.#letters[letter]);
+    }
+
+    /**
+     * Where a folded query first occurs in a text, as { start, end } in the text itself, or null. A match that ends
+     * on a letter keeps the accents that follow it, so a highlight never cuts one off.
+     */
+    static locate(text, query, locale) {
+        if (!query) return null;
+
+        // The text folded a letter at a time, remembering which letters of the text each folded unit came from.
+        let folded = "";
+        const starts = [];
+        const ends = [];
+        for (let i = 0; i < text.length;) {
+            const letter = String.fromCodePoint(text.codePointAt(i));
+            const part = Languages.fold(letter, locale);
+            for (let unit = 0; unit < part.length; unit++) {
+                starts.push(i);
+                ends.push(i + letter.length);
+            }
+            folded += part;
+            i += letter.length;
+        }
+
+        const at = folded.indexOf(query);
+        if (at < 0) return null;
+
+        let end = ends[at + query.length - 1];
+        while (end < text.length && Languages.fold(text[end], locale) === "") end++;
+        return { start: starts[at], end };
+    }
+
     // "zh-Hant-TW" -> ["zh-hant-tw", "zh-hant", "zh"], in lower case: from the exact tag to its base language.
     static #candidates(tag) {
         const parts = tag.toLowerCase().split(/[-_]/).filter(Boolean);
@@ -117,17 +168,26 @@ export default class Languages {
         let formats = Languages.#formats.get(key);
 
         if (!formats) {
-            let locales = locale || undefined;
-            try {
-                Intl.getCanonicalLocales(locales ?? []);
-            } catch {
-                locales = undefined; // Not a valid tag: the browser's own language.
-            }
-
+            const locales = Languages.#valid(locale);
             formats = { plurals: new Intl.PluralRules(locales), numbers: new Intl.NumberFormat(locales) };
             Languages.#formats.set(key, formats);
         }
 
         return formats;
+    }
+
+    // The locale if it's a valid tag, otherwise undefined: the browser's own language.
+    static #valid(locale) {
+        if (!locale) return undefined;
+        if (!Languages.#validity.has(locale)) {
+            let valid = true;
+            try {
+                Intl.getCanonicalLocales(locale);
+            } catch {
+                valid = false;
+            }
+            Languages.#validity.set(locale, valid);
+        }
+        return Languages.#validity.get(locale) ? locale : undefined;
     }
 }

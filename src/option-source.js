@@ -1,5 +1,7 @@
 "use strict";
 
+import Languages from "./languages.js";
+
 /**
  * An <optgroup> as the list sees it.
  */
@@ -62,7 +64,7 @@ export class OptionEntry {
  * never searched in one go, and a view that is no longer wanted is simply dropped.
  *
  * An entry matches when its label or subtext contains the query, or when its option group's label does (which
- * includes the whole group). A divider is kept only between two matches, so one that sits between entries that were
+ * includes the whole group). Both sides are compared folded (see Languages.fold), so case and accents don't matter. A divider is kept only between two matches, so one that sits between entries that were
  * filtered out is carried forward to the next match, and there is never one before the first match.
  */
 export class FilteredView {
@@ -75,9 +77,13 @@ export class FilteredView {
     #dividers = new Set();   // matches that have a divider before them
     #groupMatches = new Map();
 
-    constructor(entries, query) {
+    #fold;
+
+    /** `query` is folded already; `fold` folds a text the same way. */
+    constructor(entries, query, fold) {
         this.#entries = entries;
         this.#query = query;
+        this.#fold = fold;
     }
 
     get query() {
@@ -141,7 +147,7 @@ export class FilteredView {
     /** Whether the entry's own label or subtext contains the query. */
     textMatches(entry) {
         return Boolean(this.#query) &&
-            (entry.label.toLowerCase().includes(this.#query) || entry.subtext.toLowerCase().includes(this.#query));
+            (this.#fold(entry.label).includes(this.#query) || this.#fold(entry.subtext).includes(this.#query));
     }
 
     /** Whether the label of the entry's option group contains the query. */
@@ -150,7 +156,7 @@ export class FilteredView {
 
         let matches = this.#groupMatches.get(group);
         if (matches === undefined)
-            this.#groupMatches.set(group, matches = group.label.toLowerCase().trim().includes(this.#query));
+            this.#groupMatches.set(group, matches = this.#fold(group.label.trim()).includes(this.#query));
 
         return matches;
     }
@@ -170,6 +176,8 @@ export default class OptionSource {
     #entriesByOption = new WeakMap();
     #groupsByElement = new WeakMap();
     #observer;
+    #folded = new Map();    // text -> its folded form, for #foldedLocale
+    #foldedLocale = null;
 
     constructor(select) {
         this.#select = select;
@@ -253,10 +261,27 @@ export default class OptionSource {
     }
 
     /**
-     * The entries matching a search, found lazily. The query is trimmed and lowercase; an empty one matches all.
+     * The entries matching a search, found lazily. The query is trimmed and folded for the locale (see
+     * Languages.fold); an empty one matches all.
      */
-    filter(query) {
-        return new FilteredView(this.#entries, query);
+    filter(query, locale = "") {
+        return new FilteredView(this.#entries, query, text => this.fold(text, locale));
+    }
+
+    /**
+     * Folds a text (see Languages.fold), remembering it, so a search or type-ahead doesn't fold every label again on
+     * every key. The memory is by text, so a changed option simply misses it, and it starts over when the language
+     * changes or it grows past the number of texts the list can have.
+     */
+    fold(text, locale = "") {
+        if (locale !== this.#foldedLocale || this.#folded.size > 4 * this.#entries.length + 100) {
+            this.#folded.clear();
+            this.#foldedLocale = locale;
+        }
+
+        let folded = this.#folded.get(text);
+        if (folded === undefined) this.#folded.set(text, folded = Languages.fold(text, locale));
+        return folded;
     }
 
     /**

@@ -1,5 +1,7 @@
 "use strict";
 
+import Languages from "./languages.js";
+
 /**
  * Wraps the CSS Custom Highlight API for search matches.
  *
@@ -29,10 +31,13 @@ export default class Highlighter {
         return Highlighter.#highlight.size >= Highlighter.maxHighlights;
     }
 
-    /** Highlights the first occurrence of the (lowercase) query in a text node. Drops the range if there is none. */
-    apply(owner, key, node, query) {
-        const start = node ? node.data.toLowerCase().indexOf(query) : -1;
-        if (start < 0) {
+    /**
+     * Highlights the first occurrence of the (folded) query in a text node, compared as search compares it, so
+     * "zur" marks the "Zür" of "Zürich". Drops the range if there is none.
+     */
+    apply(owner, key, node, query, locale) {
+        const match = node ? Languages.locate(node.data, query, locale) : null;
+        if (!match) {
             this.drop(owner, key);
             return;
         }
@@ -41,8 +46,8 @@ export default class Highlighter {
         if (!ranges) this.#ranges.set(owner, ranges = {});
 
         const range = ranges[key] ??= new Range();
-        range.setStart(node, start);
-        range.setEnd(node, start + query.length);
+        range.setStart(node, match.start);
+        range.setEnd(node, match.end);
 
         Highlighter.#highlight.add(range);
         this.#owned.add(range);

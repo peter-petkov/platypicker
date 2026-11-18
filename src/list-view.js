@@ -1,6 +1,7 @@
 "use strict";
 
 import { addClasses, toggleClasses } from "./classes.js";
+import Languages from "./languages.js";
 
 /**
  * The popover: a search box with select all / none buttons, and the list of entries.
@@ -19,9 +20,12 @@ export default class ListView {
     // tags.
     static #emoji = /[\p{Extended_Pictographic}\p{Emoji_Modifier}\p{Regional_Indicator}\u200d\ufe0f\u20e3\u{e0020}-\u{e007f}]/gu;
 
-    /** The text type-ahead matches against: lowercase, with emoji removed so "🧀 Cheese" is found by typing "ch". */
-    static #typeAheadText(label) {
-        return label.replace(ListView.#emoji, "").replace(/\s+/g, " ").trim().toLowerCase();
+    /**
+     * The text type-ahead matches against: folded like a search (see Languages.fold), with emoji removed so
+     * "🧀 Cheese" is found by typing "ch".
+     */
+    #typeAheadText(label) {
+        return this.#source.fold(label.replace(ListView.#emoji, "").replace(/\s+/g, " ").trim(), this.#config.locale);
     }
 
     static #lastId = 0;
@@ -282,7 +286,7 @@ export default class ListView {
 
     /** Shows the entries matching a search, starting again from the first batch. An empty search shows them all. */
     filter(rawValue) {
-        this.#showMatches(rawValue.trim().toLowerCase());
+        this.#showMatches(Languages.fold(rawValue.trim(), this.#config.locale));
         this.#popover.scrollTop = 0;
 
         // Once typing pauses, so that screen readers don't read out a count for every key.
@@ -318,7 +322,7 @@ export default class ListView {
      * being shown.
      */
     #showMatches(query) {
-        const view = this.#view = this.#source.filter(query);
+        const view = this.#view = this.#source.filter(query, this.#config.locale);
 
         this.#sentinelObserver?.disconnect();
         this.#highlighter.clear();
@@ -400,7 +404,7 @@ export default class ListView {
         const keep = Math.max(this.#rows.length, this.#stepSize);
         const previous = { records: this.#recordsByEntry, groups: this.#groupItems, dividers: this.#dividerItems };
 
-        const view = this.#view = this.#source.filter(this.#query());
+        const view = this.#view = this.#source.filter(this.#query(), this.#config.locale);
 
         this.#sentinelObserver?.disconnect();
         this.#highlighter.clear();
@@ -581,7 +585,7 @@ export default class ListView {
 
             const header = entry.group && this.#groupItems.get(entry.group)?.firstElementChild;
             if (header && view.groupMatches(entry.group) && !view.textMatches(entry))
-                this.#highlighter.apply(header, "text", header.firstChild, view.query);
+                this.#highlighter.apply(header, "text", header.firstChild, view.query, this.#config.locale);
 
             const record = this.#recordsByEntry.get(entry);
             if (record && view.textMatches(entry)) this.#highlightMatch(record, view.query);
@@ -738,18 +742,19 @@ export default class ListView {
     // -----------------------------------------------------------------
 
     #query() {
-        return this.#search.value.trim().toLowerCase();
+        return Languages.fold(this.#search.value.trim(), this.#config.locale);
     }
 
     #highlightMatch(record, query) {
         if (this.#highlighter.isFull) return;
 
         const { entry, button, text, small } = record;
-        this.#highlighter.apply(button, "text", text, query);
+        const locale = this.#config.locale;
+        this.#highlighter.apply(button, "text", text, query, locale);
 
         const subtext = entry.subtext.toLowerCase();
         if (subtext && subtext !== entry.label.toLowerCase())
-            this.#highlighter.apply(button, "subtext", small.firstChild, query);
+            this.#highlighter.apply(button, "subtext", small.firstChild, query, locale);
     }
 
     // -----------------------------------------------------------------
@@ -824,10 +829,10 @@ export default class ListView {
         this.#popover.addEventListener("keydown", e => {
             if (this.#search.contains(e.target)) return;
 
-            const char = e.key.toLowerCase();
-            if (e.ctrlKey || e.altKey || e.metaKey || !/^[a-z0-9]$/.test(char)) return;
+            // A letter or digit of any script.
+            if (e.ctrlKey || e.altKey || e.metaKey || !/^[\p{L}\p{N}]$/u.test(e.key)) return;
 
-            this.#typeAheadBuffer += char;
+            this.#typeAheadBuffer += Languages.fold(e.key, this.#config.locale);
             const match = this.#findTypeAheadMatch(this.#typeAheadBuffer);
 
             if (match && this.ensureRendered(match)) {
@@ -848,7 +853,7 @@ export default class ListView {
     }
 
     #findTypeAheadMatch(buffer) {
-        const isCandidate = entry => this.isSelectable(entry) && ListView.#typeAheadText(entry.label).startsWith(buffer);
+        const isCandidate = entry => this.isSelectable(entry) && this.#typeAheadText(entry.label).startsWith(buffer);
 
         const current = this.#source.firstSelected;
         return this.#source.entries.find(entry => entry !== current && isCandidate(entry)) ??
