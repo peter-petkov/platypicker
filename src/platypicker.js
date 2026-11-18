@@ -36,6 +36,13 @@ export default class PlatyPicker extends HTMLElement {
     static defaultBatchSize = 50;
 
     /**
+     * The media query under which a picker with layout="auto" (the default) opens as a sheet at the bottom of the
+     * screen rather than a popover by its select: a touch screen the size of a phone. It's checked each time a picker
+     * opens, so it follows a rotated phone or a resized window.
+     */
+    static sheetMedia = "(pointer: coarse) and (max-width: 640px)";
+
+    /**
      * The extra classes each part gets, on top of its fixed pp-* class. A preset fills these with a framework's
      * classes, and must be imported before any picker is created. See classes.js for the parts.
      */
@@ -86,6 +93,7 @@ export default class PlatyPicker extends HTMLElement {
         "batch-size",
         "placeholder",
         "loading",
+        "layout",
     ];
 
     #internals;
@@ -197,6 +205,7 @@ export default class PlatyPicker extends HTMLElement {
 
         this.#view.configure(this.#viewConfig());
         this.#tags?.configure(this.#tagsConfig());
+        if (this.#view.popover.matches(":popover-open")) this.#syncLayout();
     }
 
     setValue(value) {
@@ -294,6 +303,20 @@ export default class PlatyPicker extends HTMLElement {
 
     set placeholder(value) {
         this.setAttribute("placeholder", value);
+    }
+
+    /**
+     * How the picker opens: "popover" by its select, "sheet" at the bottom of the screen, or "auto" (the default),
+     * a sheet where PlatyPicker.sheetMedia matches and a popover elsewhere. A missing or invalid value means "auto".
+     */
+    get layout() {
+        const value = this.getAttribute("layout")?.trim().toLowerCase();
+
+        return ["sheet", "popover"].includes(value) ? value : "auto";
+    }
+
+    set layout(value) {
+        this.setAttribute("layout", value);
     }
 
     #viewConfig() {
@@ -551,6 +574,7 @@ export default class PlatyPicker extends HTMLElement {
         popover.addEventListener("beforetoggle", e => {
             if (e.newState !== "open") return;
 
+            this.#syncLayout();
             this.#catchUp();
             this.#view.refresh(); // Picks up selection changes that fire no change event, like select.value = x.
             this.#view.setLabel(this.#label()); // The label may have changed since the last time.
@@ -613,6 +637,16 @@ export default class PlatyPicker extends HTMLElement {
         this.#stale = false;
         this.#source.rebuild();
         this.#view.reconcile();
+    }
+
+    /**
+     * Decides between the sheet and the popover (see layout), as the custom state sheet, which platypicker.css styles
+     * the popover by. Runs as the popover opens, and when the layout attribute changes while it's open.
+     */
+    #syncLayout() {
+        const layout = this.layout;
+        const sheet = layout === "sheet" || (layout === "auto" && matchMedia(PlatyPicker.sheetMedia).matches);
+        this.#internals.states[sheet ? "add" : "delete"]("sheet");
     }
 
     #togglePopover(forceOpen = false) {
