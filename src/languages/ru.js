@@ -10,4 +10,7 @@ export default {
     removeLabel: "Удалить",
     noMatchesLabel: "Нет совпадений",
     matchesLabel: { one: "{count} совпадение", few: "{count} совпадения", many: "{count} совпадений", other: "{count} совпадения" },
+    shownLabel: "Показано {count} из {total}",
+    loadedLabel: { one: "{count} вариант пока", few: "{count} варианта пока", many: "{count} вариантов пока", other: "{count} варианта пока" },
+    filteredLabel: "{count} из {total}",
 };

@@ -10,4 +10,7 @@ export default {
     removeLabel: "Usuń",
     noMatchesLabel: "Brak wyników",
     matchesLabel: { one: "{count} wynik", few: "{count} wyniki", many: "{count} wyników", other: "{count} wyniku" },
+    shownLabel: "Pokazano {count} z {total}",
+    loadedLabel: { one: "{count} opcja na razie", few: "{count} opcje na razie", many: "{count} opcji na razie", other: "{count} opcji na razie" },
+    filteredLabel: "{count} z {total}",
 };

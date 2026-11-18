@@ -10,4 +10,7 @@ export default {
     removeLabel: "Xóa",
     noMatchesLabel: "Không có kết quả",
     matchesLabel: { other: "{count} kết quả" },
+    shownLabel: "Đang hiển thị {count} trên {total}",
+    loadedLabel: { other: "hiện có {count} lựa chọn" },
+    filteredLabel: "{count} trên {total}",
 };

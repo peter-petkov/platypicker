@@ -10,4 +10,7 @@ export default {
     removeLabel: "Hapus",
     noMatchesLabel: "Tidak ada yang cocok",
     matchesLabel: { other: "{count} hasil" },
+    shownLabel: "Menampilkan {count} dari {total}",
+    loadedLabel: { other: "{count} opsi sejauh ini" },
+    filteredLabel: "{count} dari {total}",
 };

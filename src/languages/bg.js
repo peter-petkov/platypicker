@@ -10,4 +10,7 @@ export default {
     removeLabel: "Премахване",
     noMatchesLabel: "Няма съвпадения",
     matchesLabel: { one: "{count} съвпадение", other: "{count} съвпадения" },
+    shownLabel: "Показване на {count} от {total}",
+    loadedLabel: { one: "{count} опция досега", other: "{count} опции досега" },
+    filteredLabel: "{count} от {total}",
 };

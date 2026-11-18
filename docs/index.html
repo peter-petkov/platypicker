@@ -175,21 +175,21 @@
         <section id="long-lists">
             <h2>Long lists</h2>
             <p>Long lists start with a batch of rows, and more are shown a few at a time as you scroll, so the scrollbar shrinks smoothly instead of jumping. Searching still covers every option, and the arrow keys, End and type-ahead go past the rows shown so far. <code>batch-size</code> sets how many rows the list works with at a time (50 by default): the rows shown first, and how far ahead it searches. <code>batch-size="0"</code> renders everything at once.</p>
+            <p><code>counter</code> adds a line at the bottom of the popover with how many rows are shown out of all the options. It counts up as you scroll, so it shows how far the end is. With a search, it says how many options match: try "honda" here.</p>
             <div class="example">
                 <template>
-                    <platy-picker search batch-size="20">
+                    <platy-picker search counter batch-size="20">
                         <select name="car" aria-label="Car" data-cars="2000"></select>
                     </platy-picker>
                 </template>
-                <output class="hint stage-extra" data-batch-count></output>
             </div>
             <h3>Loading as you scroll</h3>
             <p>When the options come from a server, add them as they arrive. <code>loading</code> says more are on their way: the end of the list stays marked, and the picker fires <code>loadmore</code> to ask for more before the list runs out, as soon as fewer than a batch are left to show. Fetch about <code>event.detail.batchSize</code> options then, and remove <code>loading</code> once there's nothing left.</p>
             <p>The event also fires whenever the end of the list comes into view, which can be while a fetch is still running, so ignore it then. While loading, search, select all, End and type-ahead only know the options loaded so far. The <a href="https://github.com/peter-petkov/platypicker#loading-as-you-scroll">README</a> has the details, including searching on the server.</p>
-            <p><code>placeholders</code> shows skeleton rows at the end while you wait (10, or as many as you give it). This one waits most of a second per page.</p>
+            <p><code>placeholders</code> shows skeleton rows at the end while you wait (10, or as many as you give it), and <code>counter</code> says how many options have loaded so far. This one waits most of a second per page.</p>
             <div class="example" data-loading>
                 <template>
-                    <platy-picker search placeholders="3" loading>
+                    <platy-picker search counter placeholders="3" loading>
                         <select name="car" aria-label="Car"></select>
                     </platy-picker>
                 </template>
@@ -522,6 +522,7 @@ PlatyPicker.languages.pl = {
                         <legend>Picker</legend>
                         <label class="check"><input type="checkbox" name="search" checked>search</label>
                         <label class="check"><input type="checkbox" name="controls" checked>controls</label>
+                        <label class="check"><input type="checkbox" name="counter">counter</label>
                         <label class="field-row">batch-size <input class="field" type="number" name="batch-size" min="0" placeholder="50"></label>
                         <label class="field-row">placeholders <input class="field" type="number" name="placeholders" min="0" placeholder="off"></label>
                     </fieldset>

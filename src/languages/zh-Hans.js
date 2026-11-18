@@ -10,4 +10,7 @@ export default {
     removeLabel: "移除",
     noMatchesLabel: "无匹配项",
     matchesLabel: { other: "{count} 个匹配项" },
+    shownLabel: "已显示 {count} / {total}",
+    loadedLabel: { other: "目前 {count} 个选项" },
+    filteredLabel: "{count} / {total}",
 };

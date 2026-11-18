@@ -10,4 +10,7 @@ export default {
     removeLabel: "அகற்று",
     noMatchesLabel: "பொருத்தங்கள் இல்லை",
     matchesLabel: { one: "{count} பொருத்தம்", other: "{count} பொருத்தங்கள்" },
+    shownLabel: "{total} இல் {count} காட்டப்படுகிறது",
+    loadedLabel: { one: "இதுவரை {count} தேர்வு", other: "இதுவரை {count} தேர்வுகள்" },
+    filteredLabel: "{total} இல் {count}",
 };

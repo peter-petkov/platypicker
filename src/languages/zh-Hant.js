@@ -10,4 +10,7 @@ export default {
     removeLabel: "移除",
     noMatchesLabel: "沒有符合的項目",
     matchesLabel: { other: "{count} 個符合項目" },
+    shownLabel: "已顯示 {count} / {total}",
+    loadedLabel: { other: "目前 {count} 個選項" },
+    filteredLabel: "{count} / {total}",
 };

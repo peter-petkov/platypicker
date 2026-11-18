@@ -10,4 +10,7 @@ export default {
     removeLabel: "काढा",
     noMatchesLabel: "जुळणारे काहीही नाही",
     matchesLabel: { one: "{count} जुळणी", other: "{count} जुळण्या" },
+    shownLabel: "{total} पैकी {count} दाखवले",
+    loadedLabel: { one: "आतापर्यंत {count} पर्याय", other: "आतापर्यंत {count} पर्याय" },
+    filteredLabel: "{total} पैकी {count}",
 };

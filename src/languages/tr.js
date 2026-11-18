@@ -10,4 +10,7 @@ export default {
     removeLabel: "Kaldır",
     noMatchesLabel: "Eşleşme yok",
     matchesLabel: { one: "{count} eşleşme", other: "{count} eşleşme" },
+    shownLabel: "{total} içinden {count} gösteriliyor",
+    loadedLabel: { one: "şimdilik {count} seçenek", other: "şimdilik {count} seçenek" },
+    filteredLabel: "{total} içinden {count}",
 };

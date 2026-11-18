@@ -10,4 +10,7 @@ export default {
     removeLabel: "తీసివేయండి",
     noMatchesLabel: "సరిపోలికలు లేవు",
     matchesLabel: { one: "{count} సరిపోలిక", other: "{count} సరిపోలికలు" },
+    shownLabel: "{total}లో {count} చూపబడ్డాయి",
+    loadedLabel: { one: "ఇప్పటివరకు {count} ఎంపిక", other: "ఇప్పటివరకు {count} ఎంపికలు" },
+    filteredLabel: "{total}లో {count}",
 };

@@ -10,4 +10,7 @@ export default {
     removeLabel: "إزالة",
     noMatchesLabel: "لا توجد نتائج",
     matchesLabel: { zero: "لا توجد نتائج", one: "نتيجة واحدة", two: "نتيجتان", few: "{count} نتائج", many: "{count} نتيجة", other: "{count} نتيجة" },
+    shownLabel: "عُرض {count} من {total}",
+    loadedLabel: { zero: "لا خيارات حتى الآن", one: "خيار واحد حتى الآن", two: "خياران حتى الآن", few: "{count} خيارات حتى الآن", many: "{count} خيارًا حتى الآن", other: "{count} خيار حتى الآن" },
+    filteredLabel: "{count} من {total}",
 };

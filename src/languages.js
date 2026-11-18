@@ -11,7 +11,8 @@
  *
  * A text with a count, like matchesLabel, is a string with {count}, an object of plural forms picked by the
  * language's plural rules ({ one: "{count} match", other: "{count} matches" }, other being the fallback), or a
- * function of the count.
+ * function of the count. A text can have other numbers too, like filteredLabel's {total}; the form is still picked
+ * by the count.
  */
 
 /** Languages registered by the page: code -> texts. The same object is PlatyPicker.languages. */
@@ -62,17 +63,19 @@ export default class Languages {
     }
 
     /**
-     * A text with a count, for a locale: a string with {count}, plural forms, or a function. The count is
-     * formatted for the locale.
+     * A text with a count, for a locale: a string with {count}, plural forms, or a function, which gets the count
+     * and the other numbers. The count and the other numbers, like { total } for {total}, are formatted for the
+     * locale.
      */
-    static format(text, count, locale) {
-        if (typeof text === "function") return text(count);
+    static format(text, count, locale, numbers = {}) {
+        if (typeof text === "function") return text(count, numbers);
 
-        const { plurals, numbers } = Languages.#formatsFor(locale);
+        const formats = Languages.#formatsFor(locale);
         const form = text && typeof text === "object"
-            ? text[plurals.select(count)] ?? text.other ?? ""
+            ? text[formats.plurals.select(count)] ?? text.other ?? ""
             : String(text ?? "");
-        return form.replaceAll("{count}", numbers.format(count));
+        return Object.entries({ count, ...numbers })
+            .reduce((result, [name, value]) => result.replaceAll(`{${name}}`, formats.numbers.format(value)), form);
     }
 
     /** Formats a number for a locale. */

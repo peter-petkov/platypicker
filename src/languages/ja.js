@@ -10,4 +10,7 @@ export default {
     removeLabel: "削除",
     noMatchesLabel: "一致する項目はありません",
     matchesLabel: { other: "{count} 件" },
+    shownLabel: "{total} 件中 {count} 件を表示",
+    loadedLabel: { other: "これまでに{count} 件の選択肢" },
+    filteredLabel: "{total} 件中 {count} 件",
 };

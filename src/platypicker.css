@@ -331,6 +331,14 @@
             margin: 0;
         }
 
+        /* The counter. Sticky, so it stays at the bottom while the list scrolls. */
+        .pp-counter {
+            position: sticky;
+            bottom: 0;
+            z-index: 1;
+            margin: 0;
+        }
+
         /* The match count for screen readers: in the page, but not on screen. Pinned to the top, where it can
            never make the popover scroll. */
         .pp-status {
@@ -621,6 +629,15 @@
             font-size: .875em;
             line-height: 1.5;
             color: var(--_pp-muted);
+        }
+
+        .pp-counter {
+            padding: .25rem .625rem;
+            font-size: .75em;
+            line-height: 1.5;
+            color: var(--_pp-muted);
+            background: var(--_pp-bg);
+            border-top: 1px solid var(--_pp-border);
         }
 
         .pp-divider {

@@ -54,6 +54,11 @@ export default class PlatyPicker extends HTMLElement {
         noMatchesLabel: "No matches",
         // What screen readers hear once typing in the search box pauses: how many options match.
         matchesLabel: { one: "{count} match", other: "{count} matches" },
+        // The counter under the list (the counter attribute): how many rows of all the options are shown so far, how
+        // many options are loaded while more are on their way, and how many match a search, of how many.
+        shownLabel: "{count} of {total} shown",
+        loadedLabel: { one: "{count} option so far", other: "{count} options so far" },
+        filteredLabel: "{count} of {total}",
     };
 
     /**
@@ -76,6 +81,7 @@ export default class PlatyPicker extends HTMLElement {
     static observedAttributes = [
         "search",
         "controls",
+        "counter",
         "placeholders",
         "batch-size",
         "placeholder",
@@ -221,6 +227,15 @@ export default class PlatyPicker extends HTMLElement {
         this.toggleAttribute("controls", Boolean(value));
     }
 
+    /** Shows how many options there are, or how many match the search, under the list. */
+    get counter() {
+        return this.hasAttribute("counter");
+    }
+
+    set counter(value) {
+        this.toggleAttribute("counter", Boolean(value));
+    }
+
     get placeholders() {
         if (!this.hasAttribute("placeholders")) return undefined;
 
@@ -285,12 +300,18 @@ export default class PlatyPicker extends HTMLElement {
         return {
             search: this.search,
             controls: this.controls,
+            counter: this.counter,
             searchPlaceholder: this.#text("searchPlaceholder"),
             searchLabel: this.#text("searchLabel"),
             selectAllLabel: this.#text("selectAllLabel"),
             selectNoneLabel: this.#text("selectNoneLabel"),
             noMatchesLabel: this.#text("noMatchesLabel"),
             matchesLabel: count => Languages.format(this.#text("matchesLabel"), count, this.#locale),
+            counterLabel: ({ shown, matches, total, search, loading }) => search
+                ? Languages.format(this.#text("filteredLabel"), matches, this.#locale, { total })
+                : loading
+                    ? Languages.format(this.#text("loadedLabel"), total, this.#locale)
+                    : Languages.format(this.#text("shownLabel"), shown, this.#locale, { total }),
             placeholders: this.placeholders,
             batchSize: this.batchSize,
             loading: this.loading,

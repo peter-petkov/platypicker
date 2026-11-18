@@ -10,4 +10,7 @@ export default {
     removeLabel: "ہٹائیں",
     noMatchesLabel: "کوئی مماثلت نہیں",
     matchesLabel: { one: "{count} مماثلت", other: "{count} مماثلتیں" },
+    shownLabel: "{total} میں سے {count} دکھائے گئے",
+    loadedLabel: { one: "اب تک {count} آپشن", other: "اب تک {count} آپشنز" },
+    filteredLabel: "{total} میں سے {count}",
 };

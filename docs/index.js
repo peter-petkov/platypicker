@@ -63,7 +63,6 @@ function init() {
     setupLiveDemo();
     setupTheming();
     setupPlayground();
-    setupBatchCount();
     setupLoadingDemo();
     setupBenchmark();
 }
@@ -759,28 +758,6 @@ async function setupLoadingDemo() {
 }
 
 // ---------------------------------------------------------------------------
-// Batches: how many of the options are in the list so far
-// ---------------------------------------------------------------------------
-
-async function setupBatchCount() {
-    const output = document.querySelector("[data-batch-count]");
-    const picker = (await output.closest(".example").stageReady).querySelector("platy-picker");
-    const select = picker.querySelector("select");
-
-    // The list only exists once the element has been defined, and in a browser that supports it.
-    customElements.whenDefined("platy-picker").then(() => {
-        const list = picker.querySelector(".pp-list");
-        if (!list) return;
-
-        const update = () => output.textContent =
-            `${list.querySelectorAll(".pp-item").length.toLocaleString()} of ${select.options.length.toLocaleString()} options rendered`;
-
-        new MutationObserver(update).observe(list, { childList: true });
-        update();
-    });
-}
-
-// ---------------------------------------------------------------------------
 // Playground. Every change builds a new picker from the form, prints it, and swaps it in.
 // ---------------------------------------------------------------------------
 
@@ -803,7 +780,7 @@ const PLAYGROUND_GROUPS = `
 
 // The form fields that become attributes of the same name. Checkboxes are boolean attributes, the rest are left off
 // while empty.
-const PICKER_ATTRIBUTES = ["search", "controls", "batch-size", "placeholders", "placeholder"];
+const PICKER_ATTRIBUTES = ["search", "controls", "counter", "batch-size", "placeholders", "placeholder"];
 const SELECT_ATTRIBUTES = ["multiple", "required", "disabled"];
 
 // Text fields that only matter with some of the switches. The others are disabled and left out of the markup.

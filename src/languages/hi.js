@@ -10,4 +10,7 @@ export default {
     removeLabel: "हटाएँ",
     noMatchesLabel: "कोई मिलान नहीं",
     matchesLabel: { one: "{count} मिलान", other: "{count} मिलान" },
+    shownLabel: "{total} में से {count} दिखाए गए",
+    loadedLabel: { one: "अब तक {count} विकल्प", other: "अब तक {count} विकल्प" },
+    filteredLabel: "{total} में से {count}",
 };

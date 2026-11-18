@@ -56,6 +56,8 @@ export default class ListView {
     #empty;                             // "No matches", shown under the list when a search finds nothing.
     #status;                            // Tells screen readers how many options match the search.
     #announceTimer;
+    #counter;                           // How many options there are, or match the search, under the list.
+    #counterTimer;
 
     #config = {};
     #view = null;                       // The FilteredView being shown.
@@ -96,6 +98,7 @@ export default class ListView {
     destroy() {
         clearTimeout(this.#typeAheadTimer);
         clearTimeout(this.#announceTimer);
+        clearTimeout(this.#counterTimer);
         cancelAnimationFrame(this.#topUpFrame);
         this.#resizeObserver.disconnect();
         this.#popover.remove();
@@ -130,6 +133,11 @@ export default class ListView {
         this.#status = document.createElement("div");
         addClasses(this.#status, "status");
         this.#status.setAttribute("role", "status");
+
+        // Sticks to the bottom of the popover while the list scrolls.
+        this.#counter = document.createElement("p");
+        addClasses(this.#counter, "counter");
+        this.#counter.hidden = true;
     }
 
     /** Names the popover and its list after the select, as its label reads now. An empty label names neither. */
@@ -171,7 +179,7 @@ export default class ListView {
         this.#selectNoneButton = this.#buildActionButton(() => this.#busy || this.#actions.selectNone());
         form.append(this.#selectNoneButton);
 
-        this.#popover.append(this.#list, this.#empty, this.#status);
+        this.#popover.append(this.#list, this.#empty, this.#counter, this.#status);
     }
 
     #buildActionButton(onClick) {
@@ -208,8 +216,8 @@ export default class ListView {
     // -----------------------------------------------------------------
 
     /**
-     * Applies the element's settings: { search, controls, searchPlaceholder, selectAllLabel, selectNoneLabel,
-     * placeholders, batchSize, loading }. Safe to call again whenever any of them changes. A new batch size is used
+     * Applies the element's settings: { search, controls, counter, searchPlaceholder, selectAllLabel,
+     * selectNoneLabel, counterLabel, placeholders, batchSize, loading }. Safe to call again whenever any of them changes. A new batch size is used
      * from the next batch on, and the rows already rendered stay.
      */
     configure(config) {
@@ -234,6 +242,7 @@ export default class ListView {
             this.#list.setAttribute("aria-busy", Boolean(config.loading));
             this.#syncEmpty();
         }
+        this.#syncCounter();
     }
 
     /**
@@ -318,6 +327,34 @@ export default class ListView {
         // Once typing pauses, so that screen readers don't read out a count for every key.
         clearTimeout(this.#announceTimer);
         this.#announceTimer = setTimeout(() => this.#announce(), 500);
+
+        // Counting the matches of a search on a long list takes a moment, so it waits for a short pause too.
+        clearTimeout(this.#counterTimer);
+        if (this.#config.counter && this.#view.size < 0) {
+            const view = this.#view;
+            this.#counterTimer = setTimeout(() => this.#view === view && this.#syncCounter(view.count()), 150);
+        }
+    }
+
+    /**
+     * Shows how many rows of all the options are rendered so far, or how many options match the search, under the
+     * list. Runs as more rows are rendered, so it shows how far the list is from its end. `matches` is the count of
+     * a search, where it has been counted. Without it, a search whose matches aren't all scanned yet keeps
+     * the text it has until they are counted (see filter).
+     */
+    #syncCounter(matches = this.#view?.size) {
+        const counter = this.#counter;
+        counter.hidden = !this.#config.counter;
+        if (counter.hidden || !this.#view || matches < 0) return;
+
+        const text = this.#config.counterLabel({
+            shown: this.#rows.length,
+            matches,
+            total: this.#source.entries.length,
+            search: Boolean(this.#view.query),
+            loading: Boolean(this.#config.loading),
+        });
+        if (counter.textContent !== text) counter.textContent = text;
     }
 
     /**
@@ -363,6 +400,7 @@ export default class ListView {
         this.#tail = [];
 
         this.#renderMore(this.#stepSize);
+        this.#syncCounter();
         this.#scheduleTopUp();
 
         if (!this.#isBatched) {
@@ -400,6 +438,7 @@ export default class ListView {
         this.#appendRows(this.#view, this.#prepared.splice(0, count));
         this.#syncTail();
         this.#syncEmpty();
+        this.#syncCounter();
     }
 
     #scheduleTopUp() {
@@ -512,6 +551,7 @@ export default class ListView {
         this.#highlightItems(view, entries);
         this.#syncTail();
         this.#syncEmpty();
+        this.#syncCounter(this.#config.counter && view.query ? view.count() : undefined);
 
         // A focused row that went away hands focus to the row that took its place, or to the search box.
         if (focusedIndex >= 0 && !this.#popover.contains(this.#focused()) &&

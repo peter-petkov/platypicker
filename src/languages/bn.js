@@ -10,4 +10,7 @@ export default {
     removeLabel: "সরান",
     noMatchesLabel: "কোনো মিল নেই",
     matchesLabel: { one: "{count}টি মিল", other: "{count}টি মিল" },
+    shownLabel: "{total}টির মধ্যে {count}টি দেখানো হচ্ছে",
+    loadedLabel: { other: "এখন পর্যন্ত {count}টি বিকল্প" },
+    filteredLabel: "{total}টির মধ্যে {count}টি",
 };

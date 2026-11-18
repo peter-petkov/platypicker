@@ -10,4 +10,7 @@ export default {
     removeLabel: "Remover",
     noMatchesLabel: "Nenhum resultado",
     matchesLabel: { one: "{count} resultado", many: "{count} de resultados", other: "{count} resultados" },
+    shownLabel: "Mostrando {count} de {total}",
+    loadedLabel: { one: "{count} opção até agora", many: "{count} de opções até agora", other: "{count} opções até agora" },
+    filteredLabel: "{count} de {total}",
 };

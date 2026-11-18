@@ -27,6 +27,7 @@ export const classes = {
     header: "",         // an option group's label
     divider: "",        // an <hr> between options
     empty: "",          // "No matches", under the list when a search finds nothing
+    counter: "",        // how many options there are, or match the search, at the bottom (the counter attribute)
     placeholder: "",    // a skeleton row's content
     placeholderBar: "", // the bar inside it
     tags: "",           // the badges over a closed multiple select
@@ -53,6 +54,7 @@ const fixed = {
     header: "pp-header",
     divider: "pp-divider",
     empty: "pp-empty",
+    counter: "pp-counter",
     status: "pp-status",
     placeholder: "pp-placeholder",
     placeholderBar: "pp-placeholder-bar",

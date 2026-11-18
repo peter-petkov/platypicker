@@ -59,6 +59,7 @@ For multi-select, add `multiple` and `size="1"`. The closed select then shows th
 |----------------------|---------|-----------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `search`             | boolean | off                   | Shows a filter input at the top of the popover. Matches against option text, `data-subtext` and option group labels.                                                             |
 | `controls`           | boolean | off                   | Shows "All" / "None" links beside the search box, which select all or none of the options.                                                                                     |
+| `counter`            | boolean | off                   | Shows a line at the bottom of the popover with how many rows are shown so far out of all the options ("50 of 2,000 shown"), how many match the search ("12 of 2,000"), or, while `loading`, how many have loaded so far.  |
 | `placeholder`        | string  | none                  | Text shown in a multiple select while nothing is selected.                                                                                                                      |
 | `batch-size`         | number  | `50`                  | How many options the list works with at a time: the rows shown first, how far ahead it searches, and the page size it suggests to `loadmore`. More rows are shown a few at a time as you scroll. `0` renders the whole list. A missing or invalid value uses the default.  |
 | `placeholders`       | number  | off / `10`            | Shows skeleton rows at the end of the list while more options are still to come. If present without a valid non-negative integer value, renders 10 of them.                    |
@@ -67,7 +68,7 @@ For multi-select, add `multiple` and `size="1"`. The closed select then shows th
 All attributes are reflected as properties too (e.g. `picker.search = true`, `picker.batchSize = 100`), and are fully reactive – changing them after the element is connected updates the UI immediately. A new `batch-size` applies to the batches that follow; rows already rendered stay.
 
 ```html
-<platy-picker search controls batch-size="100" placeholder="Pick some fruit">
+<platy-picker search controls counter batch-size="100" placeholder="Pick some fruit">
   ...
 </platy-picker>
 ```
@@ -78,6 +79,7 @@ All attributes are reflected as properties too (e.g. `picker.search = true`, `pi
 - **Select all / select none** - one-click bulk actions for multi-selects. Select all respects `disabled` options and option groups, and takes every option matching the current search, including ones not rendered yet. When either changes 1,000 options or more, which can freeze the page for a moment, it shows a spinner while it works.
 - **Badges** - a closed multi-select shows its selected options as badges on one line, then a "+N" count of those that don't fit. The × on a badge removes it with the mouse; the last badge of a `required` select has none. The badges are only a picture: the `<select>` underneath still takes the clicks, the focus and the keyboard, and is what screen readers read.
 - **Batched rendering** - long lists start with a batch of rows (see `batch-size`), and more are shown a few at a time as you scroll, so the scrollbar shrinks smoothly instead of jumping. The list searches ahead a batch at a time. Opening, searching and selecting stay fast with tens of thousands of options.
+- **Counter** - with `counter`, a line at the bottom of the popover says how many rows are shown so far out of all the options, and counts up as more are shown while you scroll, so you can tell how far the end of a batched list is. With a search, it says how many options match.
 - **Option groups & separators** - `<optgroup>` and `<hr>` inside your `<select>` are mirrored into headers and dividers in the popover. A group's header only shows when something in the group does, and a divider only shows between two visible rows.
 - **Subtext** - add `data-subtext="..."` to any `<option>` for a secondary text on the right of its label (also searchable).
 - **Localization** - pickers follow the page's `lang`, with translations for 22 languages loaded only when needed, plural-aware texts, search that ignores case and accents, and right-to-left layouts. See below.
@@ -143,7 +145,7 @@ Things to know:
 - **It can fire while a fetch is still running**, when the end comes into view before your options arrive. Ignore it then, as `fetching` does above.
 - **Fetch about `batchSize` options at a time.** Smaller pages work, but the picker then asks again as soon as each one arrives, until a batch is in reserve, so you'll see several requests in a row.
 - **Remove `loading` when there's nothing left.** Until then the end of the list stays marked, and the event fires again each time the end comes into view. If a fetch fails and you add nothing, that's when it asks again.
-- **Only loaded options count.** While `loading` is set, search, select all, the match count screen readers hear, End and type-ahead all go by the options in the `<select>` so far. "No matches" doesn't show while loading, since more options might match.
+- **Only loaded options count.** While `loading` is set, search, select all, the match count screen readers hear, the `counter`, End and type-ahead all go by the options in the `<select>` so far. The counter says so: "120 options so far". "No matches" doesn't show while loading, since more options might match.
 - **Searching on the server.** The picker searches the options it has. To have the server search instead, replace the options with its results when `detail.search` changes, and set `loading` by whether it has more of them. A response can arrive after the search has changed again, so check that it's still for the current search before adding it.
 - **Without `loading`**, the skeleton rows rarely show on a local list: the list searches ahead, so rows are ready before you reach the end.
 
@@ -195,7 +197,7 @@ The look stays out of the way of your own CSS. Its colors, borders and spacing h
 
 ## Class plugs
 
-Every element Platypicker creates has a fixed `pp-*` class, which you can style directly: `pp-menu` (the popover), `pp-bar`, `pp-search`, `pp-button`, `pp-list`, `pp-item`, `pp-item-label`, `pp-item-subtext`, `pp-item-check`, `pp-group`, `pp-group-list`, `pp-header`, `pp-divider`, `pp-empty` ("No matches"), `pp-status` (the match count for screen readers, hidden), `pp-placeholder`, `pp-placeholder-bar`, and for the badges `pp-tags`, `pp-tag`, `pp-tag-label`, `pp-tag-remove`, `pp-tag-count` and `pp-tags-placeholder`. The `<select>` gets `pp-select`.
+Every element Platypicker creates has a fixed `pp-*` class, which you can style directly: `pp-menu` (the popover), `pp-bar`, `pp-search`, `pp-button`, `pp-list`, `pp-item`, `pp-item-label`, `pp-item-subtext`, `pp-item-check`, `pp-group`, `pp-group-list`, `pp-header`, `pp-divider`, `pp-empty` ("No matches"), `pp-counter`, `pp-status` (the match count for screen readers, hidden), `pp-placeholder`, `pp-placeholder-bar`, and for the badges `pp-tags`, `pp-tag`, `pp-tag-label`, `pp-tag-remove`, `pp-tag-count` and `pp-tags-placeholder`. The `<select>` gets `pp-select`.
 
 Each part also has a plug: extra classes added next to its fixed one, empty by default. They let you dress the picker in a framework's own classes, such as Bootstrap's or Tailwind's utilities. Two state plugs, `itemSelected` and `itemDisabled`, are added to a row while its option is selected or disabled. The full list, with what each part is, is in `src/classes.js`.
 
@@ -324,8 +326,11 @@ PlatyPicker.languages.de = { noMatchesLabel: "Nichts gefunden" };
 | `removeLabel`       | Remove                         | the tooltip of a badge's ×                   |
 | `noMatchesLabel`    | No matches                     | under a search that finds nothing            |
 | `matchesLabel`      | {count} match, {count} matches | read out to screen readers after a search    |
+| `shownLabel`        | {count} of {total} shown       | the `counter`: rows shown of all the options |
+| `loadedLabel`       | {count} option so far, {count} options so far | the `counter` while `loading`  |
+| `filteredLabel`     | {count} of {total}             | the `counter`, with a search                 |
 
-A text with a count gives its plural forms, and the browser picks the one the language's rules call for. `{count}` is the number, formatted for the language, and `other` stands in for any form left out. A function of the count works too.
+A text with a count gives its plural forms, and the browser picks the one the language's rules call for. `{count}` is the number, formatted for the language, and `other` stands in for any form left out. `shownLabel` and `filteredLabel` also have `{total}`, the number of options; their form is picked by `{count}`. A function works too, and gets the count, then the other numbers (`{ total }`).
 
 ```js
 PlatyPicker.languages.pl = {
