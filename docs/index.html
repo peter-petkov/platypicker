@@ -55,6 +55,7 @@
             <a href="#localization">Localization</a>
             <a href="#benchmark">Benchmark</a>
             <a href="#browser-support">Browser support</a>
+            <a href="#reference">Reference</a>
             <a href="#playground">Playground</a>
         </nav>
     </aside>
@@ -499,6 +500,115 @@ PlatyPicker.languages.pl = {
                 <li>Avoid <code>:has()</code> selectors of your own that depend on the options, such as <code>select:has(option:checked)</code>. Browsers re-check them for every option that changes, which turns Select all on a long list into seconds of work, in Firefox especially.</li>
                 <li>In Firefox, which has no <code>appearance: base-select</code>, a multiple select is a list box underneath: its options aren't laid out, which keeps a long list fast, so screen readers hear them only in the popover. A letter, Home, End or a page key on it selects one option in place, as in Chrome. The <a href="https://github.com/peter-petkov/platypicker#without-base-select-firefox">README</a> has the details.</li>
             </ul>
+        </section>
+
+        <section id="reference">
+            <h2>Reference</h2>
+            <p>Everything a picker takes, on one page. The sections above show each in use, and the <a href="https://github.com/peter-petkov/platypicker#readme">README</a> has the details.</p>
+
+            <h3>Attributes</h3>
+            <p>On <code>&lt;platy-picker&gt;</code>. Each is also a property, and changes apply right away.</p>
+            <div class="table-scroll">
+                <table class="table">
+                    <thead>
+                    <tr><th>Attribute</th><th>Property</th><th>Value</th><th>Does</th></tr>
+                    </thead>
+                    <tbody>
+                    <tr><td><code>search</code></td><td><code>search</code></td><td>boolean</td><td>a filter box above the list</td></tr>
+                    <tr><td><code>controls</code></td><td><code>controls</code></td><td>boolean</td><td>All and None beside it</td></tr>
+                    <tr><td><code>counter</code></td><td><code>counter</code></td><td>boolean</td><td>rows shown of all the options, or how many match, under the list</td></tr>
+                    <tr><td><code>placeholder</code></td><td><code>placeholder</code></td><td>text</td><td>shown in a multiple select while nothing is selected</td></tr>
+                    <tr><td><code>batch-size</code></td><td><code>batchSize</code></td><td>number, 50</td><td>rows the list works with at a time; <code>0</code> renders all</td></tr>
+                    <tr><td><code>placeholders</code></td><td><code>placeholders</code></td><td>number, 10</td><td>skeleton rows at the end while more are to come</td></tr>
+                    <tr><td><code>loading</code></td><td><code>loading</code></td><td>boolean</td><td>more options are on their way; fires <code>loadmore</code></td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h3>The select and its options</h3>
+            <div class="table-scroll">
+                <table class="table">
+                    <thead>
+                    <tr><th>Markup</th><th>Does</th></tr>
+                    </thead>
+                    <tbody>
+                    <tr><td><code>&lt;select multiple size="1"&gt;</code></td><td>a multiple select, showing badges</td></tr>
+                    <tr><td><code>required</code> on the select</td><td>hides None, and keeps the last badge</td></tr>
+                    <tr><td><code>&lt;optgroup label&gt;</code>, <code>&lt;hr&gt;</code></td><td>a group header, a divider</td></tr>
+                    <tr><td><code>data-subtext</code> on an option</td><td>a second text on the right of its row, searched too</td></tr>
+                    <tr><td><code>disabled</code> on an option or group</td><td>shown, but can't be picked</td></tr>
+                    <tr><td><code>hidden</code>, <code>label</code>, <code>title</code> on an option</td><td>left out; the row's text; a tooltip</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h3>Events</h3>
+            <div class="table-scroll">
+                <table class="table">
+                    <thead>
+                    <tr><th>Event</th><th>On</th><th>When</th></tr>
+                    </thead>
+                    <tbody>
+                    <tr><td><code>change</code></td><td>the select</td><td>the user picks, uses All or None, or removes a badge</td></tr>
+                    <tr><td><code>loadmore</code></td><td>the picker</td><td>more options are wanted while <code>loading</code>; <code>detail</code> has <code>search</code> and <code>batchSize</code></td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h3>JavaScript</h3>
+            <div class="table-scroll">
+                <table class="table">
+                    <thead>
+                    <tr><th>Member</th><th>Does</th></tr>
+                    </thead>
+                    <tbody>
+                    <tr><td><code>picker.setValue(value)</code></td><td>sets the select's value and updates the picker, without a <code>change</code> event</td></tr>
+                    <tr><td><code>PlatyPicker.get(select)</code></td><td>the picker of a select, if it has one</td></tr>
+                    <tr><td><code>PlatyPicker.defaultBatchSize</code></td><td>the <code>batch-size</code> of pickers without one (50)</td></tr>
+                    <tr><td><code>PlatyPicker.languageMap</code></td><td>the English texts, and the fallback for other languages</td></tr>
+                    <tr><td><code>PlatyPicker.languages</code></td><td>texts of your own, by language code</td></tr>
+                    <tr><td><code>PlatyPicker.classes</code></td><td>the <a href="#class-plugs">class plugs</a></td></tr>
+                    <tr><td><code>PlatyPicker.maxHighlights</code></td><td>the most search matches highlighted at once, across the page</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <p>The default export of <code>"platypicker"</code> is <code>PlatyPicker</code>, the element's class.</p>
+
+            <h3>Texts</h3>
+            <p>Set in <code>PlatyPicker.languageMap</code> for English, or <code>PlatyPicker.languages</code> for a language (see <a href="#localization">Localization</a>).</p>
+            <div class="table-scroll">
+                <table class="table">
+                    <thead>
+                    <tr><th>Text</th><th>English</th></tr>
+                    </thead>
+                    <tbody>
+                    <tr><td><code>searchPlaceholder</code></td><td>Type to filter...</td></tr>
+                    <tr><td><code>searchLabel</code></td><td>Search (the search box's name for screen readers)</td></tr>
+                    <tr><td><code>selectAllLabel</code>, <code>selectNoneLabel</code></td><td>All, None</td></tr>
+                    <tr><td><code>removeLabel</code></td><td>Remove (a badge's &times;)</td></tr>
+                    <tr><td><code>noMatchesLabel</code></td><td>No matches</td></tr>
+                    <tr><td><code>matchesLabel</code></td><td>{count} matches (read out after a search)</td></tr>
+                    <tr><td><code>shownLabel</code>, <code>filteredLabel</code>, <code>loadedLabel</code></td><td>{count} of {total} shown, {count} of {total}, {count} options so far (the counter)</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h3>CSS</h3>
+            <div class="table-scroll">
+                <table class="table">
+                    <thead>
+                    <tr><th>Hook</th><th>Is</th></tr>
+                    </thead>
+                    <tbody>
+                    <tr><td><code>--platypicker-*</code></td><td>colors, radius, shadow and height (see <a href="#theming">Theming</a>)</td></tr>
+                    <tr><td><code>.pp-*</code></td><td>a fixed class on every part (see <a href="#class-plugs">Class plugs</a>)</td></tr>
+                    <tr><td><code>platy-picker:state(open)</code></td><td>a picker while its popover is open</td></tr>
+                    <tr><td><code>.pp-item[aria-selected="true"]</code>, <code>.pp-item[aria-disabled="true"]</code></td><td>a selected row, a disabled row</td></tr>
+                    <tr><td><code>.pp-skin</code> on the picker</td><td>turns off the base paint, for a <a href="#skins">skin</a></td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <p>The keys are listed under <a href="#getting-started">Getting started</a>.</p>
         </section>
 
         <section id="playground">
