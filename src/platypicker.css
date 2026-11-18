@@ -105,7 +105,7 @@
             inset: auto;
             margin: 0;
             top: calc(anchor(bottom) + .25rem);
-            left: anchor(left);
+            inset-inline-start: anchor(inside); /* The select's start edge, whichever way the page reads. */
             min-width: anchor-size(width);
             max-width: max(anchor-size(width), 20rem);
             max-height: var(--platypicker-max-height, 45vh);
@@ -265,7 +265,7 @@
             list-style: none;
         }
 
-        /* A row: the label, its subtext on the right, then a column for the check mark. */
+        /* A row: the label, its subtext at the end, then a column for the check mark. */
         .pp-item {
             box-sizing: border-box;
             display: flex;
@@ -337,17 +337,18 @@
             text-decoration: underline;
         }
 
-        /* Badges in a closed multiple select, and the select's chevron on the right. Multiple selects natively have
+        /* Badges in a closed multiple select, and the select's chevron at the end. Multiple selects natively have
            no arrow, and pages and frameworks often take the background image off them, so the badges draw it. */
         .pp-tags {
             gap: .25rem;
-            padding: 0 2rem 0 .3125rem;
+            padding-block: 0;
+            padding-inline: .3125rem 2rem;
 
             &::after {
                 content: "";
                 position: absolute;
                 top: 50%;
-                right: .625rem;
+                inset-inline-end: .625rem;
                 width: .75rem;
                 height: .75rem;
                 translate: 0 -50%;
@@ -443,7 +444,8 @@
        the rest has the specificity of a single class. */
     :where(platy-picker:not(.pp-skin) > select.pp-select) {
         box-sizing: border-box;
-        padding: .375rem 2rem .375rem .625rem;
+        padding-block: .375rem;
+        padding-inline: .625rem 2rem;
         font: inherit;
         line-height: 1.5;
         color: var(--_pp-color);
@@ -455,6 +457,11 @@
 
         &[multiple] {
             background-image: none; /* The badges draw a multiple select's chevron. */
+        }
+
+        /* The chevron at the end. A background has no start and end, so right to left places it on its own. */
+        :where(&:dir(rtl)) {
+            background-position: left .625rem center;
         }
 
         &:focus-visible {
@@ -491,7 +498,8 @@
         }
 
         .pp-search {
-            margin: 0 .25rem 0 0;
+            margin: 0;
+            margin-inline-end: .25rem;
             padding: .25rem .5rem;
             font: inherit;
             font-size: .875em;
@@ -540,7 +548,8 @@
 
         .pp-item {
             margin: 0;
-            padding: .3125rem .5rem .3125rem .625rem;
+            padding-block: .3125rem;
+            padding-inline: .625rem .5rem;
             font: inherit;
             line-height: 1.5;
             color: inherit;
@@ -632,7 +641,7 @@
         .pp-tag-remove {
             width: 1.125em;
             height: 1.125em;
-            margin-right: -.1875rem;
+            margin-inline-end: -.1875rem;
             background-color: var(--_pp-muted);
             border-radius: 2px;
             mask: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'%3e%3cpath d='m4.5 4.5 7 7m0-7-7 7'/%3e%3c/svg%3e") center / .75em no-repeat;
@@ -648,7 +657,7 @@
         }
 
         .pp-tags-placeholder {
-            padding-left: .3125rem;
+            padding-inline-start: .3125rem;
             color: var(--_pp-muted);
         }
     }

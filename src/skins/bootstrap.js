@@ -75,10 +75,11 @@ const css = `
         }
 
         .pp-tags {
-            padding: 0 2.25rem 0 .4375rem;
+            padding-block: 0;
+            padding-inline: .4375rem 2.25rem;
 
             &::after {
-                right: .75rem;
+                inset-inline-end: .75rem;
                 width: 1rem;
                 height: .75rem;
                 background-color: var(--bs-body-color);
@@ -87,7 +88,7 @@ const css = `
         }
 
         .pp-tags-placeholder {
-            padding-left: .3125rem;
+            padding-inline-start: .3125rem;
         }
     }
 }`;

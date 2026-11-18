@@ -145,16 +145,20 @@ export default class TagsView {
         count.hidden = false;
         count.textContent = this.#formatCount(this.#total); // The widest the count can get.
 
+        // Distances along the line from its start edge: the left, or the right in a right-to-left page.
         const style = getComputedStyle(this.#root);
-        const right = this.#root.getBoundingClientRect().right - parseFloat(style.paddingRight) -
-            parseFloat(style.borderRightWidth);
+        const box = this.#root.getBoundingClientRect();
+        const rtl = style.direction === "rtl";
+        const endOf = rect => rtl ? box.right - rect.left : rect.right - box.left;
+        const room = box.width - parseFloat(rtl ? style.paddingLeft : style.paddingRight) -
+            parseFloat(rtl ? style.borderLeftWidth : style.borderRightWidth);
         const gap = parseFloat(style.columnGap) || 0;
         const countWidth = count.getBoundingClientRect().width;
 
         let fitting = 1;
         for (let i = 1; i < tags.length; i++) {
             const rest = this.#total - (i + 1);
-            if (tags[i].element.getBoundingClientRect().right + (rest > 0 ? gap + countWidth : 0) > right) break;
+            if (endOf(tags[i].element.getBoundingClientRect()) + (rest > 0 ? gap + countWidth : 0) > room) break;
             fitting = i + 1;
         }
 
