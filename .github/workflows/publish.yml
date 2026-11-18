@@ -78,12 +78,29 @@ jobs:
         run: |
           VERSION="${{ steps.version.outputs.version }}"
 
+          # The notes are the version's section of CHANGELOG.md, from its "## <version>" heading to the next one, with
+          # the README's relative links made absolute. A version without a section, like a bugfix release, gets
+          # GitHub's generated notes instead.
+          awk -v heading="## ${VERSION}" '
+            { sub(/\r$/, "") }
+            /^## / { if (found) exit; if ($0 == heading) { found = 1; next } }
+            found
+          ' CHANGELOG.md \
+            | sed "s#](README.md#](https://github.com/${{ github.repository }}/blob/${VERSION}/README.md#g" \
+            > release-notes.md
+
+          if [[ -s release-notes.md ]] && grep -q '[^[:space:]]' release-notes.md; then
+            NOTES=(--notes-file release-notes.md)
+          else
+            NOTES=(--generate-notes)
+          fi
+
           if gh release view "${VERSION}" >/dev/null 2>&1; then
             echo "Release ${VERSION} already exists."
           else
             gh release create "${VERSION}" \
               --title "${VERSION}" \
-              --generate-notes \
+              "${NOTES[@]}" \
               --draft=false \
               --prerelease=false
           fi
