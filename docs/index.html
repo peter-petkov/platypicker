@@ -52,6 +52,7 @@
             <a href="#class-plugs">Class plugs</a>
             <a href="#skins">Skins</a>
             <p>More</p>
+            <a href="#localization">Localization</a>
             <a href="#benchmark">Benchmark</a>
             <a href="#browser-support">Browser support</a>
             <a href="#playground">Playground</a>
@@ -370,6 +371,72 @@
             <p>Import the skin before <code>platypicker</code>: it fills the class plugs, which the pickers read when they are created, and they are created as soon as <code>platypicker</code> is imported. A skin imported too late says so in the console. There's no extra stylesheet to link.</p>
             <p>Platypicker's own look has two halves. Layout, how the parts sit, stays. Paint, the colors, borders, spacing and type, steps aside for a skinned picker and leaves it to the framework's classes, whichever stylesheet loads first. The skin adds a few rules of its own for what the framework has no class for, like the check mark and search matches. Your own <code>--platypicker-*</code> variables still apply to those.</p>
             <div data-skin-list></div>
+        </section>
+
+        <section id="localization">
+            <h2>Localization</h2>
+            <p>Each picker speaks the language of its nearest <code>lang</code> attribute. Platypicker's translation of that language loads the first time a picker needs it, so an English page loads none. Search ignores case and accents the way the language does: try "kase" in the German picker.</p>
+            <div class="example">
+                <template>
+                    <div lang="de">
+                        <platy-picker search controls placeholder="Wähle etwas">
+                            <select name="essen" multiple size="1" aria-label="Essen">
+                                <option>🧀 Käse</option>
+                                <option>🥨 Brezel</option>
+                                <option>🌭 Würstchen</option>
+                                <option>🥔 Kartoffelsalat</option>
+                                <option>🍰 Käsekuchen</option>
+                                <option>🥟 Maultaschen</option>
+                            </select>
+                        </platy-picker>
+                    </div>
+                    <div lang="ja">
+                        <platy-picker search>
+                            <select name="ryouri" aria-label="料理">
+                                <option>🍣 寿司</option>
+                                <option>🍜 ラーメン</option>
+                                <option>🍤 天ぷら</option>
+                                <option>🍙 おにぎり</option>
+                                <option>🥟 餃子</option>
+                            </select>
+                        </platy-picker>
+                    </div>
+                </template>
+            </div>
+            <p>It ships translations for 22 languages: Arabic, Bengali, Bulgarian, Chinese (simplified and traditional), French, German, Hindi, Indonesian, Italian, Japanese, Korean, Marathi, Polish, Portuguese, Russian, Spanish, Tamil, Telugu, Turkish, Urdu and Vietnamese. A regional tag uses its language (<code>de-AT</code> is German), and any other language stays English. Not every translation has been checked by a native speaker yet, and <a href="https://github.com/peter-petkov/platypicker">corrections are welcome</a>.</p>
+            <p>The translations are plain objects in <code>src/languages/</code>, one file per language. Import one to bundle it, or register texts of your own in <code>PlatyPicker.languages</code>, which win over Platypicker's text by text. A text with a count gives plural forms, picked by the language's own rules.</p>
+            <script type="text/plain" data-code="JS">import PlatyPicker from "platypicker";
+import de from "platypicker/src/languages/de.js";
+
+// Bundled, instead of loaded on demand.
+PlatyPicker.languages.de = de;
+
+// Or change a single text. The rest still comes from Platypicker's German.
+PlatyPicker.languages.de = { noMatchesLabel: "Nichts gefunden" };
+
+// Plural forms: the language's rules pick one, and other stands in for any left out.
+PlatyPicker.languages.pl = {
+  matchesLabel: { one: "{count} wynik", few: "{count} wyniki", many: "{count} wyników", other: "{count} wyniku" },
+};</script>
+            <h3>Right to left</h3>
+            <p>In a right-to-left page or element (<code>dir="rtl"</code>) the picker mirrors: the popover lines up with the select's right edge, and the chevron, badges and check marks swap sides.</p>
+            <div class="example">
+                <template>
+                    <div dir="rtl" lang="ar">
+                        <platy-picker search controls>
+                            <select name="mudun" multiple size="1" aria-label="المدن">
+                                <option selected data-subtext="مصر">القاهرة</option>
+                                <option selected data-subtext="الإمارات">دبي</option>
+                                <option selected data-subtext="السعودية">الرياض</option>
+                                <option data-subtext="الأردن">عمّان</option>
+                                <option data-subtext="لبنان">بيروت</option>
+                                <option data-subtext="تونس">تونس</option>
+                                <option data-subtext="المغرب">الرباط</option>
+                            </select>
+                        </platy-picker>
+                    </div>
+                </template>
+            </div>
         </section>
 
         <section id="benchmark">

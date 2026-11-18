@@ -87,6 +87,7 @@ All attributes are reflected as properties too (e.g. `picker.search = true`, `pi
 - **Batched rendering** - long lists are rendered a batch at a time (see `batch-size`), and the next batch loads as you scroll near the end. Opening, searching and selecting stay fast with tens of thousands of options.
 - **Option groups & separators** - `<optgroup>` and `<hr>` inside your `<select>` are mirrored into headers and dividers in the popover. A group's header only shows when something in the group does, and a divider only shows between two visible rows.
 - **Subtext** - add `data-subtext="..."` to any `<option>` for a secondary text on the right of its label (also searchable).
+- **Localization** - pickers follow the page's `lang`, with translations for 22 languages loaded only when needed, plural-aware texts, search that ignores case and accents, and right-to-left layouts. See below.
 - **Keyboard type-ahead** - typing while the popover is open moves focus to the first option whose text starts with what you typed, mirroring native `<select>` behavior; <kbd>Enter</kbd> or <kbd>Space</kbd> then selects it. Emoji are ignored, so typing "ch" finds "🧀 Cheese", and options further down a long list are rendered as needed.
 - **Focus on open** - opening the popover scrolls to the selected option. Focus goes to the search input if there is one, otherwise to the selected option.
 - **Keyboard** - as on a native select:
@@ -265,6 +266,75 @@ platy-picker {
 
 A skin is a module imported before `platypicker`, of one of two kinds. One that dresses the picker in a framework's classes fills the plugs with them and includes `pp-skin` in the `host` plug, as `src/skins/bootstrap.js` does. One that only changes the colors, radius and shadow keeps the base look and sets its variables, as `src/skins/tailwind.js` does.
 
+## Localization
+
+Each picker speaks the language of its nearest `lang` attribute, on itself or an ancestor (also across shadow roots). It takes Platypicker's translation of that language, which loads the first time a picker needs it, so an English page loads none:
+
+```html
+<html lang="de">
+  ...
+  <platy-picker search controls>…</platy-picker>   <!-- "Filtern…", "Alle", "Keine" -->
+
+  <div lang="ja">
+    <platy-picker search>…</platy-picker>          <!-- "入力して絞り込み…" -->
+  </div>
+```
+
+| Code | Language | | Code | Language |
+|------|----------|---|------|----------|
+| `ar` | Arabic (right to left) | | `ko` | Korean |
+| `bg` | Bulgarian | | `mr` | Marathi |
+| `bn` | Bengali | | `pl` | Polish |
+| `de` | German | | `pt` | Portuguese (Brazilian) |
+| `es` | Spanish | | `ru` | Russian |
+| `fr` | French | | `ta` | Tamil |
+| `hi` | Hindi | | `te` | Telugu |
+| `id` | Indonesian | | `tr` | Turkish |
+| `it` | Italian | | `ur` | Urdu (right to left) |
+| `ja` | Japanese | | `vi` | Vietnamese |
+| `zh-Hans` | Chinese, simplified | | `zh-Hant` | Chinese, traditional |
+
+A regional tag uses its language (`de-AT` is `de`, `pt-BR` is `pt`), `zh`, `zh-CN` and `zh-SG` are simplified Chinese, and `zh-TW` and `zh-HK` traditional. English, and any language not listed, uses `PlatyPicker.languageMap`. A `lang` that changes is picked up the next time the popover opens. The translations haven't all been checked by native speakers yet; corrections are welcome as pull requests.
+
+The translations are in `src/languages/`, one file per language, each a plain object of texts. To bundle one rather than load it on demand, import it and register it:
+
+```js
+import PlatyPicker from "platypicker";
+import de from "platypicker/src/languages/de.js";
+
+PlatyPicker.languages.de = de;
+```
+
+`PlatyPicker.languages` also takes languages of your own, by their code, and a language registered there wins over Platypicker's text by text. So one text can be changed on its own:
+
+```js
+PlatyPicker.languages.de = { noMatchesLabel: "Nichts gefunden" };
+```
+
+| Text                | English                        | Where                                        |
+|---------------------|--------------------------------|----------------------------------------------|
+| `searchPlaceholder` | Type to filter...              | the search box                               |
+| `searchLabel`       | Search                         | the search box's name, for screen readers    |
+| `selectAllLabel`    | All                            | select all                                   |
+| `selectNoneLabel`   | None                           | select none                                  |
+| `removeLabel`       | Remove                         | the tooltip of a badge's ×                   |
+| `noMatchesLabel`    | No matches                     | under a search that finds nothing            |
+| `matchesLabel`      | {count} match, {count} matches | read out to screen readers after a search    |
+
+A text with a count gives its plural forms, and the browser picks the one the language's rules call for. `{count}` is the number, formatted for the language, and `other` stands in for any form left out. A function of the count works too.
+
+```js
+PlatyPicker.languages.pl = {
+  matchesLabel: { one: "{count} wynik", few: "{count} wyniki", many: "{count} wyników", other: "{count} wyniku" },
+};
+```
+
+Whatever a language leaves out comes from `PlatyPicker.languageMap`, English by default. The `search-placeholder`, `select-all-label` and `select-none-label` attributes still set those texts on a single picker, whatever its language.
+
+Search compares text the way the language does, ignoring case and accents: "zurich" finds "Zürich", "strasse" finds "Straße", and with `lang="tr"`, "izmir" finds "İzmir". Matches are highlighted in the original text, and type-ahead works the same way, in any script.
+
+In a right-to-left page (`dir="rtl"`) the picker mirrors: the popover lines up with the select's right edge, and the chevron, badges and check marks swap sides. With the Bootstrap skin, load Bootstrap's own `bootstrap.rtl.css` there too.
+
 ## JavaScript API
 
 ```js
@@ -280,13 +350,12 @@ PlatyPicker.get(document.querySelector("select[name=food]"));
 
 // Defaults for every picker. Set them before the pickers connect.
 PlatyPicker.defaultBatchSize = 100;
-PlatyPicker.languageMap.searchPlaceholder = "Filtern...";
-PlatyPicker.languageMap.searchLabel = "Suchen"; // the search box's name for screen readers
-PlatyPicker.languageMap.selectAllLabel = "Alle";
-PlatyPicker.languageMap.selectNoneLabel = "Keine";
-PlatyPicker.languageMap.removeLabel = "Entfernen"; // the tooltip of a badge's ×
-PlatyPicker.languageMap.noMatchesLabel = "Keine Treffer";
-PlatyPicker.languageMap.matchesLabel = count => count === 1 ? "Ein Treffer" : `${count.toLocaleString("de")} Treffer`; // a function, for plurals
+
+// The texts of pickers whose language has no translation, English by default. See Localization.
+PlatyPicker.languageMap.selectAllLabel = "Every one";
+
+// Languages of your own, or changes to Platypicker's translations. See Localization.
+PlatyPicker.languages.de = { noMatchesLabel: "Nichts gefunden" };
 
 // The most search matches highlighted at once, across the page.
 PlatyPicker.maxHighlights = 100;
@@ -304,6 +373,7 @@ Version 2 drops Bootstrap. If you used 1.x with Bootstrap:
 - **Multi-selects show badges** instead of the browser's own text, and draw their own arrow.
 - **Validation** is no longer tied to `.is-valid` / `.is-invalid`. An invalid select gets a red border through `:user-invalid`; Bootstrap's classes still style the select itself.
 - **Dark mode** follows `color-scheme`. Bootstrap's `data-bs-theme="dark"` already sets it.
+- **Texts follow the page's `lang`.** On a page with `lang` set to a language Platypicker translates, its translation is used rather than `languageMap`. To keep texts of your own, register them in `PlatyPicker.languages` under that language (see [Localization](#localization)).
 - **Select all and select none** are labelled "All" and "None" by default. `select-all-label`, `select-none-label` or `PlatyPicker.languageMap` bring the old labels back.
 
 ## Browser support
