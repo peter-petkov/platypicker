@@ -12,5 +12,11 @@
   },
   "files": [
     "src"
-  ]
+  ],
+  "devDependencies": {
+    "puppeteer-core": "^25.18.1"
+  },
+  "scripts": {
+    "check:firefox": "node tools/browser-check.mjs firefox"
+  }
 }
