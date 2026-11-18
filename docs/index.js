@@ -780,7 +780,7 @@ const PLAYGROUND_GROUPS = `
 
 // The form fields that become attributes of the same name. Checkboxes are boolean attributes, the rest are left off
 // while empty.
-const PICKER_ATTRIBUTES = ["search", "controls", "counter", "batch-size", "placeholders", "placeholder"];
+const PICKER_ATTRIBUTES = ["search", "controls", "counter", "batch-size", "placeholders", "placeholder", "layout"];
 const SELECT_ATTRIBUTES = ["multiple", "required", "disabled"];
 
 // Text fields that only matter with some of the switches. The others are disabled and left out of the markup.
@@ -854,15 +854,18 @@ async function setupPlayground() {
         stage.replaceChildren(picker);
     };
 
+    // The pickers among the controls rebuild on change, once a pick is made.
+    const pickerFields = ["list", "layout"];
+
     form.addEventListener("input", event => {
-        if (event.target.name === "list") return;
+        if (pickerFields.includes(event.target.name)) return;
         clearTimeout(timer);
         // Text fields wait for a pause in typing, the rest rebuild at once.
         if (event.target.type === "text" || event.target.type === "number") timer = setTimeout(build, 250);
         else build();
     });
     form.addEventListener("change", event => {
-        if (event.target.name === "list") build();
+        if (pickerFields.includes(event.target.name)) build();
     });
     form.addEventListener("submit", event => event.preventDefault());
 

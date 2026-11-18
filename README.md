@@ -64,8 +64,9 @@ For multi-select, add `multiple` and `size="1"`. The closed select then shows th
 | `batch-size`         | number  | `50`                  | How many options the list works with at a time: the rows shown first, how far ahead it searches, and the page size it suggests to `loadmore`. More rows are shown a few at a time as you scroll. `0` renders the whole list. A missing or invalid value uses the default.  |
 | `placeholders`       | number  | off / `10`            | Shows skeleton rows at the end of the list while more options are still to come. If present without a valid non-negative integer value, renders 10 of them.                    |
 | `loading`            | boolean | off                   | Says more options are on their way. The end of the list stays marked, and a `loadmore` event asks for more before the list runs out. See [Loading as you scroll](#loading-as-you-scroll).        |
+| `layout`             | string  | `auto`                | How the picker opens: `popover` by the select, `sheet` along the bottom of the screen, or `auto`, a sheet on phones and a popover elsewhere. See [On phones](#on-phones).        |
 
-All attributes are reflected as properties too (e.g. `picker.search = true`, `picker.batchSize = 100`), and are fully reactive – changing them after the element is connected updates the UI immediately. The boolean ones are booleans, `batchSize` is a number, and `placeholders` the number of skeleton rows, or `undefined` while off. A new `batch-size` applies to the batches that follow; rows already rendered stay.
+All attributes are reflected as properties too (e.g. `picker.search = true`, `picker.batchSize = 100`), and are fully reactive – changing them after the element is connected updates the UI immediately. The boolean ones are booleans, `batchSize` is a number, `placeholders` the number of skeleton rows, or `undefined` while off, and `layout` one of `"auto"`, `"sheet"` and `"popover"` (a missing or invalid value reads as `"auto"`). A new `batch-size` applies to the batches that follow; rows already rendered stay.
 
 The texts, such as the search box's placeholder and the All / None labels, come from the picker's language rather than attributes. See [Localization](#localization).
 
@@ -87,7 +88,8 @@ The texts, such as the search box's placeholder and the All / None labels, come 
 - **Subtext** - add `data-subtext="..."` to any `<option>` for a secondary text on the right of its label (also searchable).
 - **Localization** - pickers follow the page's `lang`, with translations for 22 languages loaded only when needed, plural-aware texts, search that ignores case and accents, and right-to-left layouts. See below.
 - **Keyboard type-ahead** - typing while the popover is open moves focus to the first option whose text starts with what you typed, mirroring native `<select>` behavior; <kbd>Enter</kbd> or <kbd>Space</kbd> then selects it. Emoji are ignored, so typing "ch" finds "🧀 Cheese", and options further down a long list are rendered as needed.
-- **Focus on open** - opening the popover scrolls to the selected option. Focus goes to the search input if there is one, otherwise to the selected option.
+- **Focus on open** - opening the popover scrolls to the selected option. Focus goes to the search input if there is one, otherwise to the selected option. The sheet on phones leaves the search box alone, so the on-screen keyboard doesn't come up by itself.
+- **On phones** - the picker opens as a sheet along the bottom of the screen, which you drag between half and full height, and which makes room for the on-screen keyboard while you search. See [On phones](#on-phones).
 - **Keyboard** - as on a native select:
 
   | Key | Does |
@@ -104,7 +106,7 @@ The texts, such as the search box's placeholder and the All / None labels, come 
 - **Live DOM sync** – add, remove, reorder or edit `<option>`/`<optgroup>` elements on the underlying `<select>` at any time, including their `disabled`, `hidden`, `label`, `title` and `data-subtext` attributes, and the popover updates to match. Only what changed is updated, so focus and scroll position survive. While the popover is closed, updates wait until it opens; the badges follow right away.
 - **Loading as you scroll** – for options that come from a server, `loading` and the `loadmore` event let you fetch them a page at a time, with `placeholders` showing skeleton rows while you wait. See below.
 - **Accessible** - the popover is a dialog named after the select, which says when it's open. The list is a listbox of options that screen readers announce as selected or not and by position ("3 of 20", even while long lists render in batches), with option groups and disabled options as on a native select. It works in Windows High Contrast and other forced-color modes.
-- **`:state(open)`** - the `<platy-picker>` host exposes a custom state while its popover is open, so you can style around it without a class:
+- **`:state(open)`** - the `<platy-picker>` host exposes a custom state while its popover is open, so you can style around it without a class, and `:state(sheet)` while it opens as a sheet:
 ```css
   platy-picker:state(open) {
     /* ... */
@@ -152,6 +154,40 @@ Things to know:
 - **Searching on the server.** The picker searches the options it has. To have the server search instead, replace the options with its results when `detail.search` changes, and set `loading` by whether it has more of them. A response can arrive after the search has changed again, so check that it's still for the current search before adding it.
 - **Without `loading`**, the skeleton rows rarely show on a local list: the list searches ahead, so rows are ready before you reach the end.
 
+## On phones
+
+On a phone the picker opens as a sheet along the bottom of the screen rather than a popover by the select, with the same search, controls and list, laid out for touch. A browser's own picker has none of those, so Platypicker keeps its own on phones too.
+
+- **Half or full height.** The sheet opens at a little over half the screen, over the dimmed page. Drag its bar (the handle and the heading) up or down; let go, it settles at whichever height is nearer, or closes if it's let go low enough. A flick goes on in its direction. Pulling the list down once it's scrolled to the top drags the sheet too.
+- **On its side.** A phone in landscape is too short for half height, so the sheet opens at full height there, no wider than `37.5rem` and centred along the bottom edge.
+- **A heading.** The select's label names the sheet, with how many options are selected under it in a multiple select. None and All sit either side of it.
+- **The keyboard.** Opening doesn't focus the search box, so the keyboard stays down until you tap it. Then the sheet grows to full height and sits on top of the keyboard, with Cancel beside the search box. Picking options keeps the keyboard up; scrolling the list, Cancel (which also clears the search) or tapping elsewhere puts it away, and the sheet goes back to the height it had.
+- **Closing.** Tap the dimmed page, drag the sheet down, or, on Android, press Back. A tap on the dimmed page only closes the sheet: nothing under it reacts.
+- **Motion.** The sheet slides up as it opens and back down as it closes. With `prefers-reduced-motion` it doesn't.
+
+`layout` picks the sheet or the popover. `auto`, the default, opens a sheet where `PlatyPicker.sheetMedia` matches, a touch screen the size of a phone, either way up: narrow, or short (a phone on its side is wide, but short):
+
+```js
+PlatyPicker.sheetMedia = "(pointer: coarse) and ((max-width: 640px) or (max-height: 500px))"; // the default
+```
+
+It's checked each time a picker opens, so a window made wider gets what fits. `layout="sheet"` opens a sheet everywhere, and `layout="popover"` never does:
+
+```html
+<platy-picker layout="popover">
+  ...
+</platy-picker>
+```
+
+The sheet is frosted glass by default: see-through and blurred over the page. Its look has [variables of its own](#theming), and `platy-picker:state(sheet)` matches a picker that opens as one.
+
+Things to know:
+
+- **Back** closes the sheet through a `CloseWatcher`, which Chrome and Edge have. It adds no entry to the history. Without one, as in Firefox and Safari so far, Back leaves the sheet open.
+- **Closing in Firefox.** Firefox can't keep a closing popover on screen to slide away yet, so the sheet slides down while it's still open, and closes once it's down.
+- **A page wider than the screen** widens the layout viewport in some browsers, and the sheet, which fills the width of it, with it. Keep the page within the screen's width on phones.
+- **Testing in a desktop browser's phone emulation** works, with one quirk in Firefox's: a mouse double-click there arrives as two clicks on the same tap, so double-tapping a select opens and closes it again. Real phones send one.
+
 ## Theming
 
 The stylesheet draws a neutral look meant to sit well in most pages, in light and dark. Change it with these variables, set on `platy-picker` or any ancestor:
@@ -176,6 +212,11 @@ The stylesheet draws a neutral look meant to sit well in most pages, in light an
 | `--platypicker-menu-radius`        | the popover (`8px`)                               |
 | `--platypicker-shadow`             | the popover's shadow                              |
 | `--platypicker-max-height`         | the popover's height limit (`45vh`)               |
+| `--platypicker-sheet-bg`           | the [sheet](#on-phones), see-through so the page shows blurred behind it |
+| `--platypicker-sheet-card-bg`      | the sheet's rows, grouped on cards                |
+| `--platypicker-sheet-blur`         | how much the page behind the sheet is blurred (`24px`) |
+| `--platypicker-sheet-backdrop`     | what dims the page behind the sheet               |
+| `--platypicker-sheet-radius`       | the sheet's top corners (`14px`)                  |
 
 ```css
 .checkout {
@@ -200,7 +241,7 @@ The look stays out of the way of your own CSS. Its colors, borders and spacing h
 
 ## Class plugs
 
-Every element Platypicker creates has a fixed `pp-*` class, which you can style directly: `pp-menu` (the popover), `pp-bar`, `pp-search`, `pp-button`, `pp-list`, `pp-item`, `pp-item-label`, `pp-item-subtext`, `pp-item-check`, `pp-group`, `pp-group-list`, `pp-header`, `pp-divider`, `pp-empty` ("No matches"), `pp-counter`, `pp-status` (the match count for screen readers, hidden), `pp-placeholder`, `pp-placeholder-bar`, and for the badges `pp-tags`, `pp-tag`, `pp-tag-label`, `pp-tag-remove`, `pp-tag-count` and `pp-tags-placeholder`. The `<select>` gets `pp-select`.
+Every element Platypicker creates has a fixed `pp-*` class, which you can style directly: `pp-menu` (the popover), `pp-bar`, `pp-handle`, `pp-heading`, `pp-title` and `pp-selected-count` (the sheet's handle and heading, shown only in the sheet), `pp-search-row` (the search box and the sheet's Cancel), `pp-search`, `pp-button` (All, None and Cancel, told apart by `data-action="all"`, `"none"` and `"cancel"`), `pp-list`, `pp-item`, `pp-item-label`, `pp-item-subtext`, `pp-item-check`, `pp-group`, `pp-group-list`, `pp-header`, `pp-divider`, `pp-empty` ("No matches"), `pp-counter`, `pp-status` (the match count for screen readers, hidden), `pp-placeholder`, `pp-placeholder-bar`, and for the badges `pp-tags`, `pp-tag`, `pp-tag-label`, `pp-tag-remove`, `pp-tag-count` and `pp-tags-placeholder`. The `<select>` gets `pp-select`.
 
 Each part also has a plug: extra classes added next to its fixed one, empty by default. They let you dress the picker in a framework's own classes, such as Bootstrap's or Tailwind's utilities. Two state plugs, `itemSelected` and `itemDisabled`, are added to a row while its option is selected or disabled. The full list, with what each part is, is in `src/classes.js`.
 
@@ -332,6 +373,8 @@ PlatyPicker.languages.de = { noMatchesLabel: "Nichts gefunden" };
 | `shownLabel`        | {count} of {total} shown       | the `counter`: rows shown of all the options |
 | `loadedLabel`       | {count} option so far, {count} options so far | the `counter` while `loading`  |
 | `filteredLabel`     | {count} of {total}             | the `counter`, with a search                 |
+| `selectedLabel`     | {count} selected               | under the sheet's title, in a multiple select |
+| `cancelLabel`       | Cancel                         | beside the sheet's search box                |
 
 A text with a count gives its plural forms, and the browser picks the one the language's rules call for. `{count}` is the number, formatted for the language, and `other` stands in for any form left out. `shownLabel` and `filteredLabel` also have `{total}`, the number of options; their form is picked by `{count}`. A function works too, and gets the count, then the other numbers (`{ total }`).
 
@@ -368,6 +411,9 @@ PlatyPicker.get(document.querySelector("select[name=food]"));
 
 // Defaults for every picker. Set them before the pickers connect.
 PlatyPicker.defaultBatchSize = 100;
+
+// Where layout="auto" opens a sheet rather than a popover. Checked each time a picker opens. See On phones.
+PlatyPicker.sheetMedia = "(pointer: coarse) and ((max-width: 640px) or (max-height: 500px))";
 
 // The texts of pickers whose language has no translation, English by default. See Localization.
 PlatyPicker.languageMap.selectAllLabel = "Every one";
@@ -423,6 +469,7 @@ Without `appearance: base-select`, the select is an ordinary one styled with `ap
 - **Keys on a closed multiple select act as in Chrome.** A letter, Home, End or a page key selects one option in place and drops the rest, as Chrome's closed multiple select does. Page Down moves one option, where Chrome moves a few. Select all (Ctrl+A) does nothing, as in Chrome.
 - **Screen readers call a multiple select a list box** rather than a combo box, and with its options not laid out, the closed field doesn't list them. The popover lists them, marked as selected or not, as in Chrome.
 - **Firefox for Android** hasn't been tested: a tap may still open the browser's own picker.
+- **The sheet's closing slide** works differently: Firefox can't transition `overlay` yet, so the sheet slides down while it's still open, and closes once it's down (see [On phones](#on-phones)). Back doesn't close the sheet, as Firefox has no `CloseWatcher`.
 
 ## Notes
 

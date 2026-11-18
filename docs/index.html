@@ -47,6 +47,7 @@
             <p>Lists</p>
             <a href="#long-lists">Long lists</a>
             <a href="#live-changes">Live changes</a>
+            <a href="#phones">On phones</a>
             <p>Styling</p>
             <a href="#theming">Theming</a>
             <a href="#class-plugs">Class plugs</a>
@@ -254,6 +255,28 @@
             </div>
         </section>
 
+        <section id="phones">
+            <h2>On phones</h2>
+            <p>On a phone the picker opens as a sheet along the bottom of the screen, with the same search, controls and list, laid out for touch. This one is a sheet everywhere, so you can try it here: <code>layout="sheet"</code>.</p>
+            <div class="example">
+                <template>
+                    <platy-picker layout="sheet" search controls placeholder="Pick some food">
+                        <select name="food" multiple size="1" aria-label="Food" data-fill="foods"></select>
+                    </platy-picker>
+                </template>
+            </div>
+            <ul>
+                <li>It opens at a little over half the screen. Drag its handle or heading up or down, or pull the list down from the top; let go, it settles at half or full height, or closes if it's low enough. On a phone on its side it opens at full height, narrower and centred.</li>
+                <li>The select's label names it, with how many options are selected underneath. None and All sit either side.</li>
+                <li>Opening leaves the search box alone, so the keyboard stays down. Tap the search box and the sheet grows to full height above the keyboard, with Cancel beside it. Picking keeps the keyboard up; scrolling the list or Cancel puts it away, and the sheet goes back to its height.</li>
+                <li>A tap on the dimmed page only closes the sheet, so nothing under it reacts. On Android, Back closes it too.</li>
+            </ul>
+            <p><code>layout="auto"</code>, the default, opens a sheet where <code>PlatyPicker.sheetMedia</code> matches, a touch screen the size of a phone either way up, checked each time a picker opens. <code>layout="popover"</code> never opens one. The sheet's look has <a href="#theming">variables of its own</a>.</p>
+            <script type="text/plain" data-code="JS">
+                PlatyPicker.sheetMedia = "(pointer: coarse) and ((max-width: 640px) or (max-height: 500px))"; // the default
+            </script>
+        </section>
+
         <section id="theming">
             <h2>Theming</h2>
             <p>The stylesheet draws a neutral look meant to sit well in most pages, in light and dark. Change it with <code>--platypicker-*</code> variables, set on <code>platy-picker</code> or any ancestor. Move the controls to try a few; the CSS tab follows.</p>
@@ -307,6 +330,11 @@
                     <tr><td><code>--platypicker-menu-radius</code></td><td>the popover (<code>8px</code>)</td></tr>
                     <tr><td><code>--platypicker-shadow</code></td><td>the popover's shadow</td></tr>
                     <tr><td><code>--platypicker-max-height</code></td><td>the popover's height limit (<code>45vh</code>)</td></tr>
+                    <tr><td><code>--platypicker-sheet-bg</code></td><td>the <a href="#phones">sheet</a>, see-through so the page shows blurred behind it</td></tr>
+                    <tr><td><code>--platypicker-sheet-card-bg</code></td><td>the sheet's rows, grouped on cards</td></tr>
+                    <tr><td><code>--platypicker-sheet-blur</code></td><td>how much the page behind the sheet is blurred (<code>24px</code>)</td></tr>
+                    <tr><td><code>--platypicker-sheet-backdrop</code></td><td>what dims the page behind the sheet</td></tr>
+                    <tr><td><code>--platypicker-sheet-radius</code></td><td>the sheet's top corners (<code>14px</code>)</td></tr>
                     </tbody>
                 </table>
             </details>
@@ -498,6 +526,7 @@ PlatyPicker.languages.pl = {
                 <li>Only a direct child select is enhanced: <code>&lt;platy-picker&gt;&lt;select&gt;</code>.</li>
                 <li><code>&lt;platy-picker&gt;</code> is <code>display: contents</code>, so size and place the select as you would without it. A multiple select gets a minimum width of <code>14rem</code> for its badges.</li>
                 <li>Avoid <code>:has()</code> selectors of your own that depend on the options, such as <code>select:has(option:checked)</code>. Browsers re-check them for every option that changes, which turns Select all on a long list into seconds of work, in Firefox especially.</li>
+                <li>Android's Back closes the <a href="#phones">sheet</a> where there's a <code>CloseWatcher</code>, in Chrome and Edge. Firefox can't keep a closing popover on screen to slide away yet, so the sheet slides down first and then closes.</li>
                 <li>In Firefox, which has no <code>appearance: base-select</code>, a multiple select is a list box underneath: its options aren't laid out, which keeps a long list fast, so screen readers hear them only in the popover. A letter, Home, End or a page key on it selects one option in place, as in Chrome. The <a href="https://github.com/peter-petkov/platypicker#without-base-select-firefox">README</a> has the details.</li>
             </ul>
         </section>
@@ -521,6 +550,7 @@ PlatyPicker.languages.pl = {
                     <tr><td><code>batch-size</code></td><td><code>batchSize</code></td><td>number, 50</td><td>rows the list works with at a time; <code>0</code> renders all</td></tr>
                     <tr><td><code>placeholders</code></td><td><code>placeholders</code></td><td>number, 10</td><td>skeleton rows at the end while more are to come</td></tr>
                     <tr><td><code>loading</code></td><td><code>loading</code></td><td>boolean</td><td>more options are on their way; fires <code>loadmore</code></td></tr>
+                    <tr><td><code>layout</code></td><td><code>layout</code></td><td><code>auto</code>, <code>sheet</code>, <code>popover</code></td><td>a <a href="#phones">sheet</a> on phones (<code>auto</code>), always, or never</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -565,6 +595,7 @@ PlatyPicker.languages.pl = {
                     <tr><td><code>picker.setValue(value)</code></td><td>sets the select's value and updates the picker, without a <code>change</code> event</td></tr>
                     <tr><td><code>PlatyPicker.get(select)</code></td><td>the picker of a select, if it has one</td></tr>
                     <tr><td><code>PlatyPicker.defaultBatchSize</code></td><td>the <code>batch-size</code> of pickers without one (50)</td></tr>
+                    <tr><td><code>PlatyPicker.sheetMedia</code></td><td>the media query under which <code>layout="auto"</code> opens a sheet</td></tr>
                     <tr><td><code>PlatyPicker.languageMap</code></td><td>the English texts, and the fallback for other languages</td></tr>
                     <tr><td><code>PlatyPicker.languages</code></td><td>texts of your own, by language code</td></tr>
                     <tr><td><code>PlatyPicker.classes</code></td><td>the <a href="#class-plugs">class plugs</a></td></tr>
@@ -589,6 +620,7 @@ PlatyPicker.languages.pl = {
                     <tr><td><code>noMatchesLabel</code></td><td>No matches</td></tr>
                     <tr><td><code>matchesLabel</code></td><td>{count} matches (read out after a search)</td></tr>
                     <tr><td><code>shownLabel</code>, <code>filteredLabel</code>, <code>loadedLabel</code></td><td>{count} of {total} shown, {count} of {total}, {count} options so far (the counter)</td></tr>
+                    <tr><td><code>selectedLabel</code>, <code>cancelLabel</code></td><td>{count} selected, Cancel (the sheet)</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -603,6 +635,7 @@ PlatyPicker.languages.pl = {
                     <tr><td><code>--platypicker-*</code></td><td>colors, radius, shadow and height (see <a href="#theming">Theming</a>)</td></tr>
                     <tr><td><code>.pp-*</code></td><td>a fixed class on every part (see <a href="#class-plugs">Class plugs</a>)</td></tr>
                     <tr><td><code>platy-picker:state(open)</code></td><td>a picker while its popover is open</td></tr>
+                    <tr><td><code>platy-picker:state(sheet)</code></td><td>a picker that opens as a <a href="#phones">sheet</a></td></tr>
                     <tr><td><code>.pp-item[aria-selected="true"]</code>, <code>.pp-item[aria-disabled="true"]</code></td><td>a selected row, a disabled row</td></tr>
                     <tr><td><code>.pp-skin</code> on the picker</td><td>turns off the base paint, for a <a href="#skins">skin</a></td></tr>
                     </tbody>
@@ -637,6 +670,15 @@ PlatyPicker.languages.pl = {
                         <label class="check"><input type="checkbox" name="counter">counter</label>
                         <label class="field-row">batch-size <input class="field" type="number" name="batch-size" min="0" placeholder="50"></label>
                         <label class="field-row">placeholders <input class="field" type="number" name="placeholders" min="0" placeholder="off"></label>
+                        <label class="field-row">layout
+                            <platy-picker>
+                                <select name="layout" aria-label="Layout">
+                                    <option value="">auto</option>
+                                    <option value="sheet">sheet</option>
+                                    <option value="popover">popover</option>
+                                </select>
+                            </platy-picker>
+                        </label>
                     </fieldset>
                     <fieldset>
                         <legend>Text</legend>
