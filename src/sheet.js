@@ -15,7 +15,8 @@
  * The sheet can be dragged by its bar (the handle and heading), or pulled down by the list once it's scrolled to the
  * top. Let go, it settles at half or full height, whichever is nearer, or closes when it's let go low enough. A flick
  * goes on in its direction: up to full height, down a step. Dragged while the keyboard is up, the sheet goes back to
- * the height it was dragged to once the keyboard is put away.
+ * the height it was dragged to once the keyboard is put away. Snapping to the other height or closing gives a light
+ * tick on phones that can vibrate (Android).
  *
  * Phones put the keyboard over the page rather than shrinking it, so a sheet along the bottom of the layout viewport
  * would sit behind it. The visual viewport says where the keyboard is, and the sheet sits on top of it (see the
@@ -360,9 +361,11 @@ export default class Sheet {
 
         // Closed, it keeps the height it was let go at, and slides away from there.
         if (to === "closed") {
+            Sheet.#tick();
             this.#close();
             return;
         }
+        if (to && (to === "full") !== this.#full) Sheet.#tick();
 
         delete this.#popover.dataset.dragging;
         this.#popover.style.removeProperty("--_pp-drag-height");
@@ -372,6 +375,19 @@ export default class Sheet {
         this.#full = to === "full";
         if (this.#restore !== null) this.#restore = this.#full; // Where it goes back to once the keyboard is away.
         this.#apply();
+    }
+
+    /**
+     * A light tick, as a drag snaps the sheet to its other height or closes it. Only where there's a vibration API,
+     * which phones have on Android; iOS has none, and there it does nothing. The drag's end is the user's doing, as
+     * the browser asks before it vibrates.
+     */
+    static #tick() {
+        try {
+            navigator.vibrate?.(10);
+        } catch {
+            // Some browsers throw rather than ignore it, in a frame they don't allow it in.
+        }
     }
 
     /** Where a drag let go settles: "half", "full" or "closed". */
