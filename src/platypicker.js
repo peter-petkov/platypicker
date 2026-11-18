@@ -2,6 +2,7 @@
 
 import { addClasses, classes, removeClasses } from "./classes.js";
 import Highlighter from "./highlighter.js";
+import Languages, { languages } from "./languages.js";
 import ListView from "./list-view.js";
 import OptionSource from "./option-source.js";
 import TagsView from "./tags-view.js";
@@ -40,6 +41,10 @@ export default class PlatyPicker extends HTMLElement {
      */
     static classes = classes;
 
+    /**
+     * The texts, in English, for pickers whose language has no translation, and for whatever a language leaves out.
+     * See languages.js.
+     */
     static languageMap = {
         searchPlaceholder: "Type to filter...",
         searchLabel: "Search",
@@ -48,8 +53,14 @@ export default class PlatyPicker extends HTMLElement {
         removeLabel: "Remove",
         noMatchesLabel: "No matches",
         // What screen readers hear once typing in the search box pauses: how many options match.
-        matchesLabel: count => `${count.toLocaleString()} ${count === 1 ? "match" : "matches"}`,
+        matchesLabel: { one: "{count} match", other: "{count} matches" },
     };
+
+    /**
+     * Languages of the page's own, by code ("de", "pt-BR"): each an object of texts like languageMap. A picker uses
+     * the one of its nearest lang attribute, over Platypicker's own translation of it, if there is one.
+     */
+    static languages = languages;
 
     static get(select) {
         return PlatyPicker.#registry.get(select);
@@ -77,6 +88,8 @@ export default class PlatyPicker extends HTMLElement {
     #tags = null;               // The badges over a closed multiple select. Single selects have none.
     #tagsTimer;
     #abort;
+    #locale = "";               // The picker's language: its nearest lang attribute.
+    #texts = null;              // The texts for it, as far as they're loaded.
     #stale = false;             // Whether the options changed since the list last caught up with them.
     #staleSince = null;         // When the first of those changes came in.
     #reconcileTimer;
@@ -104,6 +117,7 @@ export default class PlatyPicker extends HTMLElement {
         if (!PlatyPicker.#isSupported) return; // graceful degradation: leave the native <select> untouched
 
         this.#abort = new AbortController();
+        this.#syncLanguage();
 
         addClasses(this, "host");
         addClasses(this.#select, "select");
@@ -265,7 +279,7 @@ export default class PlatyPicker extends HTMLElement {
     }
 
     get searchPlaceholder() {
-        return this.getAttribute("search-placeholder") ?? PlatyPicker.languageMap.searchPlaceholder;
+        return this.getAttribute("search-placeholder") ?? this.#text("searchPlaceholder");
     }
 
     set searchPlaceholder(value) {
@@ -273,7 +287,7 @@ export default class PlatyPicker extends HTMLElement {
     }
 
     get selectAllLabel() {
-        return this.getAttribute("select-all-label") ?? PlatyPicker.languageMap.selectAllLabel;
+        return this.getAttribute("select-all-label") ?? this.#text("selectAllLabel");
     }
 
     set selectAllLabel(value) {
@@ -281,7 +295,7 @@ export default class PlatyPicker extends HTMLElement {
     }
 
     get selectNoneLabel() {
-        return this.getAttribute("select-none-label") ?? PlatyPicker.languageMap.selectNoneLabel;
+        return this.getAttribute("select-none-label") ?? this.#text("selectNoneLabel");
     }
 
     set selectNoneLabel(value) {
@@ -293,11 +307,11 @@ export default class PlatyPicker extends HTMLElement {
             search: this.search,
             controls: this.controls,
             searchPlaceholder: this.searchPlaceholder,
-            searchLabel: PlatyPicker.languageMap.searchLabel,
+            searchLabel: this.#text("searchLabel"),
             selectAllLabel: this.selectAllLabel,
             selectNoneLabel: this.selectNoneLabel,
-            noMatchesLabel: PlatyPicker.languageMap.noMatchesLabel,
-            matchesLabel: PlatyPicker.languageMap.matchesLabel,
+            noMatchesLabel: this.#text("noMatchesLabel"),
+            matchesLabel: count => Languages.format(this.#text("matchesLabel"), count, this.#locale),
             placeholders: this.placeholders,
             batchSize: this.batchSize,
             loading: this.loading,
@@ -307,8 +321,34 @@ export default class PlatyPicker extends HTMLElement {
     #tagsConfig() {
         return {
             placeholder: this.placeholder,
-            removeLabel: PlatyPicker.languageMap.removeLabel,
+            removeLabel: this.#text("removeLabel"),
+            formatCount: count => `+${Languages.number(count, this.#locale)}`,
         };
+    }
+
+    #text(name) {
+        return (this.#texts ?? PlatyPicker.languageMap)[name];
+    }
+
+    /**
+     * Takes the texts of the picker's language, as far as they're loaded, and again once a translation it waits for
+     * has loaded. Runs when the picker connects and each time the popover opens, which is when a changed lang
+     * attribute is picked up.
+     */
+    #syncLanguage() {
+        const locale = Languages.of(this);
+        const { texts, ready } = Languages.texts(locale, PlatyPicker.languageMap);
+
+        this.#locale = locale;
+        this.#texts = texts;
+        if (this.#view) {
+            this.#view.configure(this.#viewConfig());
+            this.#tags?.configure(this.#tagsConfig());
+        }
+
+        ready?.then(() => {
+            if (this.#view && Languages.of(this) === locale) this.#syncLanguage();
+        });
     }
 
     // -----------------------------------------------------------------
@@ -449,6 +489,7 @@ export default class PlatyPicker extends HTMLElement {
             this.#catchUp();
             this.#view.refresh(); // Picks up selection changes that fire no change event, like select.value = x.
             this.#view.setLabel(this.#label()); // The label may have changed since the last time.
+            this.#syncLanguage(); // So may the language.
         }, { signal });
 
         popover.addEventListener("toggle", e => {

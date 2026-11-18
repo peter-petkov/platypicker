@@ -62,12 +62,17 @@ export default class TagsView {
         this.#tags = [];
     }
 
-    /** Applies the element's settings: { placeholder, removeLabel }. */
+    /** Applies the element's settings: { placeholder, removeLabel, formatCount }. */
     configure(config) {
         this.#config = config;
         this.#placeholder.textContent = config.placeholder ?? "";
         for (const tag of this.#tags) tag.remove.title = config.removeLabel ?? "";
         this.refresh();
+    }
+
+    /** "+N", with N in the picker's language. */
+    #formatCount(count) {
+        return this.#config.formatCount?.(count) ?? `+${count}`;
     }
 
     /** Reads which options are selected and shows them. Inexpensive however many there are. */
@@ -138,7 +143,7 @@ export default class TagsView {
         this.#root.toggleAttribute("data-measuring", true);
         for (const tag of tags) tag.element.hidden = false;
         count.hidden = false;
-        count.textContent = `+${this.#total}`; // The widest the count can get.
+        count.textContent = this.#formatCount(this.#total); // The widest the count can get.
 
         const style = getComputedStyle(this.#root);
         const right = this.#root.getBoundingClientRect().right - parseFloat(style.paddingRight) -
@@ -157,7 +162,7 @@ export default class TagsView {
 
         const rest = this.#total - fitting;
         count.hidden = rest === 0;
-        count.textContent = `+${rest}`;
+        count.textContent = this.#formatCount(rest);
         this.#root.toggleAttribute("data-measuring", false);
     }
 }
