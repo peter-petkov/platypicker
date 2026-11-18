@@ -4,7 +4,7 @@ A drop-in enhancement for the native `<select>` element: search-to-filter, selec
 
 **[Docs and live examples](https://peter-petkov.github.io/platypicker/)**, with a playground to try every attribute.
 
-In browsers that don't yet support `appearance: base-select` (see [Browser support](#browser-support)), Platypicker falls back to the default `<select>` behaviour.
+It works in Chrome, Edge and Firefox without flags. In browsers it doesn't support yet (see [Browser support](#browser-support)), Platypicker falls back to the default `<select>` behaviour.
 
 ## Install
 
@@ -389,17 +389,26 @@ Version 2 drops Bootstrap. If you used 1.x with Bootstrap:
 
 ## Browser support
 
-Platypicker requires `appearance: base-select` support. As of publishing:
+Platypicker needs anchor positioning, with `anchor-scope`, and the popover attribute. It uses `appearance: base-select` where the browser has it, and works without it. As of publishing:
 
-- Chrome / Edge 135+
-- Safari 27+ ships `appearance: base-select`; Platypicker hasn't been tested there yet
-- Firefox 149+ – implemented behind preferences that are off by default (search `about:config` for `customizable_select` and `appearance-base-select`)
+- Chrome and Edge 135 and later.
+- Firefox, current releases (tested in 160), with no flags. See below.
+- Safari hasn't been tested yet. It has anchor positioning from Safari 26 and `appearance: base-select` from 27.
 
 In any browser without support, `<platy-picker>` does nothing: the `<select>` inside it renders and behaves exactly as a plain native `<select>` would.
 
+### Without base-select (Firefox)
+
+Without `appearance: base-select`, the select is an ordinary one styled with `appearance: none`, and Platypicker keeps its own dropdown shut: a press or the opening keys (Enter, Space, the arrows, Alt+↓, F4) open the popover instead. It looks and works as in Chrome, with a few differences:
+
+- **A multiple select is a list box underneath.** Firefox draws `<select multiple size="1">` as a one-row list box, not a button. Its scrollbar and options are hidden, so only the field shows under the badges, but your own CSS on its options won't show.
+- **Keys on a closed multiple select act as in Chrome.** A letter, Home, End or a page key selects one option in place and drops the rest, as Chrome's closed multiple select does. Page Down moves one option, where Chrome moves a few. Select all (Ctrl+A) does nothing, as in Chrome.
+- **Screen readers call a multiple select a list box** rather than a combo box. Its popover is the same.
+- **Firefox for Android** hasn't been tested: a tap may still open the browser's own picker.
+
 ## Notes
 
-- `<select multiple>` popup customization via `appearance: base-select` is very new (Chromium 145+); Platypicker deliberately renders its own popover for multi-selects rather than relying on that yet, so search/controls work consistently regardless of that feature's rollout.
+- Platypicker renders its own popover for every select, single or multiple, rather than the browser's customizable one (`appearance: base-select`), so search and the controls work the same in every supported browser.
 - Platypicker only enhances a direct-child `<select>` - `<platy-picker><select>...</select></platy-picker>`. Nesting it deeper isn't supported.
 - The `<select>` remains the source of truth for value and form submission; Platypicker doesn't introduce a separate form-associated value of its own.
 - `<platy-picker>` is `display: contents`, so it doesn't change your layout: size and place the `<select>` as you would without it. A multiple select gets a minimum width of `14rem` to leave room for badges.

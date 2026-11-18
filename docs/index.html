@@ -482,10 +482,11 @@ PlatyPicker.languages.pl = {
         </section>
         <section id="browser-support">
             <h2>Browser support</h2>
-            <p>Platypicker needs <code>appearance: base-select</code>, along with anchor positioning and CSS nesting.</p>
+            <p>Platypicker needs anchor positioning (with <code>anchor-scope</code>) and the popover attribute. It uses <code>appearance: base-select</code> where the browser has it, and works without it.</p>
             <ul>
                 <li>Chrome and Edge 135 and later.</li>
-                <li>Firefox 149 has it behind preferences that are off by default (<code>customizable_select</code> and <code>appearance-base-select</code> in <code>about:config</code>).</li>
+                <li>Firefox, current releases (tested in 160), with no flags.</li>
+                <li>Safari hasn't been tested yet.</li>
             </ul>
             <p class="support-check" data-support></p>
             <p>Without support, <code>&lt;platy-picker&gt;</code> does nothing: the select inside it looks and works exactly as a plain one would, so forms keep working everywhere.</p>
@@ -494,6 +495,7 @@ PlatyPicker.languages.pl = {
                 <li>Only a direct child select is enhanced: <code>&lt;platy-picker&gt;&lt;select&gt;</code>.</li>
                 <li><code>&lt;platy-picker&gt;</code> is <code>display: contents</code>, so size and place the select as you would without it. A multiple select gets a minimum width of <code>14rem</code> for its badges.</li>
                 <li>Avoid <code>:has()</code> selectors of your own that depend on the options, such as <code>select:has(option:checked)</code>. Browsers re-check them for every option that changes, which turns Select all on a long list into seconds of work, in Firefox especially.</li>
+                <li>In Firefox, which has no <code>appearance: base-select</code>, a multiple select is a list box underneath: its options are hidden, and screen readers call it a list box. A letter, Home, End or a page key on it selects one option in place, as in Chrome. The <a href="https://github.com/peter-petkov/platypicker#without-base-select-firefox">README</a> has the details.</li>
             </ul>
         </section>
 
