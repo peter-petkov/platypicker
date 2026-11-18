@@ -47,18 +47,21 @@
             <p>Lists</p>
             <a href="#long-lists">Long lists</a>
             <a href="#live-changes">Live changes</a>
-            <a href="#phones">On phones</a>
             <p>Styling</p>
             <a href="#theming">Theming</a>
             <a href="#class-plugs">Class plugs</a>
             <a href="#skins">Skins</a>
-            <p>More</p>
+            <p>Platforms</p>
+            <a href="#phones">On phones</a>
             <a href="#localization">Localization</a>
-            <a href="#benchmark">Benchmark</a>
             <a href="#browser-support">Browser support</a>
-            <a href="#whats-new">What's new</a>
+            <p>Tools</p>
             <a href="#reference">Reference</a>
             <a href="#playground">Playground</a>
+            <a href="#benchmark">Benchmark</a>
+            <p>Project</p>
+            <a href="#whats-new">What's new</a>
+            <a href="#about">About</a>
         </nav>
     </aside>
 
@@ -256,39 +259,6 @@
             </div>
         </section>
 
-        <section id="phones">
-            <h2>On phones</h2>
-            <p>On a phone the picker opens as a sheet along the bottom of the screen, with the same search, controls and list, laid out for touch. This one is a sheet everywhere, so you can try it here: <code>layout="sheet"</code>.</p>
-            <div class="example">
-                <template>
-                    <platy-picker layout="sheet" search controls placeholder="Pick some food">
-                        <select name="food" multiple size="1" aria-label="Food" data-fill="foods"></select>
-                    </platy-picker>
-                </template>
-            </div>
-            <ul>
-                <li>It opens at a little over half the screen. Drag its handle or heading up or down, or pull the list down from the top; let go, it settles at half or full height, or closes if it's low enough, with a light tick on Android. On a phone on its side it opens at full height, narrower and centred.</li>
-                <li>The select's label names it, with how many options are selected underneath. None and All sit either side.</li>
-                <li>Opening leaves the search box alone, so the keyboard stays down. Tap the search box and the sheet grows to full height above the keyboard, with Cancel beside it. Picking keeps the keyboard up; scrolling the list or Cancel puts it away, and the sheet goes back to its height.</li>
-                <li>A tap on the dimmed page only closes the sheet, so nothing under it reacts. On Android, Back closes it too.</li>
-            </ul>
-            <p><code>layout="auto"</code>, the default, opens a sheet where <code>PlatyPicker.sheetMedia</code> matches, a touch screen the size of a phone either way up, checked each time a picker opens. <code>layout="popover"</code> never opens one. The sheet's look has <a href="#theming">variables of its own</a>.</p>
-            <script type="text/plain" data-code="JS">
-                PlatyPicker.sheetMedia = "(pointer: coarse) and ((max-width: 640px) or (max-height: 500px))"; // the default
-            </script>
-            <p><code>layout="native"</code> leaves the select to the browser instead, on every device: its own picker opens, without search, controls or subtext, and a multiple select shows no badges. It shows only the options in the select, so <code>loadmore</code> never fires there: load them all up front.</p>
-            <div class="example">
-                <template>
-                    <platy-picker layout="native">
-                        <select name="food" aria-label="Food" data-fill="foods"></select>
-                    </platy-picker>
-                    <platy-picker layout="native">
-                        <select name="plants" multiple size="1" aria-label="Plants" data-fill="plants" data-pick="0,1"></select>
-                    </platy-picker>
-                </template>
-            </div>
-        </section>
-
         <section id="theming">
             <h2>Theming</h2>
             <p>The stylesheet draws a neutral look meant to sit well in most pages, in light and dark. Change it with <code>--platypicker-*</code> variables, set on <code>platy-picker</code> or any ancestor. Move the controls to try a few; the CSS tab follows.</p>
@@ -416,6 +386,39 @@
             <div data-skin-list></div>
         </section>
 
+        <section id="phones">
+            <h2>On phones</h2>
+            <p>On a phone the picker opens as a sheet along the bottom of the screen, with the same search, controls and list, laid out for touch. This one is a sheet everywhere, so you can try it here: <code>layout="sheet"</code>.</p>
+            <div class="example">
+                <template>
+                    <platy-picker layout="sheet" search controls placeholder="Pick some food">
+                        <select name="food" multiple size="1" aria-label="Food" data-fill="foods"></select>
+                    </platy-picker>
+                </template>
+            </div>
+            <ul>
+                <li>It opens at a little over half the screen. Drag its handle or heading up or down, or pull the list down from the top; let go, it settles at half or full height, or closes if it's low enough, with a light tick on Android. On a phone on its side it opens at full height, narrower and centred.</li>
+                <li>The select's label names it, with how many options are selected underneath. None and All sit either side.</li>
+                <li>Opening leaves the search box alone, so the keyboard stays down. Tap the search box and the sheet grows to full height above the keyboard, with Cancel beside it. Picking keeps the keyboard up; scrolling the list or Cancel puts it away, and the sheet goes back to its height.</li>
+                <li>A tap on the dimmed page only closes the sheet, so nothing under it reacts. On Android, Back closes it too.</li>
+            </ul>
+            <p><code>layout="auto"</code>, the default, opens a sheet where <code>PlatyPicker.sheetMedia</code> matches, a touch screen the size of a phone either way up, checked each time a picker opens. <code>layout="popover"</code> never opens one. The sheet's look has <a href="#theming">variables of its own</a>.</p>
+            <script type="text/plain" data-code="JS">
+                PlatyPicker.sheetMedia = "(pointer: coarse) and ((max-width: 640px) or (max-height: 500px))"; // the default
+            </script>
+            <p><code>layout="native"</code> leaves the select to the browser instead, on every device: its own picker opens, without search, controls or subtext, and a multiple select shows no badges. It shows only the options in the select, so <code>loadmore</code> never fires there: load them all up front.</p>
+            <div class="example">
+                <template>
+                    <platy-picker layout="native">
+                        <select name="food" aria-label="Food" data-fill="foods"></select>
+                    </platy-picker>
+                    <platy-picker layout="native">
+                        <select name="plants" multiple size="1" aria-label="Plants" data-fill="plants" data-pick="0,1"></select>
+                    </platy-picker>
+                </template>
+            </div>
+        </section>
+
         <section id="localization">
             <h2>Localization</h2>
             <p>Each picker speaks the language of its nearest <code>lang</code> attribute. Platypicker's translation of that language loads the first time a picker needs it, so an English page loads none. Search ignores case and accents the way the language does: try "kase" in the German picker.</p>
@@ -482,47 +485,6 @@ PlatyPicker.languages.pl = {
             </div>
         </section>
 
-        <section id="benchmark">
-            <h2>Benchmark</h2>
-            <p>Builds a car list, then times open, search and pick. Each action is timed up to the second frame after it, and the median of 3 runs is shown. Build is the time to the first rows, and Rendered the time until the list stops rendering on its own. Later rows are shown as you scroll, so the two are the same now; they differ for earlier versions, which went on to render the whole list in the background. Runs stack so you can compare before and after a change. A million options take a while to build, and the page may stop responding for some seconds while they do.</p>
-            <div class="stage stage-column">
-                <div class="toolbar">
-                    <platy-picker>
-                        <select id="benchmark-count" aria-label="Number of options">
-                            <option value="1000">1,000 options</option>
-                            <option value="5000">5,000 options</option>
-                            <option value="10000" selected>10,000 options</option>
-                            <option value="25000">25,000 options</option>
-                            <option value="100000">100,000 options</option>
-                            <option value="1000000">1,000,000 options</option>
-                        </select>
-                    </platy-picker>
-                    <label class="check"><input type="checkbox" id="benchmark-multiple">Multiple</label>
-                    <label class="check"><input type="checkbox" id="benchmark-grouped">Group by make</label>
-                    <button type="button" id="benchmark-run" class="button">Run benchmark</button>
-                </div>
-                <div id="benchmark-host"></div>
-            </div>
-            <div class="table-scroll">
-                <table class="table">
-                    <thead>
-                    <tr>
-                        <th>Options</th>
-                        <th>Mode</th>
-                        <th>Build</th>
-                        <th>Rendered</th>
-                        <th>Open</th>
-                        <th>Search "an"</th>
-                        <th>Pick</th>
-                        <th>Select all</th>
-                        <th>Select none</th>
-                        <th>Items in DOM</th>
-                    </tr>
-                    </thead>
-                    <tbody id="benchmark-results"></tbody>
-                </table>
-            </div>
-        </section>
         <section id="browser-support">
             <h2>Browser support</h2>
             <p>Platypicker needs anchor positioning (with <code>anchor-scope</code>) and the popover attribute. It uses <code>appearance: base-select</code> where the browser has it, and works without it.</p>
@@ -541,92 +503,6 @@ PlatyPicker.languages.pl = {
                 <li>Android's Back closes the <a href="#phones">sheet</a> where there's a <code>CloseWatcher</code>, in Chrome and Edge. Firefox can't keep a closing popover on screen to slide away yet, so the sheet slides down first and then closes.</li>
                 <li>In Firefox, which has no <code>appearance: base-select</code>, a multiple select is a list box underneath: its options aren't laid out, which keeps a long list fast, so screen readers hear them only in the popover. A letter, Home, End or a page key on it selects one option in place, as in Chrome. The <a href="https://github.com/peter-petkov/platypicker#without-base-select-firefox">README</a> has the details.</li>
             </ul>
-        </section>
-
-        <section id="whats-new">
-            <h2>What's new</h2>
-            <p>The highlights of each major version. The <a href="https://github.com/peter-petkov/platypicker/blob/main/CHANGELOG.md">changelog</a> has the full list.</p>
-
-            <h3>2.0</h3>
-            <p>Platypicker 2.0 drops the Bootstrap dependency in favour of a look of its own, and adds framework skins, batched rendering for long lists, a bottom sheet on phones, and localization.</p>
-            <div class="features">
-                <article class="feature">
-                    <div class="feature-media">
-                        <img class="shot-light" src="./whats-new/2.0/look-light.webp" width="1040" height="680" loading="lazy" alt="An open picker searching cities for “an”, with the matches highlighted">
-                        <img class="shot-dark" src="./whats-new/2.0/look-dark.webp" width="1040" height="680" loading="lazy" alt="An open picker searching cities for “an”, with the matches highlighted, in dark mode">
-                    </div>
-                    <div class="feature-text">
-                        <h4>Built-in look and theming</h4>
-                        <p>The stylesheet now draws a neutral look of its own, in light and dark, following the page's <code>color-scheme</code>. Colors, radii and shadows are <a href="#theming"><code>--platypicker-*</code> custom properties</a>, and the rules have the specificity of a single class, so your own classes on the <code>&lt;select&gt;</code> take precedence.</p>
-                    </div>
-                </article>
-                <article class="feature">
-                    <div class="feature-media">
-                        <video class="shot-light" src="./whats-new/2.0/skins-light.mp4" poster="./whats-new/2.0/skins-light.webp" width="1040" height="680" muted loop playsinline preload="none" aria-label="The same picker in the base look, Bootstrap and Tailwind"></video>
-                        <video class="shot-dark" src="./whats-new/2.0/skins-dark.mp4" poster="./whats-new/2.0/skins-dark.webp" width="1040" height="680" muted loop playsinline preload="none" aria-label="The same picker in the base look, Bootstrap and Tailwind, in dark mode"></video>
-                    </div>
-                    <div class="feature-text">
-                        <h4>Framework skins</h4>
-                        <p><a href="#skins">Skins</a> fit the picker into a CSS framework. The Bootstrap skin dresses it in Bootstrap's own classes, so sizes, validation and <code>data-bs-theme</code> work as on any form, and the Tailwind skin paints the base look with Tailwind 4's theme variables. Import a skin before <code>platypicker</code>, or add classes of your own to each part through <a href="#class-plugs">class plugs</a>.</p>
-                    </div>
-                </article>
-                <article class="feature">
-                    <div class="feature-media">
-                        <video class="shot-light" src="./whats-new/2.0/badges-light.mp4" poster="./whats-new/2.0/badges-light.webp" width="1040" height="680" muted loop playsinline preload="none" aria-label="Picking foods in a multiple select, which shows them as badges"></video>
-                        <video class="shot-dark" src="./whats-new/2.0/badges-dark.mp4" poster="./whats-new/2.0/badges-dark.webp" width="1040" height="680" muted loop playsinline preload="none" aria-label="Picking foods in a multiple select, which shows them as badges, in dark mode"></video>
-                    </div>
-                    <div class="feature-text">
-                        <h4>Badges for multiple selects</h4>
-                        <p>A closed <a href="#multiple"><code>&lt;select multiple size="1"&gt;</code></a> shows its selected options as badges on one line, then a +N count of those that don't fit. Each badge has a &times; to remove it, and <code>placeholder</code> sets the text shown while nothing is selected. The select stays underneath, so focus, keys and screen readers work on it as before.</p>
-                    </div>
-                </article>
-                <article class="feature">
-                    <div class="feature-media">
-                        <video class="shot-light" src="./whats-new/2.0/long-light.mp4" poster="./whats-new/2.0/long-light.webp" width="1040" height="680" muted loop playsinline preload="none" aria-label="Scrolling and searching 100,000 cars"></video>
-                        <video class="shot-dark" src="./whats-new/2.0/long-dark.mp4" poster="./whats-new/2.0/long-dark.webp" width="1040" height="680" muted loop playsinline preload="none" aria-label="Scrolling and searching 100,000 cars, in dark mode"></video>
-                    </div>
-                    <div class="feature-text">
-                        <h4>Batching</h4>
-                        <p><a href="#long-lists">Long lists</a> render <code>batch-size</code> rows at a time (50 by default) and grow as you scroll, while search, select all and type-ahead still cover every option. With <code>loading</code> and the <code>loadmore</code> event, options can come from a server a page at a time, and <code>counter</code> shows how far through the list you are.</p>
-                    </div>
-                </article>
-                <article class="feature">
-                    <div class="feature-media tall">
-                        <video class="shot-light" src="./whats-new/2.0/phone-light.mp4" poster="./whats-new/2.0/phone-light.webp" width="520" height="1000" muted loop playsinline preload="none" aria-label="On a phone, the picker opens as a sheet that is dragged to full height"></video>
-                        <video class="shot-dark" src="./whats-new/2.0/phone-dark.mp4" poster="./whats-new/2.0/phone-dark.webp" width="520" height="1000" muted loop playsinline preload="none" aria-label="On a phone, the picker opens as a sheet that is dragged to full height, in dark mode"></video>
-                    </div>
-                    <div class="feature-text">
-                        <h4>Mobile support</h4>
-                        <p>With the default <code>layout="auto"</code>, pickers open as a <a href="#phones">bottom sheet</a> on phone-sized touch screens. The sheet drags between half and full height, makes room for the on-screen keyboard while searching, and closes with Back on Android. <code>layout="native"</code> leaves opening to the browser's own picker instead.</p>
-                    </div>
-                </article>
-                <article class="feature">
-                    <div class="feature-media">
-                        <video class="shot-light" src="./whats-new/2.0/languages-light.mp4" poster="./whats-new/2.0/languages-light.webp" width="1040" height="680" muted loop playsinline preload="none" aria-label="The same picker in German, Japanese and Arabic"></video>
-                        <video class="shot-dark" src="./whats-new/2.0/languages-dark.mp4" poster="./whats-new/2.0/languages-dark.webp" width="1040" height="680" muted loop playsinline preload="none" aria-label="The same picker in German, Japanese and Arabic, in dark mode"></video>
-                    </div>
-                    <div class="feature-text">
-                        <h4>Localization</h4>
-                        <p>Pickers take their texts from the nearest <code>lang</code> attribute, with <a href="#localization">22 translations</a> loaded on demand. <code>PlatyPicker.languages</code> overrides any text per language, plural forms follow <code>Intl.PluralRules</code>, search ignores case and accents, and <code>dir="rtl"</code> mirrors the layout.</p>
-                    </div>
-                </article>
-            </div>
-            <h4>Also in this release</h4>
-            <ul>
-                <li><strong>Accessibility:</strong> dialog and listbox semantics, the list as a single Tab stop, Home, End and Page keys, and support for forced colors.</li>
-                <li><strong>Firefox:</strong> works without flags. Where <code>appearance: base-select</code> is missing, the picker opens its own popover from an ordinary select.</li>
-                <li><strong>Shadow roots:</strong> pickers work inside them.</li>
-                <li><strong><a href="#live-changes">Live changes</a>:</strong> edits to the options update only the rows they affect, so focus and scroll position survive.</li>
-            </ul>
-            <p>Coming from 1.x? Bootstrap's classes inside the picker became <code>pp-*</code> ones, and the text attributes gave way to the picker's language. <a href="https://github.com/peter-petkov/platypicker#upgrading-from-1x">Upgrading from 1.x</a> lists every change.</p>
-
-            <details class="reference">
-                <summary>Earlier versions</summary>
-                <h3>1.1</h3>
-                <p>Platypicker became the <code>&lt;platy-picker&gt;</code> element, wrapped around a select rather than switched on by <code>data-toggle</code>, with reactive <code>search</code> and <code>controls</code> attributes, skeleton rows, keyboard navigation, <code>setValue()</code> and <code>:state(open)</code>. It still drew its popover with Bootstrap 5.</p>
-                <h3>1.0</h3>
-                <p>The first releases on npm: a class that turned a <code>&lt;select data-toggle="platypicker"&gt;</code> into a Bootstrap 5 dropdown, with search, select all / none, option groups, subtexts and type-ahead.</p>
-            </details>
         </section>
 
         <section id="reference">
@@ -790,6 +666,149 @@ PlatyPicker.languages.pl = {
                     <ol class="log" aria-label="Events" aria-live="polite"></ol>
                 </div>
             </div>
+        </section>
+
+        <section id="benchmark">
+            <h2>Benchmark</h2>
+            <p>Builds a car list, then times open, search and pick. Each action is timed up to the second frame after it, and the median of 3 runs is shown. Build is the time to the first rows, and Rendered the time until the list stops rendering on its own. Later rows are shown as you scroll, so the two are the same now; they differ for earlier versions, which went on to render the whole list in the background. Runs stack so you can compare before and after a change. A million options take a while to build, and the page may stop responding for some seconds while they do.</p>
+            <div class="stage stage-column">
+                <div class="toolbar">
+                    <platy-picker>
+                        <select id="benchmark-count" aria-label="Number of options">
+                            <option value="1000">1,000 options</option>
+                            <option value="5000">5,000 options</option>
+                            <option value="10000" selected>10,000 options</option>
+                            <option value="25000">25,000 options</option>
+                            <option value="100000">100,000 options</option>
+                            <option value="1000000">1,000,000 options</option>
+                        </select>
+                    </platy-picker>
+                    <label class="check"><input type="checkbox" id="benchmark-multiple">Multiple</label>
+                    <label class="check"><input type="checkbox" id="benchmark-grouped">Group by make</label>
+                    <button type="button" id="benchmark-run" class="button">Run benchmark</button>
+                </div>
+                <div id="benchmark-host"></div>
+            </div>
+            <div class="table-scroll">
+                <table class="table">
+                    <thead>
+                    <tr>
+                        <th>Options</th>
+                        <th>Mode</th>
+                        <th>Build</th>
+                        <th>Rendered</th>
+                        <th>Open</th>
+                        <th>Search "an"</th>
+                        <th>Pick</th>
+                        <th>Select all</th>
+                        <th>Select none</th>
+                        <th>Items in DOM</th>
+                    </tr>
+                    </thead>
+                    <tbody id="benchmark-results"></tbody>
+                </table>
+            </div>
+        </section>
+
+        <section id="whats-new">
+            <h2>What's new</h2>
+            <p>The highlights of each major version. The <a href="https://github.com/peter-petkov/platypicker/blob/main/CHANGELOG.md">changelog</a> has the full list.</p>
+
+            <h3>2.0</h3>
+            <p>Platypicker 2.0 drops the Bootstrap dependency in favour of a look of its own, and adds framework skins, batched rendering for long lists, a bottom sheet on phones, and localization.</p>
+            <div class="features">
+                <article class="feature">
+                    <div class="feature-media">
+                        <img class="shot-light" src="./whats-new/2.0/look-light.webp" width="1040" height="680" loading="lazy" alt="An open picker searching cities for “an”, with the matches highlighted">
+                        <img class="shot-dark" src="./whats-new/2.0/look-dark.webp" width="1040" height="680" loading="lazy" alt="An open picker searching cities for “an”, with the matches highlighted, in dark mode">
+                    </div>
+                    <div class="feature-text">
+                        <h4>Built-in look and theming</h4>
+                        <p>The stylesheet now draws a neutral look of its own, in light and dark, following the page's <code>color-scheme</code>. Colors, radii and shadows are <a href="#theming"><code>--platypicker-*</code> custom properties</a>, and the rules have the specificity of a single class, so your own classes on the <code>&lt;select&gt;</code> take precedence.</p>
+                    </div>
+                </article>
+                <article class="feature">
+                    <div class="feature-media">
+                        <video class="shot-light" src="./whats-new/2.0/skins-light.mp4" poster="./whats-new/2.0/skins-light.webp" width="1040" height="680" muted loop playsinline preload="none" aria-label="The same picker in the base look, Bootstrap and Tailwind"></video>
+                        <video class="shot-dark" src="./whats-new/2.0/skins-dark.mp4" poster="./whats-new/2.0/skins-dark.webp" width="1040" height="680" muted loop playsinline preload="none" aria-label="The same picker in the base look, Bootstrap and Tailwind, in dark mode"></video>
+                    </div>
+                    <div class="feature-text">
+                        <h4>Framework skins</h4>
+                        <p><a href="#skins">Skins</a> fit the picker into a CSS framework. The Bootstrap skin dresses it in Bootstrap's own classes, so sizes, validation and <code>data-bs-theme</code> work as on any form, and the Tailwind skin paints the base look with Tailwind 4's theme variables. Import a skin before <code>platypicker</code>, or add classes of your own to each part through <a href="#class-plugs">class plugs</a>.</p>
+                    </div>
+                </article>
+                <article class="feature">
+                    <div class="feature-media">
+                        <video class="shot-light" src="./whats-new/2.0/badges-light.mp4" poster="./whats-new/2.0/badges-light.webp" width="1040" height="680" muted loop playsinline preload="none" aria-label="Picking foods in a multiple select, which shows them as badges"></video>
+                        <video class="shot-dark" src="./whats-new/2.0/badges-dark.mp4" poster="./whats-new/2.0/badges-dark.webp" width="1040" height="680" muted loop playsinline preload="none" aria-label="Picking foods in a multiple select, which shows them as badges, in dark mode"></video>
+                    </div>
+                    <div class="feature-text">
+                        <h4>Badges for multiple selects</h4>
+                        <p>A closed <a href="#multiple"><code>&lt;select multiple size="1"&gt;</code></a> shows its selected options as badges on one line, then a +N count of those that don't fit. Each badge has a &times; to remove it, and <code>placeholder</code> sets the text shown while nothing is selected. The select stays underneath, so focus, keys and screen readers work on it as before.</p>
+                    </div>
+                </article>
+                <article class="feature">
+                    <div class="feature-media">
+                        <video class="shot-light" src="./whats-new/2.0/long-light.mp4" poster="./whats-new/2.0/long-light.webp" width="1040" height="680" muted loop playsinline preload="none" aria-label="Scrolling and searching 100,000 cars"></video>
+                        <video class="shot-dark" src="./whats-new/2.0/long-dark.mp4" poster="./whats-new/2.0/long-dark.webp" width="1040" height="680" muted loop playsinline preload="none" aria-label="Scrolling and searching 100,000 cars, in dark mode"></video>
+                    </div>
+                    <div class="feature-text">
+                        <h4>Batching</h4>
+                        <p><a href="#long-lists">Long lists</a> render <code>batch-size</code> rows at a time (50 by default) and grow as you scroll, while search, select all and type-ahead still cover every option. With <code>loading</code> and the <code>loadmore</code> event, options can come from a server a page at a time, and <code>counter</code> shows how far through the list you are.</p>
+                    </div>
+                </article>
+                <article class="feature">
+                    <div class="feature-media tall">
+                        <video class="shot-light" src="./whats-new/2.0/phone-light.mp4" poster="./whats-new/2.0/phone-light.webp" width="520" height="1000" muted loop playsinline preload="none" aria-label="On a phone, the picker opens as a sheet that is dragged to full height"></video>
+                        <video class="shot-dark" src="./whats-new/2.0/phone-dark.mp4" poster="./whats-new/2.0/phone-dark.webp" width="520" height="1000" muted loop playsinline preload="none" aria-label="On a phone, the picker opens as a sheet that is dragged to full height, in dark mode"></video>
+                    </div>
+                    <div class="feature-text">
+                        <h4>Mobile support</h4>
+                        <p>With the default <code>layout="auto"</code>, pickers open as a <a href="#phones">bottom sheet</a> on phone-sized touch screens. The sheet drags between half and full height, makes room for the on-screen keyboard while searching, and closes with Back on Android. <code>layout="native"</code> leaves opening to the browser's own picker instead.</p>
+                    </div>
+                </article>
+                <article class="feature">
+                    <div class="feature-media">
+                        <video class="shot-light" src="./whats-new/2.0/languages-light.mp4" poster="./whats-new/2.0/languages-light.webp" width="1040" height="680" muted loop playsinline preload="none" aria-label="The same picker in German, Japanese and Arabic"></video>
+                        <video class="shot-dark" src="./whats-new/2.0/languages-dark.mp4" poster="./whats-new/2.0/languages-dark.webp" width="1040" height="680" muted loop playsinline preload="none" aria-label="The same picker in German, Japanese and Arabic, in dark mode"></video>
+                    </div>
+                    <div class="feature-text">
+                        <h4>Localization</h4>
+                        <p>Pickers take their texts from the nearest <code>lang</code> attribute, with <a href="#localization">22 translations</a> loaded on demand. <code>PlatyPicker.languages</code> overrides any text per language, plural forms follow <code>Intl.PluralRules</code>, search ignores case and accents, and <code>dir="rtl"</code> mirrors the layout.</p>
+                    </div>
+                </article>
+            </div>
+            <h4>Also in this release</h4>
+            <ul>
+                <li><strong>Accessibility:</strong> dialog and listbox semantics, the list as a single Tab stop, Home, End and Page keys, and support for forced colors.</li>
+                <li><strong>Firefox:</strong> works without flags. Where <code>appearance: base-select</code> is missing, the picker opens its own popover from an ordinary select.</li>
+                <li><strong>Shadow roots:</strong> pickers work inside them.</li>
+                <li><strong><a href="#live-changes">Live changes</a>:</strong> edits to the options update only the rows they affect, so focus and scroll position survive.</li>
+            </ul>
+            <p>Coming from 1.x? Bootstrap's classes inside the picker became <code>pp-*</code> ones, and the text attributes gave way to the picker's language. <a href="https://github.com/peter-petkov/platypicker#upgrading-from-1x">Upgrading from 1.x</a> lists every change.</p>
+
+            <details class="reference">
+                <summary>Earlier versions</summary>
+                <h3>1.1</h3>
+                <p>Platypicker became the <code>&lt;platy-picker&gt;</code> element, wrapped around a select rather than switched on by <code>data-toggle</code>, with reactive <code>search</code> and <code>controls</code> attributes, skeleton rows, keyboard navigation, <code>setValue()</code> and <code>:state(open)</code>. It still drew its popover with Bootstrap 5.</p>
+                <h3>1.0</h3>
+                <p>The first releases on npm: a class that turned a <code>&lt;select data-toggle="platypicker"&gt;</code> into a Bootstrap 5 dropdown, with search, select all / none, option groups, subtexts and type-ahead.</p>
+            </details>
+        </section>
+
+        <section id="about">
+            <h2>About</h2>
+            <p>Platypicker is an open-source web component that enhances native selects, with no dependencies. It's developed on <a href="https://github.com/peter-petkov/platypicker">GitHub</a> and published to <a href="https://www.npmjs.com/package/platypicker">npm</a>. Bug reports and feature requests go to <a href="https://github.com/peter-petkov/platypicker/issues">GitHub issues</a>, and pull requests are welcome, including corrections to the translations.</p>
+
+            <h3>License</h3>
+            <p>Platypicker is released under the <a href="https://github.com/peter-petkov/platypicker/blob/main/LICENSE">MIT License</a>. You can use, copy, modify and distribute it, in commercial projects too, as long as the copyright notice and the license text come with it. It comes without warranty of any kind.</p>
+
+            <h3>AI usage</h3>
+            <p>Platypicker started out as a small helper project years ago, written by hand. With 2.0, while much of the code has been written with the help of Claude, the engineering direction, code review, testing and feature ideas remain my own.</p>
+            <p>This component was created in my spare time and is primarily used by me in my projects, but I'm happy to share it with the world. While I very much enjoy coding by hand and getting in that flow state, I have to admit that time constraints would make much of it impossible for me to maintain.</p>
+
+            <h3>Author</h3>
+            <p>Made by Peter Petkov (<a href="https://github.com/peter-petkov">@peter-petkov</a> on GitHub).</p>
         </section>
     </main>
 </div>
