@@ -1,8 +1,9 @@
 /*
  * Platypicker
  *
- * Wraps a native <select> in a searchable popover. Needs a browser with `appearance: base-select`, anchor
- * positioning and CSS nesting. Without base-select support everything below is skipped and the plain select remains.
+ * Wraps a native <select> in a searchable popover. Needs a browser with anchor positioning, the popover attribute
+ * and CSS nesting. Without them everything below is skipped and the plain select remains. `appearance: base-select`
+ * is used where there is one; elsewhere the select is `appearance: none` and the script keeps its own dropdown shut.
  *
  * The file has two parts:
  *   - Structure: what makes the picker work (positioning, the hidden native picker). Don't override it.
@@ -35,7 +36,7 @@
  *   --platypicker-shadow                the popover's shadow
  *   --platypicker-max-height            the popover's height limit
  */
-@supports (appearance: base-select) and selector(::picker(select)) {
+@supports (anchor-name: --platypicker) and selector(:popover-open) {
     /* Must live at the top level, not nested inside platy-picker. */
     @position-try --platypicker-above {
         top: auto;
@@ -65,15 +66,21 @@
             display: none !important;
         }
 
-        /* The select. It is styled with base-select, but its native picker stays hidden: the popover replaces it. */
+        /* The select. It is styled freely, but its own dropdown never shows: the popover replaces it. With
+           base-select the browser keeps that dropdown hidden; elsewhere the select is a plain appearance: none one,
+           and the script keeps its dropdown shut. */
         > select.pp-select {
             anchor-name: --platypicker;
             white-space: nowrap;
 
             &:not([multiple]) {
                 min-width: max-content;
-                appearance: base-select !important;
-                column-gap: 0; /* base-select's gap is for the picker icon, which is hidden below. */
+                appearance: none !important;
+
+                @supports (appearance: base-select) {
+                    appearance: base-select !important;
+                    column-gap: 0; /* base-select's gap is for the picker icon, which is hidden below. */
+                }
             }
 
             /* Keeps one line of height when nothing is selected, whatever the select's padding. Not

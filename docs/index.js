@@ -585,7 +585,7 @@ function setupTheme() {
 
 // The same test the stylesheet uses before it styles anything.
 function setupSupportNotice() {
-    const supported = CSS.supports("appearance", "base-select") && CSS.supports("selector(::picker(select))");
+    const supported = CSS.supports("anchor-name", "--platypicker") && CSS.supports("selector(:popover-open)");
 
     document.getElementById("no-support").hidden = supported;
     document.getElementById("benchmark-run").disabled = !supported;
@@ -760,9 +760,11 @@ async function setupBatchCount() {
     const picker = (await output.closest(".example").stageReady).querySelector("platy-picker");
     const select = picker.querySelector("select");
 
-    // The list only exists once the element has been defined.
+    // The list only exists once the element has been defined, and in a browser that supports it.
     customElements.whenDefined("platy-picker").then(() => {
         const list = picker.querySelector(".pp-list");
+        if (!list) return;
+
         const update = () => output.textContent =
             `${list.querySelectorAll(".pp-item").length.toLocaleString()} of ${select.options.length.toLocaleString()} options rendered`;
 

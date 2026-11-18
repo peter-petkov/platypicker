@@ -51,7 +51,7 @@ for (const [part, value] of Object.entries(plugs)) {
 // padding and draws its chevron, which Bootstrap leaves off multiple selects. They're one notch above Platypicker's
 // layout rules, which they adjust.
 const css = `
-@supports (appearance: base-select) and selector(::picker(select)) {
+@supports (anchor-name: --platypicker) and selector(:popover-open) {
     platy-picker.pp-skin-bootstrap {
         --_pp-skin-accent-color: var(--bs-link-color);
         --_pp-skin-highlight-bg: var(--bs-highlight-bg);

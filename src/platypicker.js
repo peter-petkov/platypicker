@@ -66,7 +66,10 @@ export default class PlatyPicker extends HTMLElement {
         return PlatyPicker.#registry.get(select);
     }
 
-    static #isSupported = CSS.supports("appearance", "base-select");
+    // What the picker needs: anchor positioning and the popover attribute, as platypicker.css checks too. Browsers
+    // without them keep the plain select. base-select is used where there is one (see #wireSelect).
+    static #isSupported = CSS.supports("anchor-name", "--platypicker") && CSS.supports("selector(:popover-open)");
+    static #hasBaseSelect = CSS.supports("appearance", "base-select");
 
     static observedAttributes = [
         "search",
@@ -450,9 +453,22 @@ export default class PlatyPicker extends HTMLElement {
         this.#select.addEventListener("click", () => this.#togglePopover(), { signal });
 
         this.#select.addEventListener("keydown", e => {
-            if (["Enter", "Space", "ArrowDown", "ArrowUp"].includes(e.code))
-                this.#togglePopover(true);
+            if (!["Enter", "Space", "ArrowDown", "ArrowUp", "F4"].includes(e.code)) return;
+
+            // Without base-select these would open the select's own dropdown, or change its value in place.
+            if (!PlatyPicker.#hasBaseSelect) e.preventDefault();
+            this.#togglePopover(true);
         }, { capture: true, signal });
+
+        // Without base-select a press opens the select's own dropdown, so it's stopped, and the select focused by
+        // hand, as stopping the press keeps focus from moving. The click that follows opens the popover.
+        if (!PlatyPicker.#hasBaseSelect) {
+            this.#select.addEventListener("mousedown", e => {
+                if (e.button !== 0) return;
+                e.preventDefault();
+                this.#select.focus({ preventScroll: true });
+            }, { signal });
+        }
 
         // The popover closes when focus leaves the picker, as by Tab past its end. Back to the select it stays open,
         // so that clicking the select toggles it rather than closing and reopening it. Focus going nowhere (another
