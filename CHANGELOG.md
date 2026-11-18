@@ -21,7 +21,8 @@ Platypicker 2 drops Bootstrap and brings a look of its own, renders long lists f
 - **Accessibility.** The popover is a dialog with a listbox, which screen readers announce as on a native select, with option positions, groups and disabled options. The list is one Tab stop, with Home, End, Page Up, Page Down and Alt+↑, and focus leaving closes the popover. It works in Windows High Contrast and other forced-color modes.
 - **Firefox support** without flags. Without `appearance: base-select`, the picker opens its own popover from an ordinary select.
 - **Shadow roots.** Pickers work inside them.
-- **Live changes** update only what changed, including an option's `disabled`, `hidden`, `label`, `title` and `data-subtext`, so focus and scroll position survive.- **Select all / none** are much faster on long lists, and show a spinner while they change 1,000 options or more.
+- **Live changes** update only what changed, including an option's `disabled`, `hidden`, `label`, `title` and `data-subtext`, so focus and scroll position survive.
+- **Select all / none** are much faster on long lists, and show a spinner while they change 1,000 options or more.
 - **Docs page** with live examples, every example in each skin, a benchmark, a reference and a playground.
 - `:state(sheet)` and `:state(native)`, beside `:state(open)`.
 - `PlatyPicker.get()`, `PlatyPicker.defaultBatchSize` and `PlatyPicker.sheetMedia`; the module's default export is now the element class.
