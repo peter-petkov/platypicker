@@ -139,8 +139,12 @@ export default class ListView {
         this.#search.setAttribute("aria-controls", this.#list.id);
         addClasses(this.#search, "search");
         this.#search.addEventListener("input", () => this.filter(this.#search.value), { signal });
+        // Esc only closes. A search box would also clear itself, without an input event, which left the list
+        // filtered by a search no longer shown. The search stays, as it does when the popover closes any other way.
         this.#search.addEventListener("keydown", e => {
-            if (e.code === "Escape") this.#actions.close();
+            if (e.code !== "Escape") return;
+            e.preventDefault();
+            this.#actions.close();
         }, { signal });
         form.append(this.#search);
 
