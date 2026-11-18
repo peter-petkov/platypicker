@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<!--
+The stage that capture.mjs photographs and films for the docs page's What's new section. Each scene is a picker in a
+window on a gradient, picked by ?scene=, in ?theme=light or dark. The skins and languages scenes are taken once per
+?skin= and ?lang=, which capture.mjs crossfades into a clip. The phone holds a frame of this page with &bare.
+-->
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>What's new stage</title>
+    <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
+    <link rel="stylesheet" href="../../src/platypicker.css">
+    <style>
+        :root {
+            color-scheme: light;
+            --accent: #0b7a75;
+            --window-bg: #fbfbfa;
+            --window-border: rgb(0 0 0 / 0.08);
+            --window-bar: #f1f0ec;
+            --dot: #d9d6cf;
+            --muted: #6b6964;
+            --line: #e6e4df;
+            --backdrop: radial-gradient(120% 90% at 0% 0%, #d6f0ec 0%, transparent 60%),
+                        radial-gradient(90% 90% at 100% 100%, #cfe6f5 0%, transparent 55%),
+                        linear-gradient(135deg, #eef7f5, #f6f4ef);
+        }
+
+        :root.dark {
+            color-scheme: dark;
+            --accent: #3cc2b7;
+            --window-bg: #161618;
+            --window-border: rgb(255 255 255 / 0.09);
+            --window-bar: #1d1d20;
+            --dot: #3a3a40;
+            --muted: #9a9aa2;
+            --line: #2c2c31;
+            --backdrop: radial-gradient(120% 90% at 0% 0%, #0f3b38 0%, transparent 60%),
+                        radial-gradient(90% 90% at 100% 100%, #14283d 0%, transparent 55%),
+                        linear-gradient(135deg, #0c1615, #121214);
+        }
+
+        *, ::before, ::after {
+            box-sizing: border-box;
+        }
+
+        html, body {
+            height: 100%;
+            margin: 0;
+        }
+
+        body {
+            display: grid;
+            place-items: center;
+            padding: 22px;
+            background: var(--backdrop);
+            color: light-dark(#1d1c1a, #ececee);
+            font: 15px/1.5 "InterVariable", "Inter", system-ui, sans-serif;
+            overflow: hidden;
+        }
+
+        /* A frame of this page: no backdrop, the picker fills it. */
+        .bare body {
+            display: block;
+            place-items: normal;
+            padding: 18px;
+            background: var(--window-bg);
+        }
+
+        .window {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            height: 100%;
+            border: 1px solid var(--window-border);
+            border-radius: 14px;
+            background: var(--window-bg);
+            box-shadow: 0 1px 2px rgb(0 0 0 / 0.06), 0 18px 50px -12px rgb(0 0 0 / 0.28);
+            overflow: hidden;
+        }
+
+        .window-bar {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            height: 34px;
+            padding: 0 14px;
+            background: var(--window-bar);
+            border-bottom: 1px solid var(--line);
+            color: var(--muted);
+            font-size: 12.5px;
+            font-weight: 500;
+
+            i {
+                width: 10px;
+                height: 10px;
+                border-radius: 50%;
+                background: var(--dot);
+            }
+
+            span {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                margin-inline-start: 8px;
+            }
+
+            img {
+                width: 14px;
+                height: 14px;
+            }
+        }
+
+        .window-body {
+            flex: 1;
+            padding: 20px 26px;
+            --platypicker-max-height: 150px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 6px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        select {
+            width: 100%;
+        }
+
+        .narrow {
+            max-width: 340px;
+            margin-inline: auto;
+        }
+
+        /* The phone: a frame of this page at a phone's size, scaled down into a bezel. */
+        .phone {
+            --scale: 0.65;
+            width: calc(320px * var(--scale) + 16px);
+            height: calc(693px * var(--scale) + 16px);
+            padding: 8px;
+            border-radius: 34px;
+            background: light-dark(#1d1c1a, #2a2a2e);
+            box-shadow: 0 0 0 1px rgb(255 255 255 / 0.06) inset, 0 18px 50px -12px rgb(0 0 0 / 0.45);
+
+            div {
+                width: 100%;
+                height: 100%;
+                border-radius: 26px;
+                overflow: hidden;
+            }
+
+            iframe {
+                width: 320px;
+                height: 693px;
+                border: 0;
+                transform: scale(var(--scale));
+                transform-origin: 0 0;
+            }
+        }
+
+        /* A page for the phone to show behind the sheet. */
+        .page {
+            h1 {
+                margin: 8px 0 4px;
+                font-size: 26px;
+                letter-spacing: -0.01em;
+            }
+
+            p {
+                margin: 0 0 22px;
+                color: var(--muted);
+            }
+
+            .field {
+                margin-bottom: 18px;
+
+                select {
+                    width: 100%;
+                }
+            }
+
+            .line {
+                height: 12px;
+                margin: 10px 0;
+                border-radius: 6px;
+                background: var(--line);
+            }
+
+            .button {
+                margin-top: 26px;
+                padding: 12px;
+                border-radius: 10px;
+                background: var(--accent);
+                color: light-dark(#fff, #0c1615);
+                font-weight: 600;
+                text-align: center;
+            }
+        }
+
+        .bare.page body {
+            padding: 52px 20px 20px;
+            font-size: 16px;
+        }
+    </style>
+    <script>
+        // Theme, bare and lang are set before anything draws, so a frame never shows the wrong one.
+        const params = new URLSearchParams(location.search);
+        const root = document.documentElement;
+        if (params.get("theme") === "dark") root.classList.add("dark");
+        if (params.has("bare")) root.classList.add("bare");
+        if (params.get("scene") === "phone-page") root.classList.add("page");
+        if (params.get("zoom")) root.style.zoom = params.get("zoom");
+        if (params.get("lang")) root.lang = params.get("lang");
+        if (params.get("lang") === "ar") root.dir = "rtl";
+        if (params.get("skin") === "bootstrap") {
+            root.dataset.bsTheme = params.get("theme") === "dark" ? "dark" : "light";
+            document.write('<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css">');
+        }
+    </script>
+</head>
+<body>
+<script type="module">
+    const params = new URLSearchParams(location.search);
+    const scene = params.get("scene") ?? "look";
+    const theme = params.get("theme") ?? "light";
+    const skin = params.get("skin");
+
+    const FOODS = ["🧀 Cheese", "🍞 Bread", "🍕 Pizza", "🍣 Sushi", "🌮 Taco", "🍔 Burger", "🍜 Ramen", "🥗 Salad",
+        "🥐 Croissant", "🥞 Pancakes", "🥟 Dumplings", "🍛 Curry"];
+    const CITIES = [["Tokyo", "Japan"], ["Paris", "France"], ["New York", "United States"], ["Cape Town", "South Africa"],
+        ["Sydney", "Australia"], ["Rio de Janeiro", "Brazil"], ["Cairo", "Egypt"], ["Mumbai", "India"],
+        ["Istanbul", "Turkey"], ["Mexico City", "Mexico"], ["Berlin", "Germany"], ["Toronto", "Canada"],
+        ["Seoul", "South Korea"], ["Buenos Aires", "Argentina"], ["Bangkok", "Thailand"], ["Lisbon", "Portugal"]];
+    const FRUITS = {
+        de: ["🍎 Apfel", "🍌 Banane", "🍒 Kirsche", "🍓 Erdbeere", "🍊 Orange", "🍐 Birne", "🍇 Traube", "🍑 Pfirsich"],
+        ja: ["🍎 りんご", "🍌 バナナ", "🍒 さくらんぼ", "🍓 いちご", "🍊 オレンジ", "🍐 なし", "🍇 ぶどう", "🍑 もも"],
+        ar: ["🍎 تفاح", "🍌 موز", "🍒 كرز", "🍓 فراولة", "🍊 برتقال", "🍐 كمثرى", "🍇 عنب", "🍑 خوخ"],
+    };
+    const LANGUAGE_NAMES = { de: "Deutsch", ja: "日本語", ar: "العربية" };
+    const FRUIT_LABELS = { de: "Obst", ja: "果物", ar: "فاكهة" };
+    const SKINS = {
+        base: ["Base", "../../platylogo.png"],
+        bootstrap: ["Bootstrap", "data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%237952b3'%3e%3cpath d='M6.375 7.125V4.658h1.78c.973 0 1.542.457 1.542 1.237 0 .802-.604 1.23-1.764 1.23zm0 3.762h1.898c1.184 0 1.81-.48 1.81-1.377 0-.885-.65-1.348-1.886-1.348H6.375z'/%3e%3cpath d='M4.002 0a4 4 0 0 0-4 4v8a4 4 0 0 0 4 4h8a4 4 0 0 0 4-4V4a4 4 0 0 0-4-4zm1.06 12V3.545h3.399c1.587 0 2.543.809 2.543 2.11 0 .884-.65 1.675-1.483 1.816v.1c1.143.117 1.904.931 1.904 2.033 0 1.488-1.084 2.396-2.888 2.396z'/%3e%3c/svg%3e"],
+        tailwind: ["Tailwind", "data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2338bdf8'%3e%3cpath d='M12 4.8c-3.2 0-5.2 1.6-6 4.8 1.2-1.6 2.6-2.2 4.2-1.8.913.228 1.565.89 2.288 1.624C13.666 10.618 15.027 12 18 12c3.2 0 5.2-1.6 6-4.8-1.2 1.6-2.6 2.2-4.2 1.8-.913-.228-1.565-.89-2.288-1.624C16.337 6.182 14.976 4.8 12 4.8zM6 12c-3.2 0-5.2 1.6-6 4.8 1.2-1.6 2.6-2.2 4.2-1.8.913.228 1.565.89 2.288 1.624 1.177 1.194 2.538 2.576 5.512 2.576 3.2 0 5.2-1.6 6-4.8-1.2 1.6-2.6 2.2-4.2 1.8-.913-.228-1.565-.89-2.288-1.624C10.337 13.382 8.976 12 6 12z'/%3e%3c/svg%3e"],
+    };
+
+    const options = (items, picked = []) => items.map((item, index) => {
+        const [label, subtext] = Array.isArray(item) ? item : [item];
+        return `<option${subtext ? ` data-subtext="${subtext}"` : ""}${picked.includes(index) ? " selected" : ""}>${label}</option>`;
+    }).join("");
+
+    // 100,000 cars, as on the docs page's long lists.
+    function cars(count) {
+        const makes = [["Toyota", ["Corolla", "Camry", "RAV4", "Yaris"]], ["Volkswagen", ["Golf", "Passat", "Tiguan", "Polo"]],
+            ["Ford", ["Focus", "Mustang", "Puma", "Kuga"]], ["Honda", ["Civic", "Accord", "Jazz", "CR-V"]],
+            ["Tesla", ["Model 3", "Model Y", "Model S"]], ["Volvo", ["XC40", "XC60", "V60"]]];
+        const colors = ["White", "Black", "Silver", "Blue", "Red", "Grey"];
+        const parts = [];
+        for (let i = 0; i < count; i++) {
+            const [make, models] = makes[i % makes.length];
+            const model = models[Math.floor(i / makes.length) % models.length];
+            const year = 2026 - Math.floor(i / 24) % 12;
+            const color = colors[Math.floor(i / 7) % colors.length];
+            parts.push(`<option value="${i}" data-subtext="${color}, ${((i * 37) % 180 + 5) * 1000} km">${year} ${make} ${model}</option>`);
+        }
+        return parts.join("");
+    }
+
+    const frame = (query, extra = "") => `<iframe src="stage.html?${query}&theme=${theme}&bare${extra}"></iframe>`;
+    const windowOf = (body, title = "", icon = "") => `<div class="window"><div class="window-bar"><i></i><i></i><i></i>${
+        title ? `<span>${icon ? `<img src="${icon}" alt="">` : ""}${title}</span>` : ""}</div><div class="window-body">${body}</div></div>`;
+
+    const scenes = {
+        look: () => windowOf(`<div class="narrow"><label for="s">City</label>
+            <platy-picker search><select id="s">${options(CITIES, [1])}</select></platy-picker></div>`),
+
+        skins: () => windowOf(`<div class="narrow"><label for="s">Food</label>
+            <platy-picker search controls><select id="s" multiple size="1">${options(FOODS, [0, 2, 3])}</select></platy-picker></div>`,
+            ...SKINS[skin ?? "base"]),
+
+        badges: () => windowOf(`<div class="narrow"><label for="s">Your order</label>
+            <platy-picker search controls placeholder="Pick some food"><select id="s" multiple size="1">${options(FOODS)}</select></platy-picker></div>`),
+
+        long: () => windowOf(`<div class="narrow"><label for="s">Car</label>
+            <platy-picker search counter><select id="s">${cars(100000)}</select></platy-picker></div>`),
+
+        phone: () => `<div class="phone"><div>${frame("scene=phone-page")}</div></div>`,
+
+        "phone-page": () => `<h1>Checkout</h1><p>Where should we deliver?</p>
+            <div class="field"><label for="s">City</label>
+            <platy-picker search layout="sheet"><select id="s">${options(CITIES, [1])}</select></platy-picker></div>
+            <div class="line" style="width: 80%"></div><div class="line" style="width: 60%"></div><div class="line" style="width: 70%"></div>
+            <div class="button">Continue</div>`,
+
+        languages: () => windowOf(`<div class="narrow"><label for="s">${FRUIT_LABELS[document.documentElement.lang]}</label>
+            <platy-picker search controls counter><select id="s" multiple size="1">${
+            options(FRUITS[document.documentElement.lang], [0, 3])}</select></platy-picker></div>`, LANGUAGE_NAMES[document.documentElement.lang]),
+    };
+
+    document.body.innerHTML = scenes[scene]();
+
+    // A skin is imported before platypicker, as in a project.
+    if (skin && skin !== "base") await import(`../../src/skins/${skin}.js`);
+    await import("../../src/platypicker.js");
+    await document.fonts.ready;
+    document.documentElement.dataset.ready = "";
+</script>
+</body>
+</html>
