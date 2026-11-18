@@ -169,6 +169,8 @@ export default class PlatyPicker extends HTMLElement {
         this.#sheet = new Sheet({
             ...this.#view.sheetParts,
             clearSearch: () => this.#view.clearSearch(),
+            // By a drag or Back. Escape may have closed it already, as Back's watcher sees Escape too.
+            close: () => this.#view.popover.matches(":popover-open") && this.#close(),
             signal: this.#abort.signal,
         });
 

@@ -140,15 +140,59 @@
             height: calc(var(--_pp-viewport, 100dvh) * .56);
             max-height: calc(var(--_pp-viewport, 100dvh) - 2.5rem);
             overflow: hidden;
-            transition: height .3s cubic-bezier(.2, .9, .25, 1), bottom .25s ease-out;
+
+            /* It slides up from below the screen as it opens, and back down as it closes. Closing, display and
+               overlay keep it on screen, in the top layer, until it's gone. Where overlay can't be transitioned
+               (Firefox, so far), it disappears at once instead. */
+            translate: 0 0;
+            transition:
+                height var(--_pp-height-duration, .3s) cubic-bezier(.2, .9, .25, 1),
+                bottom .25s ease-out,
+                translate .3s cubic-bezier(.2, .9, .25, 1),
+                display .3s allow-discrete,
+                overlay .3s allow-discrete;
+
+            @starting-style {
+                translate: 0 100%;
+            }
+
+            &:not(:popover-open) {
+                translate: 0 100%;
+            }
+
+            &::backdrop {
+                transition: opacity .3s, display .3s allow-discrete, overlay .3s allow-discrete;
+            }
 
             &[data-height="full"] {
                 height: calc(var(--_pp-viewport, 100dvh) - 2.5rem);
             }
 
+            /* While dragged, the sheet follows the pointer, at the height the script sets. It keeps that height as
+               it slides away, when it was dragged closed. */
+            &[data-dragging] {
+                --_pp-height-duration: 0s;
+                height: var(--_pp-drag-height);
+            }
+
             @media (prefers-reduced-motion: reduce) {
                 transition: none;
+
+                &::backdrop {
+                    transition: none;
+                }
             }
+        }
+
+        /* The dimmed page fades in and out with the sheet. */
+        @starting-style {
+            &:state(sheet) > .pp-menu:popover-open::backdrop {
+                opacity: 0;
+            }
+        }
+
+        &:state(sheet) > .pp-menu:not(:popover-open)::backdrop {
+            opacity: 0;
         }
 
         /* In the sheet only the list scrolls, between the bar and the counter, so nothing passes under the bar. Only
@@ -543,6 +587,8 @@
            The heading has the middle column, so it stays centered whichever buttons show. In a right-to-left page
            the columns swap, and the buttons with them. */
         &:state(sheet) .pp-bar {
+            touch-action: none; /* The bar drags the sheet (see Sheet), rather than scrolling anything. */
+            user-select: none;
             display: grid;
             grid-template-columns: 1fr minmax(0, auto) 1fr;
             grid-template-areas: "handle handle handle" "lead heading trail" "search search search";
@@ -559,6 +605,10 @@
             grid-area: heading;
             min-width: 0;
             text-align: center;
+        }
+
+        &:state(sheet) :is(.pp-handle, .pp-heading) {
+            cursor: grab;
         }
 
         :is(.pp-title, .pp-selected-count) {
@@ -861,8 +911,10 @@
                 border-radius: var(--_pp-sheet-radius) var(--_pp-sheet-radius) 0 0;
                 box-shadow: 0 -4px 24px light-dark(rgb(0 0 0 / .08), rgb(0 0 0 / .4));
 
+                /* Fades as the sheet is dragged down below half height (see Sheet). */
                 &::backdrop {
                     background: var(--_pp-sheet-backdrop);
+                    opacity: var(--_pp-backdrop-opacity, 1);
                 }
             }
 
