@@ -278,6 +278,36 @@
             pointer-events: none;
         }
 
+        /* layout="native": the browser's own picker opens, so nothing keeps it hidden. A single select keeps the
+           field's look, with appearance: none rather than base-select, whose picker is hidden above. A multiple
+           select is the browser's own, as without Platypicker: its text, its options and its list box or button,
+           with no badges over it. */
+        &:state(native) > select.pp-select:not([multiple]) {
+            appearance: none !important;
+        }
+
+        &:state(native) > select.pp-select[multiple]:is(:not([size]), [size="1"]) {
+            appearance: auto;
+            color: revert !important;
+            overflow: revert;
+            scrollbar-width: revert;
+
+            :is(option, optgroup, hr) {
+                display: revert !important;
+            }
+        }
+
+        /* Chrome draws a multiple select of one row as a button whose list is its picker, hidden above for the
+           popover's sake, so it's let show again. */
+        &:state(native) > select.pp-select::picker(select) {
+            appearance: auto !important;
+            display: revert;
+        }
+
+        &:state(native) > .pp-tags {
+            display: none !important;
+        }
+
         /* The first badge is cut short when even it doesn't fit, except while the badges are measured. */
         .pp-tag {
             flex: none;

@@ -190,6 +190,7 @@ export default class PlatyPicker extends HTMLElement {
         }
 
         this.#wireSelect();
+        this.#syncNative();
         this.#source.observe(() => this.#optionsChanged());
 
         PlatyPicker.#registry.set(this.#select, this);
@@ -220,6 +221,7 @@ export default class PlatyPicker extends HTMLElement {
 
         this.#view.configure(this.#viewConfig());
         this.#tags?.configure(this.#tagsConfig());
+        this.#syncNative(); // layout may have changed.
         if (this.#view.popover.matches(":popover-open")) {
             this.#syncLayout();
             this.#syncSelectedCount();
@@ -325,13 +327,15 @@ export default class PlatyPicker extends HTMLElement {
     }
 
     /**
-     * How the picker opens: "popover" by its select, "sheet" at the bottom of the screen, or "auto" (the default),
-     * a sheet where PlatyPicker.sheetMedia matches and a popover elsewhere. A missing or invalid value means "auto".
+     * How the picker opens: "popover" by its select, "sheet" at the bottom of the screen, "auto" (the default), a
+     * sheet where PlatyPicker.sheetMedia matches and a popover elsewhere, or "native", the browser's own picker,
+     * which shows only the options in the select and never asks for more (loadmore). A missing or invalid value
+     * means "auto".
      */
     get layout() {
         const value = this.getAttribute("layout")?.trim().toLowerCase();
 
-        return ["sheet", "popover"].includes(value) ? value : "auto";
+        return ["sheet", "popover", "native"].includes(value) ? value : "auto";
     }
 
     set layout(value) {
@@ -537,9 +541,14 @@ export default class PlatyPicker extends HTMLElement {
         const { signal } = this.#abort;
         const popover = this.#view.popover;
 
-        this.#select.addEventListener("click", () => this.#togglePopover(), { signal });
+        // With layout="native" the select is left to the browser: its presses, clicks and keys open its own picker.
+        const native = () => this.#internals.states.has("native");
+
+        this.#select.addEventListener("click", () => native() || this.#togglePopover(), { signal });
 
         this.#select.addEventListener("keydown", e => {
+            if (native()) return;
+
             // Without base-select a multiple select is a list box whose own keys can't act (see #selectByKey).
             if (!PlatyPicker.#hasBaseSelect && this.#select.multiple && this.#selectByKey(e)) {
                 e.preventDefault();
@@ -557,7 +566,7 @@ export default class PlatyPicker extends HTMLElement {
         // hand, as stopping the press keeps focus from moving. The click that follows opens the popover.
         if (!PlatyPicker.#hasBaseSelect) {
             this.#select.addEventListener("mousedown", e => {
-                if (e.button !== 0) return;
+                if (e.button !== 0 || native()) return;
                 e.preventDefault();
                 this.#select.focus({ preventScroll: true });
             }, { signal });
@@ -685,6 +694,31 @@ export default class PlatyPicker extends HTMLElement {
         this.#view.setSelectedCount(shown
             ? Languages.format(this.#text("selectedLabel"), this.#select.selectedOptions.length, this.#locale)
             : "");
+    }
+
+    /** Whether the browser's own picker opens rather than the popover: layout="native". */
+    get #isNative() {
+        return this.layout === "native";
+    }
+
+    /**
+     * Steps aside for the browser's own picker, or back, as the native state, which platypicker.css lets the
+     * browser's picker show by. It's decided ahead of any press, since the browser opens its picker on the press
+     * itself. The select only says it opens the popover while it does.
+     */
+    #syncNative() {
+        const native = this.#isNative;
+        this.#internals.states[native ? "add" : "delete"]("native");
+
+        if (native) {
+            this.#hidePopover();
+            for (const name of ["aria-haspopup", "aria-controls", "aria-expanded"]) this.#select.removeAttribute(name);
+        } else if (!this.#select.hasAttribute("aria-haspopup")) {
+            this.#select.setAttribute("aria-haspopup", "dialog");
+            this.#select.setAttribute("aria-controls", this.#view.popover.id);
+            this.#select.setAttribute("aria-expanded", "false");
+            this.#tags?.refresh(); // Hidden while native, so they're measured again.
+        }
     }
 
     #togglePopover(forceOpen = false) {

@@ -64,9 +64,9 @@ For multi-select, add `multiple` and `size="1"`. The closed select then shows th
 | `batch-size`         | number  | `50`                  | How many options the list works with at a time: the rows shown first, how far ahead it searches, and the page size it suggests to `loadmore`. More rows are shown a few at a time as you scroll. `0` renders the whole list. A missing or invalid value uses the default.  |
 | `placeholders`       | number  | off / `10`            | Shows skeleton rows at the end of the list while more options are still to come. If present without a valid non-negative integer value, renders 10 of them.                    |
 | `loading`            | boolean | off                   | Says more options are on their way. The end of the list stays marked, and a `loadmore` event asks for more before the list runs out. See [Loading as you scroll](#loading-as-you-scroll).        |
-| `layout`             | string  | `auto`                | How the picker opens: `popover` by the select, `sheet` along the bottom of the screen, or `auto`, a sheet on phones and a popover elsewhere. See [On phones](#on-phones).        |
+| `layout`             | string  | `auto`                | How the picker opens: `popover` by the select, `sheet` along the bottom of the screen, `auto`, a sheet on phones and a popover elsewhere, or `native`, the browser's own picker. See [On phones](#on-phones) and [The browser's own picker](#the-browsers-own-picker).        |
 
-All attributes are reflected as properties too (e.g. `picker.search = true`, `picker.batchSize = 100`), and are fully reactive – changing them after the element is connected updates the UI immediately. The boolean ones are booleans, `batchSize` is a number, `placeholders` the number of skeleton rows, or `undefined` while off, and `layout` one of `"auto"`, `"sheet"` and `"popover"` (a missing or invalid value reads as `"auto"`). A new `batch-size` applies to the batches that follow; rows already rendered stay.
+All attributes are reflected as properties too (e.g. `picker.search = true`, `picker.batchSize = 100`), and are fully reactive – changing them after the element is connected updates the UI immediately. The boolean ones are booleans, `batchSize` is a number, `placeholders` the number of skeleton rows, or `undefined` while off, and `layout` one of `"auto"`, `"sheet"`, `"popover"` and `"native"` (a missing or invalid value reads as `"auto"`). A new `batch-size` applies to the batches that follow; rows already rendered stay.
 
 The texts, such as the search box's placeholder and the All / None labels, come from the picker's language rather than attributes. See [Localization](#localization).
 
@@ -106,7 +106,7 @@ The texts, such as the search box's placeholder and the All / None labels, come 
 - **Live DOM sync** – add, remove, reorder or edit `<option>`/`<optgroup>` elements on the underlying `<select>` at any time, including their `disabled`, `hidden`, `label`, `title` and `data-subtext` attributes, and the popover updates to match. Only what changed is updated, so focus and scroll position survive. While the popover is closed, updates wait until it opens; the badges follow right away.
 - **Loading as you scroll** – for options that come from a server, `loading` and the `loadmore` event let you fetch them a page at a time, with `placeholders` showing skeleton rows while you wait. See below.
 - **Accessible** - the popover is a dialog named after the select, which says when it's open. The list is a listbox of options that screen readers announce as selected or not and by position ("3 of 20", even while long lists render in batches), with option groups and disabled options as on a native select. It works in Windows High Contrast and other forced-color modes.
-- **`:state(open)`** - the `<platy-picker>` host exposes a custom state while its popover is open, so you can style around it without a class, and `:state(sheet)` while it opens as a sheet:
+- **`:state(open)`** - the `<platy-picker>` host exposes a custom state while its popover is open, so you can style around it without a class, `:state(sheet)` while it opens as a sheet, and `:state(native)` while the browser's own picker opens instead:
 ```css
   platy-picker:state(open) {
     /* ... */
@@ -187,6 +187,27 @@ Things to know:
 - **Closing in Firefox.** Firefox can't keep a closing popover on screen to slide away yet, so the sheet slides down while it's still open, and closes once it's down.
 - **A page wider than the screen** widens the layout viewport in some browsers, and the sheet, which fills the width of it, with it. Keep the page within the screen's width on phones.
 - **Testing in a desktop browser's phone emulation** works, with one quirk in Firefox's: a mouse double-click there arrives as two clicks on the same tap, so double-tapping a select opens and closes it again. Real phones send one.
+
+### The browser's own picker
+
+`layout="native"` leaves the select to the browser: a press, a tap or a key opens the browser's own picker, on every device, and the popover and the sheet never show. A single select keeps Platypicker's look while closed. A multiple select is the browser's own, closed too, with no badges over it: a button or a one-row list box on a desktop, depending on the browser, and a button on a phone.
+
+```html
+<platy-picker layout="native">
+  ...
+</platy-picker>
+```
+
+None of the popover's extras work in the browser's picker: `search`, `controls`, `counter` and the `data-subtext` of options don't show there. It shows what's in the `<select>` and nothing more, so with [loading as you scroll](#loading-as-you-scroll) it shows only the options loaded so far, and `loadmore` never fires: load every option up front for a picker with `layout="native"`, or switch to another layout while some are still to come.
+
+To have the browser's picker on phones only, switch `layout` with a media query of your own:
+
+```js
+const phone = matchMedia(PlatyPicker.sheetMedia);
+const sync = () => picker.layout = phone.matches ? "native" : "auto";
+phone.addEventListener("change", sync);
+sync();
+```
 
 ## Theming
 

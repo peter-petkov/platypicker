@@ -275,6 +275,17 @@
             <script type="text/plain" data-code="JS">
                 PlatyPicker.sheetMedia = "(pointer: coarse) and ((max-width: 640px) or (max-height: 500px))"; // the default
             </script>
+            <p><code>layout="native"</code> leaves the select to the browser instead, on every device: its own picker opens, without search, controls or subtext, and a multiple select shows no badges. It shows only the options in the select, so <code>loadmore</code> never fires there: load them all up front.</p>
+            <div class="example">
+                <template>
+                    <platy-picker layout="native">
+                        <select name="food" aria-label="Food" data-fill="foods"></select>
+                    </platy-picker>
+                    <platy-picker layout="native">
+                        <select name="plants" multiple size="1" aria-label="Plants" data-fill="plants" data-pick="0,1"></select>
+                    </platy-picker>
+                </template>
+            </div>
         </section>
 
         <section id="theming">
@@ -550,7 +561,7 @@ PlatyPicker.languages.pl = {
                     <tr><td><code>batch-size</code></td><td><code>batchSize</code></td><td>number, 50</td><td>rows the list works with at a time; <code>0</code> renders all</td></tr>
                     <tr><td><code>placeholders</code></td><td><code>placeholders</code></td><td>number, 10</td><td>skeleton rows at the end while more are to come</td></tr>
                     <tr><td><code>loading</code></td><td><code>loading</code></td><td>boolean</td><td>more options are on their way; fires <code>loadmore</code></td></tr>
-                    <tr><td><code>layout</code></td><td><code>layout</code></td><td><code>auto</code>, <code>sheet</code>, <code>popover</code></td><td>a <a href="#phones">sheet</a> on phones (<code>auto</code>), always, or never</td></tr>
+                    <tr><td><code>layout</code></td><td><code>layout</code></td><td><code>auto</code>, <code>sheet</code>, <code>popover</code>, <code>native</code></td><td>a <a href="#phones">sheet</a> on phones (<code>auto</code>), always, or never; or the browser's own picker</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -636,6 +647,7 @@ PlatyPicker.languages.pl = {
                     <tr><td><code>.pp-*</code></td><td>a fixed class on every part (see <a href="#class-plugs">Class plugs</a>)</td></tr>
                     <tr><td><code>platy-picker:state(open)</code></td><td>a picker while its popover is open</td></tr>
                     <tr><td><code>platy-picker:state(sheet)</code></td><td>a picker that opens as a <a href="#phones">sheet</a></td></tr>
+                    <tr><td><code>platy-picker:state(native)</code></td><td>a picker that leaves opening to the browser (<code>layout="native"</code>)</td></tr>
                     <tr><td><code>.pp-item[aria-selected="true"]</code>, <code>.pp-item[aria-disabled="true"]</code></td><td>a selected row, a disabled row</td></tr>
                     <tr><td><code>.pp-skin</code> on the picker</td><td>turns off the base paint, for a <a href="#skins">skin</a></td></tr>
                     </tbody>
@@ -676,6 +688,7 @@ PlatyPicker.languages.pl = {
                                     <option value="">auto</option>
                                     <option value="sheet">sheet</option>
                                     <option value="popover">popover</option>
+                                    <option value="native">native</option>
                                 </select>
                             </platy-picker>
                         </label>
