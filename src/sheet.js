@@ -9,6 +9,9 @@
  * searching or while there's a search to clear), by scrolling the list, or by focus leaving the search box. Picking
  * a row or select all / none while searching keeps focus in the search box, and so the keyboard up.
  *
+ * On a short screen, as a phone on its side, there's no half height: the sheet opens at full height, narrower and
+ * centred (see platypicker.css).
+ *
  * The sheet can be dragged by its bar (the handle and heading), or pulled down by the list once it's scrolled to the
  * top. Let go, it settles at half or full height, whichever is nearer, or closes when it's let go low enough. A flick
  * goes on in its direction: up to full height, down a step. Dragged while the keyboard is up, the sheet goes back to
@@ -26,6 +29,9 @@ export default class Sheet {
 
     // Let go lower than this share of half height, the sheet closes.
     static #closeBelow = .65;
+
+    // A screen too short for half height, as a phone on its side. The same as in platypicker.css.
+    static #shortScreen = "(max-height: 500px)";
 
     // Whether a closing popover can stay in the top layer while it slides away (see hide).
     static #canSlideAway = CSS.supports("overlay", "auto") && CSS.supports("transition-behavior", "allow-discrete");
@@ -305,8 +311,13 @@ export default class Sheet {
     // Dragging
     // -----------------------------------------------------------------
 
-    /** Half height, in pixels: a little over half of what the keyboard leaves of the screen, as in the stylesheet. */
+    /**
+     * Half height, in pixels: a little over half of what the keyboard leaves of the screen, as in the stylesheet. A
+     * short screen has none: the sheet is full height there, so a drag settles at full height or closes.
+     */
     get #halfHeight() {
+        if (matchMedia(Sheet.#shortScreen).matches) return this.#fullHeight;
+
         const viewport = parseFloat(this.#popover.style.getPropertyValue("--_pp-viewport")) || window.innerHeight;
         return viewport * .56;
     }

@@ -38,10 +38,11 @@ export default class PlatyPicker extends HTMLElement {
 
     /**
      * The media query under which a picker with layout="auto" (the default) opens as a sheet at the bottom of the
-     * screen rather than a popover by its select: a touch screen the size of a phone. It's checked each time a picker
-     * opens, so it follows a rotated phone or a resized window.
+     * screen rather than a popover by its select: a touch screen the size of a phone, either way up. A phone on its
+     * side is too wide for the width alone to tell, but it's short. It's checked each time a picker opens, so it
+     * follows a rotated phone or a resized window.
      */
-    static sheetMedia = "(pointer: coarse) and (max-width: 640px)";
+    static sheetMedia = "(pointer: coarse) and ((max-width: 640px) or (max-height: 500px))";
 
     /**
      * The extra classes each part gets, on top of its fixed pp-* class. A preset fills these with a framework's
