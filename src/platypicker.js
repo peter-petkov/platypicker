@@ -5,6 +5,7 @@ import Highlighter from "./highlighter.js";
 import Languages, { languages } from "./languages.js";
 import ListView from "./list-view.js";
 import OptionSource from "./option-source.js";
+import Sheet from "./sheet.js";
 import TagsView from "./tags-view.js";
 
 export default class PlatyPicker extends HTMLElement {
@@ -68,6 +69,8 @@ export default class PlatyPicker extends HTMLElement {
         filteredLabel: "{count} of {total}",
         // Under the sheet's title (layout="sheet") in a multiple select: how many options are selected.
         selectedLabel: "{count} selected",
+        // Beside the sheet's search box while searching: clears the search and puts the keyboard away.
+        cancelLabel: "Cancel",
     };
 
     /**
@@ -104,6 +107,7 @@ export default class PlatyPicker extends HTMLElement {
     #highlighter;
     #view;
     #tags = null;               // The badges over a closed multiple select. Single selects have none.
+    #sheet;                     // What the popover does as the sheet (layout="sheet").
     #tagsTimer;
     #abort;
     #typed = "";                // What was typed on a closed multiple select in the last second (see #selectByKey).
@@ -162,6 +166,12 @@ export default class PlatyPicker extends HTMLElement {
         this.#view.configure(this.#viewConfig());
         this.#view.render();
 
+        this.#sheet = new Sheet({
+            ...this.#view.sheetParts,
+            clearSearch: () => this.#view.clearSearch(),
+            signal: this.#abort.signal,
+        });
+
         // The select tells screen readers that it opens the popover, and whether it's open.
         this.#select.setAttribute("aria-haspopup", "dialog");
         this.#select.setAttribute("aria-controls", this.#view.popover.id);
@@ -199,7 +209,7 @@ export default class PlatyPicker extends HTMLElement {
         removeClasses(this, "host");
         for (const name of ["aria-haspopup", "aria-controls", "aria-expanded"]) this.#select.removeAttribute(name);
 
-        this.#select = this.#source = this.#highlighter = this.#view = this.#tags = null;
+        this.#select = this.#source = this.#highlighter = this.#view = this.#tags = this.#sheet = null;
     }
 
     attributeChangedCallback() {
@@ -334,6 +344,7 @@ export default class PlatyPicker extends HTMLElement {
             searchLabel: this.#text("searchLabel"),
             selectAllLabel: this.#text("selectAllLabel"),
             selectNoneLabel: this.#text("selectNoneLabel"),
+            cancelLabel: this.#text("cancelLabel"),
             noMatchesLabel: this.#text("noMatchesLabel"),
             matchesLabel: count => Languages.format(this.#text("matchesLabel"), count, this.#locale),
             counterLabel: ({ shown, matches, total, search, loading }) => search
@@ -597,6 +608,8 @@ export default class PlatyPicker extends HTMLElement {
             if (e.newState === "open") {
                 this.#view.syncControls();
                 this.#view.focusInitial({ search: !this.#internals.states.has("sheet") });
+            } else {
+                this.#sheet.close();
             }
         }, { signal });
     }
@@ -656,6 +669,8 @@ export default class PlatyPicker extends HTMLElement {
         const sheet = layout === "sheet" || (layout === "auto" && matchMedia(PlatyPicker.sheetMedia).matches);
         this.#internals.states[sheet ? "add" : "delete"]("sheet");
         this.#view.setSheet(sheet);
+        if (sheet) this.#sheet.open();
+        else this.#sheet.close();
     }
 
     /**

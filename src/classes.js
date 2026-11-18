@@ -17,8 +17,9 @@ export const classes = {
     heading: "",        // the sheet's heading: its title and selected count
     title: "",          // the sheet's title, the select's label
     selectedCount: "",  // how many options are selected, under the sheet's title (multiple selects)
+    searchRow: "",      // the search box, with the sheet's Cancel button beside it
     search: "",         // the search box
-    button: "",         // select all and select none
+    button: "",         // select all and select none, and the sheet's Cancel
     list: "",           // the <ul> of options
     item: "",           // an option's row
     itemSelected: "",   // a row whose option is selected
@@ -50,6 +51,7 @@ const fixed = {
     heading: "pp-heading",
     title: "pp-title",
     selectedCount: "pp-selected-count",
+    searchRow: "pp-search-row",
     search: "pp-search",
     button: "pp-button",
     list: "pp-list",

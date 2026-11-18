@@ -127,15 +127,28 @@
 
         /* On a phone the popover is a sheet along the bottom of the screen instead (the sheet state, see layout in
            platypicker.js), the full width of it, with a heading the popover doesn't show. */
+        /* Half the screen, or all of it but a strip at the top (see Sheet in sheet.js). The script sets the height of
+           the visual viewport, --_pp-viewport, and how far the on-screen keyboard reaches up the screen,
+           --_pp-keyboard, so the sheet sits on top of the keyboard and fits what's left. */
         &:state(sheet) > .pp-menu[popover] {
             position-try-fallbacks: none;
             inset: auto 0 0;
+            bottom: var(--_pp-keyboard, 0px);
             width: auto;
             min-width: 0;
             max-width: none;
-            height: 56dvh;
-            max-height: calc(100dvh - 2.5rem);
+            height: calc(var(--_pp-viewport, 100dvh) * .56);
+            max-height: calc(var(--_pp-viewport, 100dvh) - 2.5rem);
             overflow: hidden;
+            transition: height .3s cubic-bezier(.2, .9, .25, 1), bottom .25s ease-out;
+
+            &[data-height="full"] {
+                height: calc(var(--_pp-viewport, 100dvh) - 2.5rem);
+            }
+
+            @media (prefers-reduced-motion: reduce) {
+                transition: none;
+            }
         }
 
         /* In the sheet only the list scrolls, between the bar and the counter, so nothing passes under the bar. Only
@@ -568,10 +581,22 @@
             justify-self: end;
         }
 
-        &:state(sheet) .pp-search {
+        /* The search box and the sheet's Cancel. Outside the sheet the row isn't there for layout, and Cancel is hidden. */
+        .pp-search-row {
+            display: contents;
+        }
+
+        &:state(sheet) .pp-search-row {
             grid-area: search;
+            display: flex;
+            align-items: center;
             min-width: 0;
-            width: 100%;
+        }
+
+        &:state(sheet) .pp-search {
+            flex: 1;
+            min-width: 0;
+            width: auto;
         }
 
         /* The sheet's rows sit on cards: a group's rows on one, and each run of rows outside groups on another. */
@@ -880,6 +905,11 @@
                 &:hover {
                     text-decoration: none;
                 }
+            }
+
+            .pp-button[data-action="cancel"] {
+                margin: .25rem 0 0;
+                margin-inline-start: .75rem;
             }
 
             /* 16px at least: iOS zooms the page into a text box with smaller text when it takes focus. */

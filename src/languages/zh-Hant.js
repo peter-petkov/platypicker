@@ -14,4 +14,5 @@ export default {
     loadedLabel: { other: "目前 {count} 個選項" },
     filteredLabel: "{count} / {total}",
     selectedLabel: "已選 {count} 項",
+    cancelLabel: "取消",
 };

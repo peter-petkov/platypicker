@@ -14,4 +14,5 @@ export default {
     loadedLabel: { one: "{count} опция досега", other: "{count} опции досега" },
     filteredLabel: "{count} от {total}",
     selectedLabel: "Избрани: {count}",
+    cancelLabel: "Отказ",
 };

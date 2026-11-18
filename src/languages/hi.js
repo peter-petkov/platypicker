@@ -14,4 +14,5 @@ export default {
     loadedLabel: { one: "अब तक {count} विकल्प", other: "अब तक {count} विकल्प" },
     filteredLabel: "{total} में से {count}",
     selectedLabel: "{count} चयनित",
+    cancelLabel: "रद्द करें",
 };

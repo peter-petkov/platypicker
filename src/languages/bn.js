@@ -14,4 +14,5 @@ export default {
     loadedLabel: { other: "এখন পর্যন্ত {count}টি বিকল্প" },
     filteredLabel: "{total}টির মধ্যে {count}টি",
     selectedLabel: "{count}টি নির্বাচিত",
+    cancelLabel: "বাতিল",
 };

@@ -14,4 +14,5 @@ export default {
     loadedLabel: { other: "{count} opsi sejauh ini" },
     filteredLabel: "{count} dari {total}",
     selectedLabel: "{count} dipilih",
+    cancelLabel: "Batal",
 };

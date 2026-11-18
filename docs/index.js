@@ -985,7 +985,8 @@ function setupBenchmark() {
             await nextPaint();
 
             if (multiple) {
-                const [selectAll, selectNone] = popover.querySelectorAll(".pp-bar button");
+                const selectAll = popover.querySelector("[data-action='all']");
+                const selectNone = popover.querySelector("[data-action='none']");
                 await measure("selectAll", () => selectAll.click());
                 await measure("selectNone", () => selectNone.click());
             }

@@ -61,6 +61,7 @@ export default class ListView {
     #title;                             // The sheet's title and selected count, above the search box.
     #selectedCount;
     #sheet = false;                     // Whether the popover is shown as the sheet, where the list scrolls.
+    #cancelButton;                      // The sheet's Cancel, beside the search box.
 
     #config = {};
     #view = null;                       // The FilteredView being shown.
@@ -198,7 +199,19 @@ export default class ListView {
             e.preventDefault();
             this.#actions.close();
         }, { signal });
-        form.append(this.#search);
+
+        // Clears the search and puts the keyboard away. Only the sheet shows it, while searching (see Sheet).
+        this.#cancelButton = document.createElement("button");
+        this.#cancelButton.type = "button";
+        this.#cancelButton.dataset.action = "cancel";
+        this.#cancelButton.hidden = true;
+        addClasses(this.#cancelButton, "button");
+
+        // display: contents outside the sheet, so the search box sits in the bar as if the row weren't there.
+        const searchRow = document.createElement("div");
+        addClasses(searchRow, "searchRow");
+        searchRow.append(this.#search, this.#cancelButton);
+        form.append(searchRow);
 
         // Clicks are ignored while either action is running, so a long one can't be started twice.
         this.#selectAllButton = this.#buildActionButton(() => this.#busy || this.#actions.selectAll());
@@ -264,6 +277,7 @@ export default class ListView {
         this.#empty.textContent = config.noMatchesLabel;
         this.#selectAllButton.textContent = config.selectAllLabel;
         this.#selectNoneButton.textContent = config.selectNoneLabel;
+        this.#cancelButton.textContent = config.cancelLabel;
         this.syncControls();
 
         if (placeholdersChanged || loadingChanged) {
@@ -999,6 +1013,18 @@ export default class ListView {
     /** Says whether the popover is shown as the sheet (layout="sheet"), where the list scrolls rather than the popover. */
     setSheet(sheet) {
         this.#sheet = sheet;
+    }
+
+    /** The parts the sheet's behaviour works with (see Sheet). */
+    get sheetParts() {
+        return { popover: this.#popover, bar: this.#form, search: this.#search, cancel: this.#cancelButton, list: this.#list };
+    }
+
+    /** Empties the search box and shows every option again. */
+    clearSearch() {
+        if (!this.#search.value) return;
+        this.#search.value = "";
+        this.filter("");
     }
 
     // -----------------------------------------------------------------

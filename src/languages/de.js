@@ -14,4 +14,5 @@ export default {
     loadedLabel: { one: "{count} Option bisher", other: "{count} Optionen bisher" },
     filteredLabel: "{count} von {total}",
     selectedLabel: "{count} ausgewählt",
+    cancelLabel: "Abbrechen",
 };

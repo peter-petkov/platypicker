@@ -14,4 +14,5 @@ export default {
     loadedLabel: { one: "{count} opzione finora", many: "{count} di opzioni finora", other: "{count} opzioni finora" },
     filteredLabel: "{count} di {total}",
     selectedLabel: { one: "{count} selezionata", other: "{count} selezionate" },
+    cancelLabel: "Annulla",
 };

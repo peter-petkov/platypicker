@@ -14,4 +14,5 @@ export default {
     loadedLabel: { one: "اب تک {count} آپشن", other: "اب تک {count} آپشنز" },
     filteredLabel: "{total} میں سے {count}",
     selectedLabel: "{count} منتخب",
+    cancelLabel: "منسوخ کریں",
 };

@@ -14,4 +14,5 @@ export default {
     loadedLabel: { other: "지금까지 옵션 {count}개" },
     filteredLabel: "{total}개 중 {count}개",
     selectedLabel: "{count}개 선택됨",
+    cancelLabel: "취소",
 };

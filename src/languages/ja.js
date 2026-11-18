@@ -14,4 +14,5 @@ export default {
     loadedLabel: { other: "これまでに{count} 件の選択肢" },
     filteredLabel: "{total} 件中 {count} 件",
     selectedLabel: "{count} 件選択",
+    cancelLabel: "キャンセル",
 };
