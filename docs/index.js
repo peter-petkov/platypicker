@@ -702,7 +702,7 @@ async function setupTheming() {
 // ---------------------------------------------------------------------------
 
 async function setupLoadingDemo() {
-    const PAGE_SIZE = 20;
+    const FIRST_PAGE = 50; // As if it came with the page. Later pages are as big as loadmore asks for.
     const TOTAL = 100; // roughly: the car generator spreads them evenly over the makes
     const DELAY = 800;
     const example = document.querySelector("[data-loading]");
@@ -716,8 +716,8 @@ async function setupLoadingDemo() {
 
     // The attribute rather than the property: this runs before the element is defined, and setting the property
     // then would hide the element's own accessor.
-    const receivePage = () => {
-        select.append(...waiting.splice(0, PAGE_SIZE));
+    const receivePage = size => {
+        select.append(...waiting.splice(0, size));
         picker.toggleAttribute("loading", waiting.length > 0);
         output.textContent = `${select.options.length} of ${total} cars loaded`;
     };
@@ -730,10 +730,10 @@ async function setupLoadingDemo() {
         select.replaceChildren();
         run++;
         fetching = false;
-        receivePage();
+        receivePage(FIRST_PAGE);
     };
 
-    picker.addEventListener("loadmore", () => {
+    picker.addEventListener("loadmore", event => {
         if (fetching) return;
 
         const current = run;
@@ -743,7 +743,7 @@ async function setupLoadingDemo() {
         setTimeout(() => {
             if (current !== run) return;
             fetching = false;
-            receivePage();
+            receivePage(event.detail.batchSize);
         }, DELAY);
     });
 

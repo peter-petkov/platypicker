@@ -174,7 +174,7 @@
 
         <section id="long-lists">
             <h2>Long lists</h2>
-            <p>Long lists are rendered a batch at a time, and the next batch follows as you scroll down. Searching still covers every option, and the arrow keys and type-ahead go past the rendered rows. <code>batch-size</code> sets how many rows a batch has (50 by default), and <code>batch-size="0"</code> renders everything at once.</p>
+            <p>Long lists start with a batch of rows, and more are shown a few at a time as you scroll, so the scrollbar shrinks smoothly instead of jumping. Searching still covers every option, and the arrow keys, End and type-ahead go past the rows shown so far. <code>batch-size</code> sets how many rows the list works with at a time (50 by default): the rows shown first, and how far ahead it searches. <code>batch-size="0"</code> renders everything at once.</p>
             <div class="example">
                 <template>
                     <platy-picker search batch-size="20">
@@ -184,8 +184,9 @@
                 <output class="hint stage-extra" data-batch-count></output>
             </div>
             <h3>Loading as you scroll</h3>
-            <p>When the options come from a server, add them as they arrive. <code>loading</code> says more are on their way: the end of the list stays marked, and the picker fires <code>loadmore</code> whenever that end comes near, including when it opens on a short list. Fetch the next page then, and remove <code>loading</code> once there's nothing left. The event fires again each time the end comes near, so ignore it while a fetch is still running.</p>
-            <p><code>placeholders</code> shows skeleton rows at the end while you wait (10, or as many as you give it). This one waits most of a second per page of 20 cars.</p>
+            <p>When the options come from a server, add them as they arrive. <code>loading</code> says more are on their way: the end of the list stays marked, and the picker fires <code>loadmore</code> to ask for more before the list runs out, as soon as fewer than a batch are left to show. Fetch about <code>event.detail.batchSize</code> options then, and remove <code>loading</code> once there's nothing left.</p>
+            <p>The event also fires whenever the end of the list comes into view, which can be while a fetch is still running, so ignore it then. While loading, search, select all, End and type-ahead only know the options loaded so far. The <a href="https://github.com/peter-petkov/platypicker#loading-as-you-scroll">README</a> has the details, including searching on the server.</p>
+            <p><code>placeholders</code> shows skeleton rows at the end while you wait (10, or as many as you give it). This one waits most of a second per page.</p>
             <div class="example" data-loading>
                 <template>
                     <platy-picker search placeholders="3" loading>
@@ -202,11 +203,12 @@
                     let page = 0;
                     let fetching = false;
 
-                    picker.addEventListener("loadmore", async () => {
+                    picker.addEventListener("loadmore", async event => {
                       if (fetching) return;
                       fetching = true;
 
-                      const { cars, more } = await fetch(`/cars?page=${++page}`).then(response => response.json());
+                      const { batchSize } = event.detail;
+                      const { cars, more } = await fetch(`/cars?page=${++page}&size=${batchSize}`).then(response => response.json());
                       select.append(...cars.map(car => new Option(car.name, car.id)));
                       picker.loading = more;
 

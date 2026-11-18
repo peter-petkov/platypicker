@@ -60,9 +60,9 @@ For multi-select, add `multiple` and `size="1"`. The closed select then shows th
 | `search`             | boolean | off                   | Shows a filter input at the top of the popover. Matches against option text, `data-subtext` and option group labels.                                                             |
 | `controls`           | boolean | off                   | Shows "All" / "None" links beside the search box, which select all or none of the options.                                                                                     |
 | `placeholder`        | string  | none                  | Text shown in a multiple select while nothing is selected.                                                                                                                      |
-| `batch-size`         | number  | `50`                  | How many options are rendered at a time; the next batch loads as you scroll near the end of the list. `0` renders the whole list. A missing or invalid value uses the default.  |
+| `batch-size`         | number  | `50`                  | How many options the list works with at a time: the rows shown first, how far ahead it searches, and the page size it suggests to `loadmore`. More rows are shown a few at a time as you scroll. `0` renders the whole list. A missing or invalid value uses the default.  |
 | `placeholders`       | number  | off / `10`            | Shows skeleton rows at the end of the list while more options are still to come. If present without a valid non-negative integer value, renders 10 of them.                    |
-| `loading`            | boolean | off                   | Says more options are on their way. The end of the list stays marked, and a `loadmore` event fires as it comes near. See [Loading as you scroll](#loading-as-you-scroll).        |
+| `loading`            | boolean | off                   | Says more options are on their way. The end of the list stays marked, and a `loadmore` event asks for more before the list runs out. See [Loading as you scroll](#loading-as-you-scroll).        |
 | `search-placeholder` | string  | `"Type to filter..."` | Placeholder text for the search input.                                                                                                                                          |
 | `select-all-label`   | string  | `"All"`               | Label for select all. Only appears when the `<select>` has `multiple`.                                                                                                          |
 | `select-none-label`  | string  | `"None"`              | Label for select none. Only appears if the `<select>` does not have the `required` attribute.                                                                                   |
@@ -84,7 +84,7 @@ All attributes are reflected as properties too (e.g. `picker.search = true`, `pi
 - **Search/filter** - type to narrow the option list; matches are highlighted using the native CSS Custom Highlight API. The search covers the whole list, including options that aren't rendered yet. A search that finds nothing says "No matches", and screen readers hear how many options match once typing pauses.
 - **Select all / select none** - one-click bulk actions for multi-selects. Select all respects `disabled` options and option groups, and takes every option matching the current search, including ones not rendered yet. When either changes 1,000 options or more, which can freeze the page for a moment, it shows a spinner while it works.
 - **Badges** - a closed multi-select shows its selected options as badges on one line, then a "+N" count of those that don't fit. The × on a badge removes it with the mouse; the last badge of a `required` select has none. The badges are only a picture: the `<select>` underneath still takes the clicks, the focus and the keyboard, and is what screen readers read.
-- **Batched rendering** - long lists are rendered a batch at a time (see `batch-size`), and the next batch loads as you scroll near the end. Opening, searching and selecting stay fast with tens of thousands of options.
+- **Batched rendering** - long lists start with a batch of rows (see `batch-size`), and more are shown a few at a time as you scroll, so the scrollbar shrinks smoothly instead of jumping. The list searches ahead a batch at a time. Opening, searching and selecting stay fast with tens of thousands of options.
 - **Option groups & separators** - `<optgroup>` and `<hr>` inside your `<select>` are mirrored into headers and dividers in the popover. A group's header only shows when something in the group does, and a divider only shows between two visible rows.
 - **Subtext** - add `data-subtext="..."` to any `<option>` for a secondary text on the right of its label (also searchable).
 - **Localization** - pickers follow the page's `lang`, with translations for 22 languages loaded only when needed, plural-aware texts, search that ignores case and accents, and right-to-left layouts. See below.
@@ -115,7 +115,7 @@ All attributes are reflected as properties too (e.g. `picker.search = true`, `pi
 
 ## Loading as you scroll
 
-When the options come from a server, add them to the `<select>` as they arrive. Set `loading` while there are more to come: the end of the list stays marked, with skeleton rows if `placeholders` is set, and the picker fires a `loadmore` event whenever that end comes near. That includes opening on a list too short to fill the popover. Fetch the next page then, append its options, and remove `loading` once there's nothing left:
+When the options come from a server, add them to the `<select>` as they arrive. Set `loading` while there are more to come: the end of the list stays marked, with skeleton rows if `placeholders` is set, and the picker fires a `loadmore` event to ask for more before the list runs out. Fetch the next page then, append its options, and remove `loading` once there's nothing left:
 
 ```html
 <platy-picker search placeholders="3" loading>
@@ -129,11 +129,12 @@ const select = picker.querySelector("select");
 let page = 0;
 let fetching = false;
 
-picker.addEventListener("loadmore", async () => {
+picker.addEventListener("loadmore", async event => {
   if (fetching) return;
   fetching = true;
 
-  const { cars, more } = await fetch(`/cars?page=${++page}`).then(response => response.json());
+  const { batchSize } = event.detail;
+  const { cars, more } = await fetch(`/cars?page=${++page}&size=${batchSize}`).then(response => response.json());
   select.append(...cars.map(car => new Option(car.name, car.id)));
   picker.loading = more;
 
@@ -141,7 +142,17 @@ picker.addEventListener("loadmore", async () => {
 });
 ```
 
-The event fires again each time the end of the list comes near, including right after new options are added if the end is still in view, so ignore it while a fetch is running. It bubbles, and `event.detail.search` holds the text in the search box, in case the server should filter too. Without `loading`, the skeleton rows rarely show on a local list: the next batch is rendered before you reach the end.
+The event bubbles, and its `detail` has `batchSize`, a good number of options to fetch (the picker's `batch-size`), and `search`, the text in the search box.
+
+Things to know:
+
+- **When it fires.** As soon as fewer than `batchSize` options are left to show, so the next page has time to arrive while there's still a batch to scroll through. On a list shorter than that, it fires right when the popover opens. After that it waits until you add options, but fires again whenever the end of the list comes into view.
+- **It can fire while a fetch is still running**, when the end comes into view before your options arrive. Ignore it then, as `fetching` does above.
+- **Fetch about `batchSize` options at a time.** Smaller pages work, but the picker then asks again as soon as each one arrives, until a batch is in reserve, so you'll see several requests in a row.
+- **Remove `loading` when there's nothing left.** Until then the end of the list stays marked, and the event fires again each time the end comes into view. If a fetch fails and you add nothing, that's when it asks again.
+- **Only loaded options count.** While `loading` is set, search, select all, the match count screen readers hear, End and type-ahead all go by the options in the `<select>` so far. "No matches" doesn't show while loading, since more options might match.
+- **Searching on the server.** The picker searches the options it has. To have the server search instead, replace the options with its results when `detail.search` changes, and set `loading` by whether it has more of them. A response can arrive after the search has changed again, so check that it's still for the current search before adding it.
+- **Without `loading`**, the skeleton rows rarely show on a local list: the list searches ahead, so rows are ready before you reach the end.
 
 ## Theming
 
