@@ -133,10 +133,11 @@
                 overflow: hidden;
                 scrollbar-width: none;
 
-                /* Not laid out at all. A long list box is slow to build, focus and change in Firefox, about a tenth
-                   of a second per 25,000 options each time, while it lays them all out; it's ten times faster
-                   without. It also hides the selected ones, which a focused list box colors with !important. */
-                option {
+                /* Nothing in it is laid out: not its options, nor the group labels and dividers it would draw too.
+                   A long list box is slow to build, focus and change in Firefox, about a tenth of a second per 25,000
+                   options each time, while it lays them all out; it's ten times faster without. It also hides the
+                   selected ones, which a focused list box colors with !important. */
+                :is(option, optgroup, hr) {
                     display: none !important;
                 }
             }
