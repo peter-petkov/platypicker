@@ -405,7 +405,7 @@ export default class PlatyPicker extends HTMLElement {
         } else {
             this.#source.selectOnly(entry);
             this.#view.refresh();
-            this.#view.popover.hidePopover();
+            this.#hidePopover();
         }
 
         this.#view.scrollIntoView(entry);
@@ -460,7 +460,7 @@ export default class PlatyPicker extends HTMLElement {
     }
 
     #close() {
-        this.#view.popover.hidePopover();
+        this.#hidePopover();
         this.#select.focus();
     }
 
@@ -566,7 +566,7 @@ export default class PlatyPicker extends HTMLElement {
         // so that clicking the select toggles it rather than closing and reopening it. Focus going nowhere (another
         // window, or a click on the page, which the click listener below handles) leaves it open too.
         popover.addEventListener("focusout", e => {
-            if (e.relatedTarget && !this.contains(e.relatedTarget)) popover.hidePopover();
+            if (e.relatedTarget && !this.contains(e.relatedTarget)) this.#hidePopover();
         }, { signal });
 
         this.#select.addEventListener("change", async () => {
@@ -583,12 +583,12 @@ export default class PlatyPicker extends HTMLElement {
         // By the composed path, so that a click on a picker inside a shadow root counts as a click on it.
         document.addEventListener("click", e => {
             if (popover.matches(":popover-open") && !e.composedPath().includes(this))
-                popover.hidePopover();
+                this.#hidePopover();
         }, { signal });
 
         document.addEventListener("keydown", e => {
             if (e.code === "Escape" && popover.matches(":popover-open"))
-                popover.hidePopover();
+                this.#hidePopover();
         }, { signal });
 
         // Runs right before the popover shows, whatever opened it, so it never shows a stale list.
@@ -689,8 +689,14 @@ export default class PlatyPicker extends HTMLElement {
     #togglePopover(forceOpen = false) {
         const popover = this.#view.popover;
         const willOpen = forceOpen || !popover.matches(":popover-open");
-        popover.togglePopover(willOpen);
+        if (willOpen) popover.togglePopover(true);
+        else this.#hidePopover();
         if (!willOpen) this.#select.focus();
+    }
+
+    /** Hides the popover. As the sheet, it may slide down before it hides (see Sheet's hide). */
+    #hidePopover() {
+        this.#sheet.hide();
     }
 }
 

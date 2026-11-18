@@ -156,8 +156,14 @@
                 translate: 0 100%;
             }
 
-            &:not(:popover-open) {
+            /* Closing. data-closing slides it down while it's still open, where it couldn't stay on screen to slide
+               away once closed (see hide in sheet.js). */
+            &:not(:popover-open), &[data-closing] {
                 translate: 0 100%;
+            }
+
+            &[data-closing]::backdrop {
+                opacity: 0;
             }
 
             &::backdrop {

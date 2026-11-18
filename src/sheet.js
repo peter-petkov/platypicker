@@ -27,6 +27,9 @@ export default class Sheet {
     // Let go lower than this share of half height, the sheet closes.
     static #closeBelow = .65;
 
+    // Whether a closing popover can stay in the top layer while it slides away (see hide).
+    static #canSlideAway = CSS.supports("overlay", "auto") && CSS.supports("transition-behavior", "allow-discrete");
+
     #popover;
     #bar;
     #search;
@@ -43,6 +46,7 @@ export default class Sheet {
     #pull = null;           // While a touch on the list may turn into pulling the sheet down: where it started.
     #closeWatcher = null;   // Closes the sheet on Back, while it's open.
     #settling = null;       // While the closed sheet slides away: stops waiting for it to be gone.
+    #hiding = null;         // While the sheet slides down before hiding (see hide): stops waiting for it.
 
     constructor({ popover, bar, search, cancel, list, clearSearch, close, signal }) {
         this.#popover = popover;
@@ -76,6 +80,59 @@ export default class Sheet {
 
         this.#wireBarDrag(signal);
         this.#wireListPull(signal);
+        this.#wireOutsideTaps(signal);
+    }
+
+    /**
+     * A tap outside the sheet, on the dimmed page, only closes it, as a tap on a backdrop does: nothing under it
+     * reacts, not another picker nor this one's own select. A popover's backdrop doesn't catch taps (they go through
+     * to the page), so they're caught on their way there, before anything on the page sees them. The press is
+     * stopped too, so it doesn't move focus or open a native select.
+     */
+    #wireOutsideTaps(signal) {
+        const outside = e => this.#active && !e.composedPath().includes(this.#popover);
+
+        document.addEventListener("pointerdown", e => {
+            if (outside(e)) e.preventDefault();
+        }, { capture: true, signal });
+
+        document.addEventListener("click", e => {
+            if (!outside(e)) return;
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            this.hide();
+        }, { capture: true, signal });
+    }
+
+    /**
+     * Hides the popover, which the picker does through here wherever it hides it. A closing popover leaves the top
+     * layer at once unless overlay can be transitioned, which keeps it there while it slides away (see
+     * platypicker.css). Where it can't (Firefox, so far), the open sheet slides down first, and hides once it's
+     * down. Elsewhere, and outside the sheet, it hides at once.
+     */
+    hide() {
+        const popover = this.#popover;
+        if (!popover.matches(":popover-open") || this.#hiding) return;
+
+        if (!this.#active || Sheet.#canSlideAway || matchMedia("(prefers-reduced-motion: reduce)").matches) {
+            popover.hidePopover();
+            return;
+        }
+
+        const hiding = this.#hiding = new AbortController();
+        const finish = () => {
+            if (hiding.signal.aborted) return;
+            hiding.abort();
+            this.#hiding = null;
+            if (popover.matches(":popover-open")) popover.hidePopover();
+            delete popover.dataset.closing;
+        };
+
+        popover.dataset.closing = "";
+        popover.addEventListener("transitionend", e => {
+            if (e.target === popover && e.propertyName === "translate") finish();
+        }, { signal: hiding.signal });
+        setTimeout(finish, 400);
     }
 
     /** The bar drags the sheet, by any pointer, except on its buttons and the search box. */
@@ -163,6 +220,8 @@ export default class Sheet {
         this.#viewport = null;
         this.#closeWatcher?.destroy();
         this.#closeWatcher = null;
+        this.#hiding?.abort(); // Closed some other way while sliding down to hide.
+        this.#hiding = null;
         this.#drag = null;
         this.#pull = null;
         this.#syncCancel();
@@ -193,6 +252,7 @@ export default class Sheet {
         const popover = this.#popover;
         delete popover.dataset.height;
         delete popover.dataset.dragging;
+        delete popover.dataset.closing;
         for (const name of ["--_pp-keyboard", "--_pp-viewport", "--_pp-drag-height", "--_pp-backdrop-opacity"])
             popover.style.removeProperty(name);
     }
