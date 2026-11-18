@@ -31,6 +31,10 @@ export default class Sheet {
     // Let go lower than this share of half height, the sheet closes.
     static #closeBelow = .65;
 
+    // How far up the screen something must reach to count as the on-screen keyboard, in pixels. Less is taken for
+    // a browser's own toolbar, which can sit over the bottom of the page too.
+    static #keyboardAtLeast = 120;
+
     // A screen too short for half height, as a phone on its side. The same as in platypicker.css.
     static #shortScreen = "(max-height: 500px)";
 
@@ -260,7 +264,8 @@ export default class Sheet {
         delete popover.dataset.height;
         delete popover.dataset.dragging;
         delete popover.dataset.closing;
-        for (const name of ["--_pp-keyboard", "--_pp-viewport", "--_pp-drag-height", "--_pp-backdrop-opacity"])
+        for (const name of ["--_pp-keyboard", "--_pp-viewport", "--_pp-drag-height", "--_pp-backdrop-opacity",
+            "--_pp-height-duration", "--_pp-keyboard-duration"])
             popover.style.removeProperty(name);
     }
 
@@ -319,8 +324,9 @@ export default class Sheet {
     get #halfHeight() {
         if (matchMedia(Sheet.#shortScreen).matches) return this.#fullHeight;
 
-        const viewport = parseFloat(this.#popover.style.getPropertyValue("--_pp-viewport")) || window.innerHeight;
-        return viewport * .56;
+        // The screen the stylesheet goes by: full height is all of it but 2.5rem.
+        const strip = 2.5 * parseFloat(getComputedStyle(document.documentElement).fontSize);
+        return (this.#fullHeight + strip) * .56;
     }
 
     /** Full height, in pixels: the sheet's height limit, which the stylesheet sets. */
@@ -430,15 +436,64 @@ export default class Sheet {
         const viewport = window.visualViewport;
         if (!viewport) return;
 
-        this.#viewport = new AbortController();
-        const sync = () => {
-            const keyboard = Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop);
-            this.#popover.style.setProperty("--_pp-keyboard", `${Math.round(keyboard)}px`);
-            this.#popover.style.setProperty("--_pp-viewport", `${Math.round(viewport.height)}px`);
+        const watching = this.#viewport = new AbortController();
+        const popover = this.#popover;
+
+        // The keyboard has finished moving by the time the browser says where it is (Firefox for Android says so
+        // once, after its slide), so the sheet takes its new place at once rather than sliding there after it.
+        // A keyboard put away by its own button (Android's, in place of Back) leaves focus in the search box, so
+        // the sheet wouldn't know. Its going counts as putting it away: focus leaves the search box, and the sheet
+        // goes back to its height.
+        let keyboardUp = false;
+        let keyboardTimer = 0;
+
+        const measure = () => {
+            const inset = Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop);
+            const up = inset > Sheet.#keyboardAtLeast;
+            const wentAway = keyboardUp && !up;
+            if (wentAway && this.#searching) this.#search.blur();
+            keyboardUp = up;
+
+            // Only the keyboard moves and sizes the sheet. Without it, the stylesheet's steady height applies, so a
+            // browser's toolbar sliding in or out as the page scrolls (which changes the visual viewport too)
+            // doesn't make the sheet jump.
+            const keyboard = up ? `${Math.round(inset)}px` : "";
+            const height = up ? `${Math.round(viewport.height)}px` : "";
+            if (popover.style.getPropertyValue("--_pp-keyboard") === keyboard &&
+                popover.style.getPropertyValue("--_pp-viewport") === height) return;
+
+            // Once the keyboard has gone, the sheet moves down to where it was and back to its height, animated as
+            // after Cancel: its place above the keyboard and its height change together, so it doesn't drop first
+            // and grow back after.
+            if (wentAway) {
+                clearTimeout(keyboardTimer);
+                popover.style.setProperty("--_pp-keyboard-duration", ".3s");
+                keyboardTimer = setTimeout(() => popover.style.removeProperty("--_pp-keyboard-duration"), 400);
+            } else {
+                popover.style.setProperty("--_pp-height-duration", "0s");
+                requestAnimationFrame(() => requestAnimationFrame(() => popover.style.removeProperty("--_pp-height-duration")));
+            }
+            for (const [name, value] of [["--_pp-keyboard", keyboard], ["--_pp-viewport", height]]) {
+                if (value) popover.style.setProperty(name, value);
+                else popover.style.removeProperty(name);
+            }
         };
 
-        viewport.addEventListener("resize", sync, { signal: this.#viewport.signal });
-        viewport.addEventListener("scroll", sync, { signal: this.#viewport.signal });
-        sync();
+        // A keyboard coming up can be told in a few steps: the visual viewport shrinks, then scrolls to keep the
+        // search box in view, a frame or so later. Measured in between, the sheet would sit too high for a moment,
+        // so it's measured once they've stopped.
+        let timer = 0;
+        const settle = () => {
+            clearTimeout(timer);
+            timer = setTimeout(() => watching.signal.aborted || measure(), 60);
+        };
+
+        viewport.addEventListener("resize", settle, { signal: watching.signal });
+        viewport.addEventListener("scroll", settle, { signal: watching.signal });
+        watching.signal.addEventListener("abort", () => {
+            clearTimeout(timer);
+            clearTimeout(keyboardTimer);
+        });
+        measure();
     }
 }

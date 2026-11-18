@@ -489,7 +489,7 @@ Without `appearance: base-select`, the select is an ordinary one styled with `ap
 - **A multiple select is a list box underneath.** Firefox draws `<select multiple size="1">` as a one-row list box, not a button. Its scrollbar is hidden and its options aren't laid out (`display: none`), so only the field shows under the badges, and a long list stays fast: Firefox would otherwise lay out every option each time the select is built, focused or changed. Your own CSS on its options won't show.
 - **Keys on a closed multiple select act as in Chrome.** A letter, Home, End or a page key selects one option in place and drops the rest, as Chrome's closed multiple select does. Page Down moves one option, where Chrome moves a few. Select all (Ctrl+A) does nothing, as in Chrome.
 - **Screen readers call a multiple select a list box** rather than a combo box, and with its options not laid out, the closed field doesn't list them. The popover lists them, marked as selected or not, as in Chrome.
-- **Firefox for Android** hasn't been tested: a tap may still open the browser's own picker.
+- **Firefox for Android** opens the sheet. A tap on the select would open Firefox's own picker as well, so the picker takes taps over there, and a touch that moves is left to scroll the page. Firefox only says where the keyboard is once it has finished sliding in, so the sheet takes its place above it at once rather than sliding there after it.
 - **The sheet's closing slide** works differently: Firefox can't transition `overlay` yet, so the sheet slides down while it's still open, and closes once it's down (see [On phones](#on-phones)). Back doesn't close the sheet, as Firefox has no `CloseWatcher`.
 
 ## Notes

@@ -570,6 +570,28 @@ export default class PlatyPicker extends HTMLElement {
                 e.preventDefault();
                 this.#select.focus({ preventScroll: true });
             }, { signal });
+
+            // A tap opens the browser's own picker on its own, which stopping the press doesn't prevent: Firefox for
+            // Android shows a dialog of the options, empty for a multiple select, whose options aren't laid out.
+            // So a tap is taken over. Stopping its touchend stops the press and the click the browser would make of
+            // it, and the popover opens as the click would have opened it. A touch that moves is a scroll, left be.
+            let touch = null;
+            this.#select.addEventListener("touchstart", e => {
+                touch = e.touches.length === 1 ? { x: e.touches[0].clientX, y: e.touches[0].clientY } : null;
+            }, { passive: true, signal });
+
+            this.#select.addEventListener("touchend", e => {
+                const start = touch;
+                touch = null;
+                if (!start || native() || !e.cancelable) return;
+
+                const end = e.changedTouches[0];
+                if (Math.hypot(end.clientX - start.x, end.clientY - start.y) > 10) return;
+
+                e.preventDefault();
+                this.#select.focus({ preventScroll: true });
+                this.#togglePopover();
+            }, { signal });
         }
 
         // The popover closes when focus leaves the picker, as by Tab past its end. Back to the select it stays open,

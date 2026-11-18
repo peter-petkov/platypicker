@@ -127,9 +127,10 @@
 
         /* On a phone the popover is a sheet along the bottom of the screen instead (the sheet state, see layout in
            platypicker.js), the full width of it, with a heading the popover doesn't show. */
-        /* Half the screen, or all of it but a strip at the top (see Sheet in sheet.js). The script sets the height of
-           the visual viewport, --_pp-viewport, and how far the on-screen keyboard reaches up the screen,
-           --_pp-keyboard, so the sheet sits on top of the keyboard and fits what's left. */
+        /* Half the screen, or all of it but a strip at the top (see Sheet in sheet.js). The screen is 100svh, its
+           height with the browser's toolbars shown, which stays put as they slide in and out. While the on-screen
+           keyboard is up, the script sets what it leaves of the screen, --_pp-viewport, and how far it reaches up
+           the screen, --_pp-keyboard, so the sheet sits on top of the keyboard and fits what's left. */
         &:state(sheet) > .pp-menu[popover] {
             position-try-fallbacks: none;
             inset: auto 0 0;
@@ -137,8 +138,8 @@
             width: auto;
             min-width: 0;
             max-width: none;
-            height: calc(var(--_pp-viewport, 100dvh) * .56);
-            max-height: calc(var(--_pp-viewport, 100dvh) - 2.5rem);
+            height: calc(var(--_pp-viewport, 100svh) * .56);
+            max-height: calc(var(--_pp-viewport, 100svh) - 2.5rem);
             overflow: hidden;
 
             /* It slides up from below the screen as it opens, and back down as it closes. Closing, display and
@@ -147,7 +148,7 @@
             translate: 0 0;
             transition:
                 height var(--_pp-height-duration, .3s) cubic-bezier(.2, .9, .25, 1),
-                bottom .25s ease-out,
+                bottom var(--_pp-keyboard-duration, 0s) cubic-bezier(.2, .9, .25, 1),
                 translate .3s cubic-bezier(.2, .9, .25, 1),
                 display .3s allow-discrete,
                 overlay .3s allow-discrete;
@@ -171,7 +172,7 @@
             }
 
             &[data-height="full"] {
-                height: calc(var(--_pp-viewport, 100dvh) - 2.5rem);
+                height: calc(var(--_pp-viewport, 100svh) - 2.5rem);
             }
 
             /* A short screen, as a phone on its side, has no room for half height: the sheet opens at full height
@@ -179,7 +180,7 @@
             @media (max-height: 500px) {
                 width: min(100%, 37.5rem);
                 margin-inline: auto;
-                height: calc(var(--_pp-viewport, 100dvh) - 2.5rem);
+                height: calc(var(--_pp-viewport, 100svh) - 2.5rem);
             }
 
             /* While dragged, the sheet follows the pointer, at the height the script sets. It keeps that height as
