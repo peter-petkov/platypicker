@@ -13,4 +13,5 @@ export default {
     shownLabel: { one: "{count} di {total} mostrato", other: "{count} di {total} mostrati" },
     loadedLabel: { one: "{count} opzione finora", many: "{count} di opzioni finora", other: "{count} opzioni finora" },
     filteredLabel: "{count} di {total}",
+    selectedLabel: { one: "{count} selezionata", other: "{count} selezionate" },
 };

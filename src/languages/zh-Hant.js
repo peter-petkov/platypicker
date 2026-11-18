@@ -13,4 +13,5 @@ export default {
     shownLabel: "已顯示 {count} / {total}",
     loadedLabel: { other: "目前 {count} 個選項" },
     filteredLabel: "{count} / {total}",
+    selectedLabel: "已選 {count} 項",
 };

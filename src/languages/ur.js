@@ -13,4 +13,5 @@ export default {
     shownLabel: "{total} میں سے {count} دکھائے گئے",
     loadedLabel: { one: "اب تک {count} آپشن", other: "اب تک {count} آپشنز" },
     filteredLabel: "{total} میں سے {count}",
+    selectedLabel: "{count} منتخب",
 };

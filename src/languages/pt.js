@@ -13,4 +13,5 @@ export default {
     shownLabel: "Mostrando {count} de {total}",
     loadedLabel: { one: "{count} opção até agora", many: "{count} de opções até agora", other: "{count} opções até agora" },
     filteredLabel: "{count} de {total}",
+    selectedLabel: { one: "{count} selecionada", other: "{count} selecionadas" },
 };

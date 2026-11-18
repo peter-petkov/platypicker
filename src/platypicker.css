@@ -35,6 +35,11 @@
  *   --platypicker-menu-radius           the popover
  *   --platypicker-shadow                the popover's shadow
  *   --platypicker-max-height            the popover's height limit
+ *   --platypicker-sheet-bg              the sheet (layout="sheet"), see-through so the page shows blurred behind it
+ *   --platypicker-sheet-card-bg         the sheet's rows, grouped on cards
+ *   --platypicker-sheet-blur            how much the page behind the sheet is blurred
+ *   --platypicker-sheet-backdrop        what dims the page behind the sheet
+ *   --platypicker-sheet-radius          the sheet's top corners
  */
 @supports (anchor-scope: all) and selector(:popover-open) {
     /* Must live at the top level, not nested inside platy-picker. */
@@ -118,6 +123,53 @@
             max-height: var(--platypicker-max-height, 45vh);
             overflow: auto;
             overscroll-behavior: contain;
+        }
+
+        /* On a phone the popover is a sheet along the bottom of the screen instead (the sheet state, see layout in
+           platypicker.js), the full width of it, with a heading the popover doesn't show. */
+        &:state(sheet) > .pp-menu[popover] {
+            position-try-fallbacks: none;
+            inset: auto 0 0;
+            width: auto;
+            min-width: 0;
+            max-width: none;
+            height: 56dvh;
+            max-height: calc(100dvh - 2.5rem);
+            overflow: hidden;
+        }
+
+        /* In the sheet only the list scrolls, between the bar and the counter, so nothing passes under the bar. Only
+           while open: a display of its own would keep the closed popover showing. The list is positioned so that its
+           rows measure their offsetTop from it, as the script expects of whatever scrolls. */
+        &:state(sheet) > .pp-menu:popover-open {
+            display: flex;
+            flex-direction: column;
+
+            > :is(.pp-bar, .pp-empty, .pp-counter) {
+                flex: none;
+            }
+
+            > .pp-list {
+                position: relative;
+                flex: 1;
+                min-height: 0;
+                align-content: start;
+                overflow: auto;
+                overscroll-behavior: contain;
+            }
+        }
+
+        > .pp-menu :is(.pp-handle, .pp-heading) {
+            display: none;
+        }
+
+        &:state(sheet) > .pp-menu :is(.pp-handle, .pp-heading) {
+            display: block;
+        }
+
+        /* The sheet keeps its bar for the handle and heading, even with no search box or buttons in it. */
+        &:state(sheet) > .pp-menu > .pp-bar[hidden] {
+            display: grid !important;
         }
 
         /* The badges over a closed multiple select (see TagsView). They cover the select exactly and let clicks
@@ -207,6 +259,11 @@
         --_pp-shadow: var(--platypicker-shadow, var(--_pp-skin-shadow,
             0 8px 24px light-dark(rgb(0 0 0 / .12), rgb(0 0 0 / .4)),
             0 2px 6px light-dark(rgb(0 0 0 / .08), rgb(0 0 0 / .3))));
+        --_pp-sheet-bg: var(--platypicker-sheet-bg, var(--_pp-skin-sheet-bg, light-dark(rgb(242 242 240 / .8), rgb(30 30 33 / .8))));
+        --_pp-sheet-card-bg: var(--platypicker-sheet-card-bg, var(--_pp-skin-sheet-card-bg, light-dark(rgb(255 255 255 / .85), rgb(255 255 255 / .07))));
+        --_pp-sheet-blur: var(--platypicker-sheet-blur, var(--_pp-skin-sheet-blur, 24px));
+        --_pp-sheet-backdrop: var(--platypicker-sheet-backdrop, var(--_pp-skin-sheet-backdrop, rgb(0 0 0 / .2)));
+        --_pp-sheet-radius: var(--platypicker-sheet-radius, var(--_pp-skin-sheet-radius, 14px));
     }
 
     /* Layout: how the parts sit, which a skin keeps. One notch above a single class, so a framework class on a part
@@ -468,6 +525,73 @@
         .pp-tag-count {
             flex: none;
         }
+
+        /* The sheet's bar: the handle, then select none, the heading and select all in a row, then the search box.
+           The heading has the middle column, so it stays centered whichever buttons show. In a right-to-left page
+           the columns swap, and the buttons with them. */
+        &:state(sheet) .pp-bar {
+            display: grid;
+            grid-template-columns: 1fr minmax(0, auto) 1fr;
+            grid-template-areas: "handle handle handle" "lead heading trail" "search search search";
+            align-items: center;
+            gap: 0;
+        }
+
+        &:state(sheet) .pp-handle {
+            grid-area: handle;
+            justify-self: center;
+        }
+
+        &:state(sheet) .pp-heading {
+            grid-area: heading;
+            min-width: 0;
+            text-align: center;
+        }
+
+        :is(.pp-title, .pp-selected-count) {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+
+            &:empty {
+                display: none;
+            }
+        }
+
+        &:state(sheet) .pp-button[data-action="none"] {
+            grid-area: lead;
+            justify-self: start;
+        }
+
+        &:state(sheet) .pp-button[data-action="all"] {
+            grid-area: trail;
+            justify-self: end;
+        }
+
+        &:state(sheet) .pp-search {
+            grid-area: search;
+            min-width: 0;
+            width: 100%;
+        }
+
+        /* The sheet's rows sit on cards: a group's rows on one, and each run of rows outside groups on another. */
+        &:state(sheet) .pp-group-list {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr);
+            margin: 0;
+            padding: 0; /* A list's own indent, which display: contents had kept from showing. */
+            overflow: clip;
+        }
+
+        /* clip, not hidden: a box with overflow: hidden may shrink to nothing in a grid, which Firefox does to the
+           rows once the sheet's list has a height to fit. */
+        &:state(sheet) .pp-list > li:not(.pp-group) {
+            overflow: clip;
+        }
+
+        &:state(sheet) .pp-item {
+            position: relative; /* For the line between rows. */
+        }
     }
 
     /* Paint: colors, borders, spacing and type. A skin (which adds the pp-skin class to platy-picker) leaves these to
@@ -699,6 +823,172 @@
         .pp-tags-placeholder {
             padding-inline-start: .3125rem;
             color: var(--_pp-muted);
+        }
+
+        /* The sheet: frosted glass over a dimmed page, with the rows on cards. */
+        :where(&:state(sheet)) {
+            .pp-menu {
+                padding-bottom: env(safe-area-inset-bottom);
+                background: var(--_pp-sheet-bg);
+                backdrop-filter: blur(var(--_pp-sheet-blur)) saturate(1.8);
+                border: 0;
+                border-top: 1px solid var(--_pp-border);
+                border-radius: var(--_pp-sheet-radius) var(--_pp-sheet-radius) 0 0;
+                box-shadow: 0 -4px 24px light-dark(rgb(0 0 0 / .08), rgb(0 0 0 / .4));
+
+                &::backdrop {
+                    background: var(--_pp-sheet-backdrop);
+                }
+            }
+
+            /* Nothing scrolls under the bar or the counter in the sheet, so the frosted sheet shows through them. */
+            :is(.pp-bar, .pp-counter) {
+                background: none;
+                border: 0;
+            }
+
+            .pp-bar {
+                padding: 0 .75rem .625rem;
+            }
+
+            .pp-handle {
+                width: 2.25rem;
+                height: .3125rem;
+                margin-block: .375rem .125rem;
+                background: color-mix(in srgb, var(--_pp-color) 25%, transparent);
+                border-radius: 999px;
+            }
+
+            .pp-heading {
+                padding-block: .375rem;
+                line-height: 1.25;
+            }
+
+            .pp-title {
+                font-weight: 600;
+            }
+
+            .pp-selected-count {
+                font-size: .75em;
+                color: var(--_pp-muted);
+            }
+
+            .pp-button {
+                padding: .625rem .25rem;
+                font-size: 1em;
+
+                &:hover {
+                    text-decoration: none;
+                }
+            }
+
+            /* 16px at least: iOS zooms the page into a text box with smaller text when it takes focus. */
+            .pp-search {
+                margin: .25rem 0 0;
+                padding-block: .4375rem;
+                padding-inline: 2rem .625rem;
+                font-size: max(1em, 16px);
+                line-height: 1.25;
+                background: color-mix(in srgb, var(--_pp-color) 8%, transparent) no-repeat left .625rem center / 1rem;
+                background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23888' stroke-width='1.75' stroke-linecap='round'%3e%3ccircle cx='7' cy='7' r='4.75'/%3e%3cpath d='m10.5 10.5 3.5 3.5'/%3e%3c/svg%3e");
+                border: 0;
+                border-radius: .625rem;
+
+                :where(&:dir(rtl)) {
+                    background-position: right .625rem center;
+                }
+
+                &:focus-visible {
+                    outline-offset: 0;
+                }
+            }
+
+            .pp-list {
+                gap: 0;
+                padding: .25rem .75rem .75rem;
+            }
+
+            :is(.pp-group-list, .pp-list > li:not(.pp-group)) {
+                background: var(--_pp-sheet-card-bg);
+            }
+
+            .pp-group-list {
+                border-radius: .625rem;
+            }
+
+            /* A run of rows outside groups: rounded where it starts and ends. ListView marks a row a group follows. */
+            .pp-list > li:not(.pp-group):is(:first-child, .pp-group + *) {
+                border-start-start-radius: .625rem;
+                border-start-end-radius: .625rem;
+            }
+
+            .pp-list > .pp-group + li:not(.pp-group) {
+                margin-top: .75rem;
+            }
+
+            .pp-list > li:not(.pp-group):is(:last-child, [data-before-group]) {
+                border-end-start-radius: .625rem;
+                border-end-end-radius: .625rem;
+            }
+
+            .pp-item {
+                min-height: 2.75rem;
+                padding-block: .5rem;
+                padding-inline: 1rem .875rem;
+                border-radius: 0;
+
+                /* A touch leaves :hover on the row it tapped, so only a press shows. */
+                &:hover:not(:focus-visible) {
+                    background: none;
+                }
+
+                &:active:not(:disabled, [aria-disabled="true"]) {
+                    background: var(--_pp-hover);
+                }
+
+                /* Rounded like the cards, so the ring sits inside one rather than across its corners. */
+                &:focus-visible {
+                    border-radius: .625rem;
+                }
+            }
+
+            /* The line between rows on a card, starting at the text, as in a phone's own lists. */
+            :is(.pp-list, .pp-group-list) > li:not(.pp-group) + li:not(.pp-group) > .pp-item::before {
+                content: "";
+                position: absolute;
+                inset-block-start: 0;
+                inset-inline: 1rem 0;
+                border-top: 1px solid var(--_pp-border);
+            }
+
+            /* A divider is the full width of its card, and the row after it draws no line of its own. */
+            .pp-divider {
+                margin: 0;
+            }
+
+            [data-divider] + li > .pp-item::before {
+                display: none;
+            }
+
+            .pp-item-check {
+                width: 1.125rem;
+                height: 1.125rem;
+            }
+
+            .pp-header {
+                padding: .875rem 1rem .375rem;
+                font-size: .8125em;
+            }
+
+            .pp-empty {
+                padding: 1.5rem 1rem;
+                text-align: center;
+            }
+
+            .pp-counter {
+                padding: .375rem 1rem .5rem;
+                text-align: center;
+            }
         }
     }
 }

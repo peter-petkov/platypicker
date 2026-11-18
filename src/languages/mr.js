@@ -13,4 +13,5 @@ export default {
     shownLabel: "{total} पैकी {count} दाखवले",
     loadedLabel: { one: "आतापर्यंत {count} पर्याय", other: "आतापर्यंत {count} पर्याय" },
     filteredLabel: "{total} पैकी {count}",
+    selectedLabel: "{count} निवडलेले",
 };

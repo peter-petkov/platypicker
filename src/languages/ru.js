@@ -13,4 +13,5 @@ export default {
     shownLabel: "Показано {count} из {total}",
     loadedLabel: { one: "{count} вариант пока", few: "{count} варианта пока", many: "{count} вариантов пока", other: "{count} варианта пока" },
     filteredLabel: "{count} из {total}",
+    selectedLabel: "Выбрано: {count}",
 };

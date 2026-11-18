@@ -58,6 +58,9 @@ export default class ListView {
     #announceTimer;
     #counter;                           // How many options there are, or match the search, under the list.
     #counterTimer;
+    #title;                             // The sheet's title and selected count, above the search box.
+    #selectedCount;
+    #sheet = false;                     // Whether the popover is shown as the sheet, where the list scrolls.
 
     #config = {};
     #view = null;                       // The FilteredView being shown.
@@ -140,12 +143,21 @@ export default class ListView {
         this.#counter.hidden = true;
     }
 
-    /** Names the popover and its list after the select, as its label reads now. An empty label names neither. */
+    /**
+     * Names the popover and its list after the select, as its label reads now, and titles the sheet with it. An empty
+     * label names neither.
+     */
     setLabel(label) {
         for (const element of [this.#popover, this.#list]) {
             if (!label) element.removeAttribute("aria-label");
             else if (element.getAttribute("aria-label") !== label) element.setAttribute("aria-label", label);
         }
+        if (this.#title.textContent !== label) this.#title.textContent = label;
+    }
+
+    /** Shows how many options are selected under the sheet's title, as "3 selected". Empty text shows nothing. */
+    setSelectedCount(text) {
+        if (this.#selectedCount.textContent !== text) this.#selectedCount.textContent = text;
     }
 
     #buildControls() {
@@ -155,6 +167,22 @@ export default class ListView {
         addClasses(form, "bar");
         form.addEventListener("submit", e => e.preventDefault(), { signal });
         this.#popover.append(form);
+
+        // Shown only in the sheet (layout="sheet"), where select all and none sit either side of the heading. The
+        // heading repeats what the popover's name says, so screen readers skip it.
+        const handle = document.createElement("div");
+        addClasses(handle, "handle");
+        handle.setAttribute("aria-hidden", "true");
+
+        const heading = document.createElement("div");
+        addClasses(heading, "heading");
+        heading.setAttribute("aria-hidden", "true");
+        this.#title = document.createElement("div");
+        addClasses(this.#title, "title");
+        this.#selectedCount = document.createElement("div");
+        addClasses(this.#selectedCount, "selectedCount");
+        heading.append(this.#title, this.#selectedCount);
+        form.append(handle, heading);
 
         this.#search = document.createElement("input");
         this.#search.type = "search";
@@ -174,9 +202,11 @@ export default class ListView {
 
         // Clicks are ignored while either action is running, so a long one can't be started twice.
         this.#selectAllButton = this.#buildActionButton(() => this.#busy || this.#actions.selectAll());
+        this.#selectAllButton.dataset.action = "all";
         form.append(this.#selectAllButton);
 
         this.#selectNoneButton = this.#buildActionButton(() => this.#busy || this.#actions.selectNone());
+        this.#selectNoneButton.dataset.action = "none";
         form.append(this.#selectNoneButton);
 
         this.#popover.append(this.#list, this.#empty, this.#counter, this.#status);
@@ -205,10 +235,13 @@ export default class ListView {
             if (this.#recordsByButton.has(e.target)) this.#setTabStop(e.target);
         }, { signal: this.#signal });
 
-        // More rows as the list scrolls, or as the popover grows (say, with the window), at most once a frame.
-        this.#popover.addEventListener("scroll", () => this.#scheduleTopUp(), { passive: true, signal: this.#signal });
+        // More rows as the list scrolls, or as the popover grows (say, with the window), at most once a frame. The
+        // popover scrolls, or in the sheet the list does.
+        for (const scroller of [this.#popover, this.#list])
+            scroller.addEventListener("scroll", () => this.#scheduleTopUp(), { passive: true, signal: this.#signal });
         this.#resizeObserver = new ResizeObserver(() => this.#scheduleTopUp());
         this.#resizeObserver.observe(this.#popover);
+        this.#resizeObserver.observe(this.#list);
     }
 
     // -----------------------------------------------------------------
@@ -322,7 +355,7 @@ export default class ListView {
     /** Shows the entries matching a search, starting again from the first batch. An empty search shows them all. */
     filter(rawValue) {
         this.#showMatches(Languages.fold(rawValue.trim(), this.#config.locale));
-        this.#popover.scrollTop = 0;
+        this.#scroller.scrollTop = 0;
 
         // Once typing pauses, so that screen readers don't read out a count for every key.
         clearTimeout(this.#announceTimer);
@@ -453,12 +486,14 @@ export default class ListView {
      * scrolled into view, so the list grows smoothly as it scrolls. Then sees whether to ask the page for more.
      */
     #topUp() {
-        const popover = this.#popover;
-        if (!this.#view || this.#signal.aborted || !popover.matches(":popover-open")) return;
+        if (!this.#view || this.#signal.aborted || !this.#popover.matches(":popover-open")) return;
 
-        const end = this.#tail[0]?.offsetTop ?? popover.scrollHeight;
-        const below = end - popover.scrollTop - popover.clientHeight;
-        const wanted = popover.clientHeight * ListView.#cushion;
+        // The skeleton rows' offsetTop is measured in the scroller: the popover is positioned, and so is the sheet's
+        // list (see platypicker.css).
+        const scroller = this.#scroller;
+        const end = this.#tail[0]?.offsetTop ?? scroller.scrollHeight;
+        const below = end - scroller.scrollTop - scroller.clientHeight;
+        const wanted = scroller.clientHeight * ListView.#cushion;
 
         if (below < wanted && this.#hasMore && this.#isBatched) {
             const rowHeight = this.#rows.at(-1)?.button.offsetHeight || 32;
@@ -597,6 +632,7 @@ export default class ListView {
                     addClasses(divider, "divider");
                     li = this.#wrapInListItem(divider);
                     li.setAttribute("aria-hidden", "true"); // A listbox holds options and groups only.
+                    li.dataset.divider = ""; // So the sheet leaves out the line the row after it would draw.
                 }
 
                 this.#dividerItems.set(entry, li);
@@ -612,6 +648,12 @@ export default class ListView {
                     const header = li.firstElementChild;
                     if (header.textContent !== entry.group.label) header.textContent = entry.group.label;
 
+                    // The sheet rounds off the rows outside a group where a group follows them, which CSS can't
+                    // see without :has() (see #styleBar for why that's avoided).
+                    const previous = items.at(-1) ?? (reuse ? null : this.#lastListItem());
+                    if (previous && !previous.matches(".pp-group"))
+                        previous.dataset.beforeGroup = "";
+
                     this.#groupItems.set(entry.group, li);
                     items.push(li);
                 }
@@ -624,10 +666,17 @@ export default class ListView {
             record.button.setAttribute("aria-posinset", this.#rows.length);
             if (this.#setSize !== null) record.button.setAttribute("aria-setsize", this.#setSize);
 
-            itemsOf(entry.group).push(old ? record.button.parentElement : this.#wrapInListItem(record.button));
+            const li = old ? record.button.parentElement : this.#wrapInListItem(record.button);
+            delete li.dataset.beforeGroup; // Set again above if a group still follows it.
+            itemsOf(entry.group).push(li);
         }
 
         return { items, groups };
+    }
+
+    /** The list's last item before the skeleton rows, if there are any. */
+    #lastListItem() {
+        return this.#tail.length ? this.#tail[0].previousElementSibling : this.#list.lastElementChild;
     }
 
     /**
@@ -884,16 +933,18 @@ export default class ListView {
 
     /**
      * Called when the popover opens. The selected item is rendered if it wasn't yet and brought into view. Focus
-     * goes to the search box when there is one, otherwise to the selected item, otherwise to the first item.
+     * goes to the search box when there is one, otherwise to the selected item, otherwise to the first item. With
+     * `search` false (in the sheet, where focusing the search box would bring up the on-screen keyboard), the
+     * search box is passed over.
      */
-    focusInitial() {
+    focusInitial({ search = true } = {}) {
         this.#scheduleTopUp(); // The popover has its size now, so the list can fill it.
 
         const selected = this.#source.firstSelected;
         const selectedButton = selected && this.ensureRendered(selected) ? this.#recordsByEntry.get(selected).button : null;
         if (selectedButton) this.#reveal(selectedButton, true);
 
-        if (!this.#search.hidden) {
+        if (search && !this.#search.hidden) {
             this.#search.focus({ preventScroll: true });
             return;
         }
@@ -919,17 +970,35 @@ export default class ListView {
      * The sticky bar covers the top of the popover, so the part under it doesn't count as in view.
      */
     #reveal(button, center) {
-        const popover = this.#popover;
-        if (!popover.matches(":popover-open")) return;
+        if (!this.#popover.matches(":popover-open")) return;
 
-        const bar = this.#form.hidden ? 0 : this.#form.offsetHeight;
-        const top = button.getBoundingClientRect().top - popover.getBoundingClientRect().top - popover.clientTop - bar;
+        const scroller = this.#scroller;
+        const bar = this.#coveredHeight;
+        const top = button.getBoundingClientRect().top - scroller.getBoundingClientRect().top - scroller.clientTop - bar;
         const height = button.offsetHeight;
-        const room = popover.clientHeight - bar;
+        const room = scroller.clientHeight - bar;
 
-        if (center) popover.scrollTop += top - (room - height) / 2;
-        else if (top < 0) popover.scrollTop += top;
-        else if (top + height > room) popover.scrollTop += top + height - room;
+        if (center) scroller.scrollTop += top - (room - height) / 2;
+        else if (top < 0) scroller.scrollTop += top;
+        else if (top + height > room) scroller.scrollTop += top + height - room;
+    }
+
+    /**
+     * What scrolls: the popover, with the bar sticking to its top, or in the sheet (see setSheet) the list alone, so
+     * nothing passes under the sheet's see-through bar.
+     */
+    get #scroller() {
+        return this.#sheet ? this.#list : this.#popover;
+    }
+
+    /** How much of the top of the scroller the sticky bar covers. */
+    get #coveredHeight() {
+        return this.#sheet || this.#form.hidden ? 0 : this.#form.offsetHeight;
+    }
+
+    /** Says whether the popover is shown as the sheet (layout="sheet"), where the list scrolls rather than the popover. */
+    setSheet(sheet) {
+        this.#sheet = sheet;
     }
 
     // -----------------------------------------------------------------
@@ -1027,7 +1096,7 @@ export default class ListView {
      */
     #jump(from, pages) {
         const index = this.#rows.findIndex(record => record.button === from);
-        const room = this.#popover.clientHeight - (this.#form.hidden ? 0 : this.#form.offsetHeight);
+        const room = this.#scroller.clientHeight - this.#coveredHeight;
         const pageSize = Math.max(1, Math.floor(room / from.offsetHeight) - 1);
         const wanted = Number.isFinite(pages) ? index + pages * pageSize : pages;
 

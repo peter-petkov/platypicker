@@ -13,4 +13,5 @@ export default {
     shownLabel: "{total}개 중 {count}개 표시",
     loadedLabel: { other: "지금까지 옵션 {count}개" },
     filteredLabel: "{total}개 중 {count}개",
+    selectedLabel: "{count}개 선택됨",
 };

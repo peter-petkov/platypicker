@@ -13,4 +13,5 @@ export default {
     shownLabel: "{total}లో {count} చూపబడ్డాయి",
     loadedLabel: { one: "ఇప్పటివరకు {count} ఎంపిక", other: "ఇప్పటివరకు {count} ఎంపికలు" },
     filteredLabel: "{total}లో {count}",
+    selectedLabel: "{count} ఎంచుకోబడ్డాయి",
 };

@@ -13,4 +13,5 @@ export default {
     shownLabel: "{total}টির মধ্যে {count}টি দেখানো হচ্ছে",
     loadedLabel: { other: "এখন পর্যন্ত {count}টি বিকল্প" },
     filteredLabel: "{total}টির মধ্যে {count}টি",
+    selectedLabel: "{count}টি নির্বাচিত",
 };

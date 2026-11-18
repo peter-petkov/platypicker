@@ -13,6 +13,10 @@ export const classes = {
     select: "",         // the <select> it wraps
     menu: "",           // the popover
     bar: "",            // the search box and buttons above the list
+    handle: "",         // the grab handle at the top of the sheet (layout="sheet")
+    heading: "",        // the sheet's heading: its title and selected count
+    title: "",          // the sheet's title, the select's label
+    selectedCount: "",  // how many options are selected, under the sheet's title (multiple selects)
     search: "",         // the search box
     button: "",         // select all and select none
     list: "",           // the <ul> of options
@@ -42,6 +46,10 @@ const fixed = {
     select: "pp-select",
     menu: "pp-menu",
     bar: "pp-bar",
+    handle: "pp-handle",
+    heading: "pp-heading",
+    title: "pp-title",
+    selectedCount: "pp-selected-count",
     search: "pp-search",
     button: "pp-button",
     list: "pp-list",

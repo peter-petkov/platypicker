@@ -13,4 +13,5 @@ export default {
     shownLabel: "Đang hiển thị {count} trên {total}",
     loadedLabel: { other: "hiện có {count} lựa chọn" },
     filteredLabel: "{count} trên {total}",
+    selectedLabel: "Đã chọn {count}",
 };

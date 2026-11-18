@@ -66,6 +66,8 @@ export default class PlatyPicker extends HTMLElement {
         shownLabel: "{count} of {total} shown",
         loadedLabel: { one: "{count} option so far", other: "{count} options so far" },
         filteredLabel: "{count} of {total}",
+        // Under the sheet's title (layout="sheet") in a multiple select: how many options are selected.
+        selectedLabel: "{count} selected",
     };
 
     /**
@@ -205,7 +207,10 @@ export default class PlatyPicker extends HTMLElement {
 
         this.#view.configure(this.#viewConfig());
         this.#tags?.configure(this.#tagsConfig());
-        if (this.#view.popover.matches(":popover-open")) this.#syncLayout();
+        if (this.#view.popover.matches(":popover-open")) {
+            this.#syncLayout();
+            this.#syncSelectedCount();
+        }
     }
 
     setValue(value) {
@@ -214,6 +219,7 @@ export default class PlatyPicker extends HTMLElement {
         this.#source.setValue(value);
         this.#view.refresh();
         this.#tags?.refresh();
+        this.#syncSelectedCount();
     }
 
     // -----------------------------------------------------------------
@@ -368,6 +374,7 @@ export default class PlatyPicker extends HTMLElement {
         if (this.#view) {
             this.#view.configure(this.#viewConfig());
             this.#tags?.configure(this.#tagsConfig());
+            this.#syncSelectedCount();
         }
 
         ready?.then(() => {
@@ -554,6 +561,7 @@ export default class PlatyPicker extends HTMLElement {
             await new Promise(resolve => requestAnimationFrame(resolve)); // let in-flight option mutations settle
             this.#view?.refresh();
             this.#tags?.refresh();
+            this.#syncSelectedCount();
         }, { signal });
 
         // A form reset changes the selection without a change event, and only once the reset event has run.
@@ -574,11 +582,11 @@ export default class PlatyPicker extends HTMLElement {
         popover.addEventListener("beforetoggle", e => {
             if (e.newState !== "open") return;
 
-            this.#syncLayout();
             this.#catchUp();
             this.#view.refresh(); // Picks up selection changes that fire no change event, like select.value = x.
             this.#view.setLabel(this.#label()); // The label may have changed since the last time.
-            this.#syncLanguage(); // So may the language.
+            this.#syncLayout(); // So may the screen, for the sheet.
+            this.#syncLanguage(); // And the language. This also counts the selected options for the sheet.
         }, { signal });
 
         popover.addEventListener("toggle", e => {
@@ -588,7 +596,7 @@ export default class PlatyPicker extends HTMLElement {
 
             if (e.newState === "open") {
                 this.#view.syncControls();
-                this.#view.focusInitial();
+                this.#view.focusInitial({ search: !this.#internals.states.has("sheet") });
             }
         }, { signal });
     }
@@ -647,6 +655,18 @@ export default class PlatyPicker extends HTMLElement {
         const layout = this.layout;
         const sheet = layout === "sheet" || (layout === "auto" && matchMedia(PlatyPicker.sheetMedia).matches);
         this.#internals.states[sheet ? "add" : "delete"]("sheet");
+        this.#view.setSheet(sheet);
+    }
+
+    /**
+     * Tells the sheet's heading how many options are selected, in a multiple select. Only the sheet shows the count,
+     * so the popover doesn't count them; counting the selected options of a long select takes a moment.
+     */
+    #syncSelectedCount() {
+        const shown = this.#select.multiple && this.#internals.states.has("sheet");
+        this.#view.setSelectedCount(shown
+            ? Languages.format(this.#text("selectedLabel"), this.#select.selectedOptions.length, this.#locale)
+            : "");
     }
 
     #togglePopover(forceOpen = false) {

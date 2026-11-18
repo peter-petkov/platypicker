@@ -13,4 +13,5 @@ export default {
     shownLabel: "{total} içinden {count} gösteriliyor",
     loadedLabel: { one: "şimdilik {count} seçenek", other: "şimdilik {count} seçenek" },
     filteredLabel: "{total} içinden {count}",
+    selectedLabel: "{count} seçili",
 };

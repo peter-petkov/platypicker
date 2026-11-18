@@ -13,4 +13,5 @@ export default {
     shownLabel: "{total} में से {count} दिखाए गए",
     loadedLabel: { one: "अब तक {count} विकल्प", other: "अब तक {count} विकल्प" },
     filteredLabel: "{total} में से {count}",
+    selectedLabel: "{count} चयनित",
 };

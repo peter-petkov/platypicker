@@ -13,4 +13,5 @@ export default {
     shownLabel: "Показване на {count} от {total}",
     loadedLabel: { one: "{count} опция досега", other: "{count} опции досега" },
     filteredLabel: "{count} от {total}",
+    selectedLabel: "Избрани: {count}",
 };
