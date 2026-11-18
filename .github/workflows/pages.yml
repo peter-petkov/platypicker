@@ -38,7 +38,7 @@ jobs:
           VERSION="$(git describe --tags --abbrev=0)"
 
           mkdir _site
-          cp docs/* _site/
+          cp -r docs/. _site/
           cp -r src _site/src
           cp platylogo.png platylogo.ico _site/
           printf '{ "version": "%s" }\n' "${VERSION}" > _site/package.json

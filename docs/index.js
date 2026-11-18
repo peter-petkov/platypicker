@@ -65,6 +65,7 @@ function init() {
     setupPlayground();
     setupLoadingDemo();
     setupBenchmark();
+    setupWhatsNew();
 }
 
 // ---------------------------------------------------------------------------
@@ -587,6 +588,41 @@ function setupTheme() {
             applyTheme();
         });
     }
+}
+
+// ---------------------------------------------------------------------------
+// What's new. Each clip comes in light and dark, and only the one for the page's theme shows. It plays while it's on
+// screen, and is paused otherwise. With reduced motion, clips wait on their first frame, with controls to play them.
+// ---------------------------------------------------------------------------
+
+function setupWhatsNew() {
+    const videos = [...document.querySelectorAll(".feature video")];
+    const inView = new Set();
+
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        for (const video of videos) video.controls = true;
+        return;
+    }
+
+    const sync = () => {
+        for (const video of videos) {
+            if (inView.has(video.parentElement) && video.checkVisibility()) video.play().catch(() => {});
+            else video.pause();
+        }
+    };
+
+    const observer = new IntersectionObserver(entries => {
+        for (const entry of entries) {
+            if (entry.isIntersecting) inView.add(entry.target);
+            else inView.delete(entry.target);
+        }
+        sync();
+    }, { threshold: 0.4 });
+
+    // The box around a clip and its twin is watched, since the twin that's hidden has no box of its own.
+    for (const media of new Set(videos.map(video => video.parentElement))) observer.observe(media);
+    for (const radio of document.querySelectorAll("input[name=theme]")) radio.addEventListener("change", () => setTimeout(sync));
+    matchMedia("(prefers-color-scheme: dark)").addEventListener("change", sync);
 }
 
 // The same test the stylesheet uses before it styles anything.

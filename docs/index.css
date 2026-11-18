@@ -542,6 +542,103 @@ p {
     }
 }
 
+/* What's new: a row per feature, its picture or clip on alternate sides. Each comes in light and dark, and the one
+   for the page's theme shows. */
+
+.features {
+    display: grid;
+    gap: 2rem;
+    margin: 1.5rem 0 2rem;
+
+    & + h4 {
+        margin: 0 0 0.5rem;
+        font-size: 1.05rem;
+        font-weight: 600;
+    }
+}
+
+.feature {
+    display: grid;
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+    align-items: center;
+    gap: 1.75rem;
+
+    &:nth-child(even) {
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+
+        .feature-media {
+            order: 1;
+        }
+    }
+
+    h4 {
+        margin: 0 0 0.3rem;
+        font-size: 1.05rem;
+        font-weight: 600;
+    }
+
+    p {
+        margin: 0;
+    }
+}
+
+.feature-media {
+    overflow: hidden;
+    border: 1px solid var(--page-border);
+    border-radius: 12px;
+    background: var(--page-stage);
+    aspect-ratio: 1040 / 680;
+
+    img, video {
+        display: block;
+        width: 100%;
+        height: 100%;
+    }
+
+    &.tall {
+        justify-self: center;
+        width: min(100%, 11.5rem);
+        aspect-ratio: 520 / 1000;
+    }
+}
+
+.shot-dark {
+    display: none !important;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme=light]) {
+        .shot-light {
+            display: none !important;
+        }
+
+        .shot-dark {
+            display: block !important;
+        }
+    }
+}
+
+:root[data-theme=dark] {
+    .shot-light {
+        display: none !important;
+    }
+
+    .shot-dark {
+        display: block !important;
+    }
+}
+
+@media (width < 640px) {
+    .feature, .feature:nth-child(even) {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 0.9rem;
+
+        .feature-media {
+            order: 0;
+        }
+    }
+}
+
 /* Playground */
 
 .playground {
