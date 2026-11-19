@@ -1,6 +1,7 @@
 "use strict";
 
 import { addClasses, toggleClasses } from "./classes.js";
+import Glide from "./glide.js";
 import Languages from "./languages.js";
 
 /**
@@ -63,6 +64,7 @@ export default class ListView {
     #selectedCountParts;
     #selectedCountShown = { text: "", count: 0 };
     #selectedCountRoll = null;          // The count rolling to its new number, while it does.
+    #glide = null;                      // Moves the sheet's rows as a search changes which show (see Glide).
     #sheet = false;                     // Whether the popover is shown as the sheet, where the list scrolls.
     #cancelButton;                      // The sheet's Cancel, beside the search box.
 
@@ -418,8 +420,15 @@ export default class ListView {
 
     /** Shows the entries matching a search, starting again from the first batch. An empty search shows them all. */
     filter(rawValue) {
+        // In the open sheet, the rows glide to their new places (see Glide).
+        const glide = this.#sheet && this.#popover.matches(":popover-open") &&
+            !matchMedia("(prefers-reduced-motion: reduce)").matches;
+        this.#glide ??= new Glide(this.#popover);
+        const taken = glide && this.#glide.take(this.#scroller, this.#glideRows(), this.#groupItems);
+
         this.#showMatches(Languages.fold(rawValue.trim(), this.#config.locale));
         this.#scroller.scrollTop = 0;
+        if (taken) this.#glide.play(taken, this.#scroller, this.#glideRows(), this.#groupItems);
 
         // Once typing pauses, so that screen readers don't read out a count for every key.
         clearTimeout(this.#announceTimer);
@@ -431,6 +440,11 @@ export default class ListView {
             const view = this.#view;
             this.#counterTimer = setTimeout(() => this.#view === view && this.#syncCounter(view.count()), 150);
         }
+    }
+
+    /** The rendered rows, in order, as Glide takes them: keyed by their option, with their group. */
+    * #glideRows() {
+        for (const { entry, button } of this.#rows) yield { key: entry, group: entry.group ?? null, button };
     }
 
     /**

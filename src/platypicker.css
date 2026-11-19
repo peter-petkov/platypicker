@@ -250,6 +250,14 @@
             }
         }
 
+        /* Where copies of the rows a search took away fade out, over the list (see Glide). */
+        .pp-glide-layer {
+            position: absolute;
+            z-index: 1;
+            overflow: hidden;
+            pointer-events: none;
+        }
+
         > .pp-menu :is(.pp-handle, .pp-heading) {
             display: none;
         }
