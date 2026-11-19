@@ -86,6 +86,14 @@ export default class Sheet {
         list.addEventListener("touchmove", dismiss, { passive: true, signal });
         list.addEventListener("wheel", dismiss, { passive: true, signal });
 
+        // A row bounces as it's picked or unpicked, by tap, click or key alike.
+        list.addEventListener("click", e => {
+            const row = e.target.closest(".pp-item");
+            if (!this.#active || !row || row.matches(":disabled, [aria-disabled='true']") ||
+                matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+            row.animate([{ scale: 1 }, { scale: .975, offset: .4 }, { scale: 1 }], { duration: 240, easing: "ease-out" });
+        }, { signal });
+
         cancel.addEventListener("click", () => this.#cancelSearch(), { signal });
         signal.addEventListener("abort", () => this.close());
 

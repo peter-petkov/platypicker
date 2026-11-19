@@ -480,9 +480,29 @@
             height: 1rem;
         }
 
-        .pp-item[aria-selected="true"] > .pp-item-check {
+        .pp-item[aria-selected="true"] > .pp-item-check,
+        &:state(sheet) .pp-item-check {
             background: var(--_pp-accent);
             mask: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3e%3cpath d='m5 12 5 5 10-10'/%3e%3c/svg%3e") center / contain no-repeat;
+        }
+
+        /* In the sheet the check mark is wiped in from the start edge as its row is picked, and out again as it's
+           unpicked. Every row has one there, cut away while its row isn't selected. */
+        &:state(sheet) .pp-item-check {
+            clip-path: inset(0 100% 0 0);
+            transition: clip-path .22s ease-out;
+
+            &:dir(rtl) {
+                clip-path: inset(0 0 0 100%);
+            }
+
+            @media (prefers-reduced-motion: reduce) {
+                transition: none;
+            }
+        }
+
+        &:state(sheet) .pp-item[aria-selected="true"] > .pp-item-check {
+            clip-path: inset(0);
         }
 
         /* "No matches", under the list. */
@@ -1064,7 +1084,8 @@
                 padding-inline: 1rem .875rem;
                 border-radius: 0;
 
-                /* A touch leaves :hover on the row it tapped, so only a press shows. */
+                /* A touch leaves :hover on the row it tapped, so only a press shows. A picked row bounces too (see
+                   Sheet), which shows where a press doesn't: Firefox for Android hardly shows :active on a tap. */
                 &:hover:not(:focus-visible) {
                     background: none;
                 }
