@@ -38,6 +38,12 @@ export default class Sheet {
     // A screen too short for half height, as a phone on its side. The same as in platypicker.css.
     static #shortScreen = "(max-height: 500px)";
 
+    // The spring a let-go sheet settles by (see #springTo): seconds a swing takes, how damped it is (1 doesn't
+    // overshoot), and the most speed it takes from the finger, in pixels per second.
+    static #springResponse = .45;
+    static #springDamping = .75;
+    static #springMaxSpeed = 4000;
+
     // As the sheet opens, how many rows rise one after another; the rest in view rise with the last of them.
     static #riseSteps = 12;
 
@@ -63,6 +69,7 @@ export default class Sheet {
     #hiding = null;         // While the sheet slides down before hiding (see hide): stops waiting for it.
     #risen = [];            // While the rows rise as the sheet opens (see rise): the rows, each with its turn.
     #riseTimer = 0;
+    #spring = 0;            // While a let-go sheet springs to its height (see #springTo): the next frame's request.
 
     constructor({ popover, bar, search, cancel, list, clearSearch, close, signal }) {
         this.#popover = popover;
@@ -248,6 +255,7 @@ export default class Sheet {
         this.#hiding = null;
         this.#drag = null;
         this.#pull = null;
+        cancelAnimationFrame(this.#spring); // It slides away at the height it had come to.
         this.#syncCancel();
         this.#resetLookOnceGone();
     }
@@ -274,11 +282,12 @@ export default class Sheet {
 
     #resetLook() {
         const popover = this.#popover;
+        cancelAnimationFrame(this.#spring);
         delete popover.dataset.height;
         delete popover.dataset.dragging;
         delete popover.dataset.closing;
         for (const name of ["--_pp-keyboard", "--_pp-viewport", "--_pp-drag-height", "--_pp-backdrop-opacity",
-            "--_pp-height-duration", "--_pp-keyboard-duration"])
+            "--_pp-height-duration", "--_pp-height-ease", "--_pp-keyboard-duration"])
             popover.style.removeProperty(name);
         this.#stopRising();
     }
@@ -367,18 +376,21 @@ export default class Sheet {
      */
     get #halfHeight() {
         if (matchMedia(Sheet.#shortScreen).matches) return this.#fullHeight;
-
-        // The screen the stylesheet goes by: full height is all of it but 2.5rem.
-        const strip = 2.5 * parseFloat(getComputedStyle(document.documentElement).fontSize);
-        return (this.#fullHeight + strip) * .56;
+        return this.#screenHeight * .56;
     }
 
-    /** Full height, in pixels: the sheet's height limit, which the stylesheet sets. */
+    /** Full height, in pixels: all of the screen the stylesheet goes by but a 2.5rem strip at the top. */
     get #fullHeight() {
+        return this.#screenHeight - 2.5 * parseFloat(getComputedStyle(document.documentElement).fontSize);
+    }
+
+    /** The screen the stylesheet goes by, in pixels: the sheet's height limit, which the stylesheet sets. */
+    get #screenHeight() {
         return parseFloat(getComputedStyle(this.#popover).maxHeight) || window.innerHeight;
     }
 
     #startDrag(y) {
+        cancelAnimationFrame(this.#spring); // Caught while springing to a height.
         const height = this.#popover.getBoundingClientRect().height;
         this.#drag = { startY: y, startHeight: height, height, y, time: performance.now(), speed: 0 };
         this.#popover.dataset.dragging = "";
@@ -417,14 +429,66 @@ export default class Sheet {
         }
         if (to && (to === "full") !== this.#full) Sheet.#tick();
 
-        delete this.#popover.dataset.dragging;
-        this.#popover.style.removeProperty("--_pp-drag-height");
         this.#popover.style.removeProperty("--_pp-backdrop-opacity");
-        if (!to) return;
+        if (!to) {
+            this.#stopSpring();
+            return;
+        }
 
         this.#full = to === "full";
         if (this.#restore !== null) this.#restore = this.#full; // Where it goes back to once the keyboard is away.
         this.#apply();
+
+        // A finger that had stopped before letting go gives the sheet no speed of its own.
+        const moving = performance.now() - drag.time < 80;
+        if (matchMedia("(prefers-reduced-motion: reduce)").matches) this.#stopSpring();
+        else this.#springTo(to === "full" ? this.#fullHeight : this.#halfHeight, drag.height,
+            moving ? -drag.speed * 1000 : 0);
+    }
+
+    /**
+     * Springs the let-go sheet to the height it settles at, starting at the speed the finger moved it. The
+     * stylesheet's spring (a transition of fixed length) would start over at its own speed, and slow down a fast
+     * drag let go just short of the height. It stays a drag (data-dragging) until it comes to rest at that height.
+     * Speeds are in pixels per second, growing positive.
+     */
+    #springTo(target, height, speed) {
+        const omega = 2 * Math.PI / Sheet.#springResponse;
+        const zeta = Sheet.#springDamping;
+        speed = Math.max(-Sheet.#springMaxSpeed, Math.min(Sheet.#springMaxSpeed, speed));
+
+        // Past full height there's only the strip at the top of the screen to go into. The further the spring goes
+        // past it, the less of that the sheet takes, so it eases toward the top of the screen and never hits it.
+        const full = this.#fullHeight;
+        const strip = this.#screenHeight - full;
+        const shown = h => h <= full || strip <= 0 ? h : full + strip * (1 - Math.exp(-(h - full) / strip));
+
+        cancelAnimationFrame(this.#spring);
+        let last = performance.now();
+        const step = now => {
+            // A frame's time can come before the moment the spring started; that frame doesn't move it.
+            const dt = Math.max(0, Math.min(.032, (now - last) / 1000)) / 4;
+            last = now;
+            for (let i = 0; i < 4; i++) {
+                speed += (-omega * omega * (height - target) - 2 * zeta * omega * speed) * dt;
+                height += speed * dt;
+            }
+            if (Math.abs(height - target) < .5 && Math.abs(speed) < 20) {
+                this.#stopSpring();
+                return;
+            }
+            this.#popover.style.setProperty("--_pp-drag-height", `${shown(height)}px`);
+            this.#spring = requestAnimationFrame(step);
+        };
+        this.#spring = requestAnimationFrame(step);
+    }
+
+    /** Ends a drag's spring, or the drag itself, leaving the sheet at the height the stylesheet gives it. */
+    #stopSpring() {
+        cancelAnimationFrame(this.#spring);
+        this.#spring = 0;
+        delete this.#popover.dataset.dragging;
+        this.#popover.style.removeProperty("--_pp-drag-height");
     }
 
     /**
@@ -509,10 +573,15 @@ export default class Sheet {
             // Once the keyboard has gone, the sheet moves down to where it was and back to its height, animated as
             // after Cancel: its place above the keyboard and its height change together, so it doesn't drop first
             // and grow back after.
+            // The height doesn't spring here, as the place can't.
             if (wentAway) {
                 clearTimeout(keyboardTimer);
-                popover.style.setProperty("--_pp-keyboard-duration", ".3s");
-                keyboardTimer = setTimeout(() => popover.style.removeProperty("--_pp-keyboard-duration"), 400);
+                const together = [["--_pp-keyboard-duration", ".3s"], ["--_pp-height-duration", ".3s"],
+                    ["--_pp-height-ease", "cubic-bezier(.2, .9, .25, 1)"]];
+                for (const [name, value] of together) popover.style.setProperty(name, value);
+                keyboardTimer = setTimeout(() => {
+                    for (const [name] of together) popover.style.removeProperty(name);
+                }, 400);
             } else {
                 popover.style.setProperty("--_pp-height-duration", "0s");
                 requestAnimationFrame(() => requestAnimationFrame(() => popover.style.removeProperty("--_pp-height-duration")));

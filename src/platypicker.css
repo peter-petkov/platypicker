@@ -146,15 +146,17 @@
             min-width: 0;
             max-width: none;
             height: calc(var(--_pp-viewport, 100svh) * .56);
-            max-height: calc(var(--_pp-viewport, 100svh) - 2.5rem);
+            /* Full height leaves a strip at the top, which the spring between heights may overshoot into. */
+            max-height: var(--_pp-viewport, 100svh);
             overflow: hidden;
 
             /* It slides up from below the screen as it opens, and back down as it closes. Closing, display and
                overlay keep it on screen, in the top layer, until it's gone. Where overlay can't be transitioned
-               (Firefox, so far), it disappears at once instead. */
+               (Firefox, so far), it disappears at once instead. Between half and full height it springs, going a
+               little past the new height and settling back. */
             translate: 0 0;
             transition:
-                height var(--_pp-height-duration, .3s) cubic-bezier(.2, .9, .25, 1),
+                height var(--_pp-height-duration, .5s) var(--_pp-height-ease, cubic-bezier(.3, 1.28, .6, 1)),
                 bottom var(--_pp-keyboard-duration, 0s) cubic-bezier(.2, .9, .25, 1),
                 translate .3s cubic-bezier(.2, .9, .25, 1),
                 display .3s allow-discrete,
