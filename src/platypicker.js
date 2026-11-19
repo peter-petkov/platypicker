@@ -642,6 +642,7 @@ export default class PlatyPicker extends HTMLElement {
             if (e.newState === "open") {
                 this.#view.syncControls();
                 this.#view.focusInitial({ search: !this.#internals.states.has("sheet") });
+                this.#sheet.rise(); // Once the list has scrolled to the selected row.
             } else {
                 this.#sheet.close();
             }

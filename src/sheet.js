@@ -38,6 +38,9 @@ export default class Sheet {
     // A screen too short for half height, as a phone on its side. The same as in platypicker.css.
     static #shortScreen = "(max-height: 500px)";
 
+    // As the sheet opens, how many rows rise one after another; the rest in view rise with the last of them.
+    static #riseSteps = 12;
+
     // Whether a closing popover can stay in the top layer while it slides away (see hide).
     static #canSlideAway = CSS.supports("overlay", "auto") && CSS.supports("transition-behavior", "allow-discrete");
 
@@ -58,6 +61,8 @@ export default class Sheet {
     #closeWatcher = null;   // Closes the sheet on Back, while it's open.
     #settling = null;       // While the closed sheet slides away: stops waiting for it to be gone.
     #hiding = null;         // While the sheet slides down before hiding (see hide): stops waiting for it.
+    #risen = [];            // While the rows rise as the sheet opens (see rise): the rows, each with its turn.
+    #riseTimer = 0;
 
     constructor({ popover, bar, search, cancel, list, clearSearch, close, signal }) {
         this.#popover = popover;
@@ -275,6 +280,37 @@ export default class Sheet {
         for (const name of ["--_pp-keyboard", "--_pp-viewport", "--_pp-drag-height", "--_pp-backdrop-opacity",
             "--_pp-height-duration", "--_pp-keyboard-duration"])
             popover.style.removeProperty(name);
+        this.#stopRising();
+    }
+
+    /**
+     * Has the rows in view rise into place one after another (see platypicker.css), as the sheet opens. Runs once
+     * the popover is open and the list has scrolled to the selected row. Rows rendered later, as the list is
+     * searched or scrolled, just appear.
+     */
+    rise() {
+        if (!this.#active || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+        this.#stopRising();
+
+        const list = this.#list;
+        const bottom = list.scrollTop + list.clientHeight;
+        let step = 0;
+        for (const element of list.querySelectorAll(".pp-header, .pp-item")) {
+            if (element.offsetTop + element.offsetHeight <= list.scrollTop) continue;
+            if (element.offsetTop >= bottom) break;
+            element.style.setProperty("--_pp-rise", Math.min(step++, Sheet.#riseSteps));
+            this.#risen.push(element);
+        }
+
+        this.#popover.dataset.rising = "";
+        this.#riseTimer = setTimeout(() => this.#stopRising(), 400 + Sheet.#riseSteps * 26);
+    }
+
+    #stopRising() {
+        clearTimeout(this.#riseTimer);
+        delete this.#popover.dataset.rising;
+        for (const element of this.#risen) element.style.removeProperty("--_pp-rise");
+        this.#risen = [];
     }
 
     get #searching() {

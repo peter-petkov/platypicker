@@ -54,6 +54,13 @@
         }
     }
 
+    @keyframes platypicker-rise {
+        from {
+            opacity: 0;
+            translate: 0 .875rem;
+        }
+    }
+
     @keyframes platypicker-pulse {
         50% {
             opacity: .4;
@@ -228,6 +235,16 @@
                 align-content: start;
                 overflow: auto;
                 overscroll-behavior: contain;
+            }
+        }
+
+        /* As the sheet opens, the rows in view rise into place one after another (see Sheet). */
+        &:state(sheet) > .pp-menu[data-rising] :is(.pp-header, .pp-item) {
+            animation: platypicker-rise .3s cubic-bezier(.2, .9, .25, 1) backwards;
+            animation-delay: calc(70ms + var(--_pp-rise, 0) * 26ms);
+
+            @media (prefers-reduced-motion: reduce) {
+                animation: none;
             }
         }
 
