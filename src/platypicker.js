@@ -714,9 +714,8 @@ export default class PlatyPicker extends HTMLElement {
      */
     #syncSelectedCount() {
         const shown = this.#select.multiple && this.#internals.states.has("sheet");
-        this.#view.setSelectedCount(shown
-            ? Languages.format(this.#text("selectedLabel"), this.#select.selectedOptions.length, this.#locale)
-            : "");
+        const count = shown ? this.#select.selectedOptions.length : 0;
+        this.#view.setSelectedCount(shown ? Languages.format(this.#text("selectedLabel"), count, this.#locale) : "", count);
     }
 
     /** Whether the browser's own picker opens rather than the popover: layout="native". */

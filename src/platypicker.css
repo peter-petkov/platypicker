@@ -700,9 +700,16 @@
             text-overflow: ellipsis;
             white-space: nowrap;
 
-            &:empty {
+            &:empty, &[hidden] {
                 display: none;
             }
+        }
+
+        /* The digits of the count that change roll to their new value inside the line (see setSelectedCount in
+           list-view.js). */
+        .pp-selected-count > span:nth-child(2) {
+            display: inline-block;
+            vertical-align: top;
         }
 
         &:state(sheet) .pp-button[data-action="none"] {

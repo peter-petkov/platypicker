@@ -60,6 +60,9 @@ export default class ListView {
     #counterTimer;
     #title;                             // The sheet's title and selected count, above the search box.
     #selectedCount;
+    #selectedCountParts;
+    #selectedCountShown = { text: "", count: 0 };
+    #selectedCountRoll = null;          // The count rolling to its new number, while it does.
     #sheet = false;                     // Whether the popover is shown as the sheet, where the list scrolls.
     #cancelButton;                      // The sheet's Cancel, beside the search box.
 
@@ -156,9 +159,52 @@ export default class ListView {
         if (this.#title.textContent !== label) this.#title.textContent = label;
     }
 
-    /** Shows how many options are selected under the sheet's title, as "3 selected". Empty text shows nothing. */
-    setSelectedCount(text) {
-        if (this.#selectedCount.textContent !== text) this.#selectedCount.textContent = text;
+    /**
+     * Shows how many options are selected under the sheet's title, as "3 selected". Empty text shows nothing. While
+     * the sheet is open, a new count rolls in, up for more and down for fewer, as on an odometer: only what changed
+     * rolls, the digits that differ ("19" to "20", but just the last of "12" to "13"). What changed is told by the
+     * text the old and new lines share at either end, since where the number sits depends on the language.
+     */
+    setSelectedCount(text, count) {
+        const previous = this.#selectedCountShown;
+        if (previous.text === text) return;
+        this.#selectedCountShown = { text, count };
+
+        const [before, rolling, after] = this.#selectedCountParts;
+        this.#selectedCountRoll?.cancel();
+        this.#selectedCountRoll = null;
+        this.#selectedCount.hidden = !text;
+
+        if (!previous.text || !text || count === previous.count || !this.#popover.matches(":popover-open") ||
+            matchMedia("(prefers-reduced-motion: reduce)").matches) {
+            before.textContent = text;
+            rolling.textContent = after.textContent = "";
+            return;
+        }
+
+        const old = previous.text;
+        let start = 0;
+        while (start < old.length && start < text.length && old[start] === text[start]) start++;
+        let end = 0;
+        while (end < old.length - start && end < text.length - start &&
+            old[old.length - 1 - end] === text[text.length - 1 - end]) end++;
+
+        before.textContent = text.slice(0, start);
+        after.textContent = text.slice(text.length - end);
+        rolling.textContent = old.slice(start, old.length - end);
+
+        const way = count > previous.count ? -1 : 1; // Which way the digits move: up (-1) or down.
+        const out = this.#selectedCountRoll = rolling.animate(
+            [{ translate: "0 0", opacity: 1 }, { translate: `0 ${way * 80}%`, opacity: 0 }],
+            { duration: 90, easing: "ease-in", fill: "forwards" });
+        out.onfinish = () => {
+            if (this.#selectedCountRoll !== out) return;
+            rolling.textContent = text.slice(start, text.length - end);
+            this.#selectedCountRoll = rolling.animate(
+                [{ translate: `0 ${-way * 80}%`, opacity: 0 }, { translate: "0 0", opacity: 1 }],
+                { duration: 180, easing: "cubic-bezier(.2, .9, .25, 1)" });
+            out.cancel();
+        };
     }
 
     #buildControls() {
@@ -182,6 +228,10 @@ export default class ListView {
         addClasses(this.#title, "title");
         this.#selectedCount = document.createElement("div");
         addClasses(this.#selectedCount, "selectedCount");
+        // The text before what changed, what rolls (see setSelectedCount), and the text after it.
+        this.#selectedCountParts = [0, 1, 2].map(() => document.createElement("span"));
+        this.#selectedCount.append(...this.#selectedCountParts);
+        this.#selectedCount.hidden = true;
         heading.append(this.#title, this.#selectedCount);
         form.append(handle, heading);
 
