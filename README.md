@@ -30,16 +30,32 @@ You'll also need the stylesheet, `src/platypicker.css` in the package:
 <link rel="stylesheet" href="node_modules/platypicker/src/platypicker.css">
 ```
 
-### Minified files
+### Without a build step
 
-Next to `src/`, the package has `dist/`, the same files minified, each with a source map back to `src/` (since 2.1.1). A page loads about 24 kB of them, gzipped, script and stylesheet together, against 57 kB from `src/`; a translation or a skin adds a kilobyte or two, and only where it's used. A bundler minifies `src/` just as well, so `dist/` is for pages without one, such as one loading Platypicker from a CDN:
+The package's `dist/` folder has Platypicker minified into single files, for pages that load it with a plain `<script>` tag, from a CDN for example (since 2.1.2):
 
 ```html
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/platypicker@2/dist/platypicker.css">
-<script type="module" src="https://cdn.jsdelivr.net/npm/platypicker@2/dist/platypicker.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/platypicker@2/dist/platypicker.min.css">
+<script src="https://cdn.jsdelivr.net/npm/platypicker@2/dist/platypicker.min.js"></script>
 ```
 
-The files in `dist/` import each other by the same paths as in `src/`, so a skin, a translation or `classes.js` comes from the folder the picker does: `platypicker/dist/skins/bootstrap.js` with `platypicker/dist/platypicker.js`. Taking some from `src/` and some from `dist/` loads two copies, and the skin or the class plugs no longer reach the picker.
+| File                           | What it is                                                     |
+|--------------------------------|----------------------------------------------------------------|
+| `platypicker.min.js`           | the picker with every translation, 21 kB gzipped               |
+| `platypicker.bootstrap.min.js` | the same with the [Bootstrap skin](#bootstrap) applied first   |
+| `platypicker.tailwind.min.js`  | the same with the [Tailwind skin](#tailwind) applied first     |
+| `platypicker.min.css`          | the stylesheet, 4 kB gzipped                                   |
+
+Each has a source map into `src/`. A script defines `<platy-picker>` and sets `window.PlatyPicker`, the element class, for the [JavaScript API](#javascript-api). It needs no module support, but works as a `<script type="module">` too. Take one script: a skin's build already has the picker in it.
+
+The translations are in the script, rather than loaded on demand as from `src/`, so a script needs nothing else. [Class plugs](#class-plugs) of your own go in a script right after it, in the `<head>`, so they're set before the pickers in the page are created:
+
+```html
+<script src="https://cdn.jsdelivr.net/npm/platypicker@2/dist/platypicker.min.js"></script>
+<script>PlatyPicker.classes.search = "input input-sm";</script>
+```
+
+With `defer` or `async`, the pickers can be created first and miss them. A bundler minifies `src/` as well as these files are, so with one, import `platypicker` as above.
 
 ## Usage
 
