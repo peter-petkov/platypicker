@@ -1,11 +1,31 @@
 {
   "name": "platypicker",
   "version": "2.1.1",
+  "description": "A searchable popover for native selects, with badges, long lists, a sheet on phones and 22 languages.",
+  "keywords": [
+    "select",
+    "multiselect",
+    "dropdown",
+    "combobox",
+    "searchable-select",
+    "custom-element",
+    "web-component",
+    "popover",
+    "vanilla-js",
+    "no-dependencies"
+  ],
   "private": false,
   "type": "module",
   "main": "src/platypicker.js",
+  "style": "src/platypicker.css",
+  "jsdelivr": "dist/platypicker.min.js",
+  "unpkg": "dist/platypicker.min.js",
   "author": "Peter Petkov",
   "license": "MIT",
+  "homepage": "https://peter-petkov.github.io/platypicker/",
+  "bugs": {
+    "url": "https://github.com/peter-petkov/platypicker/issues"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/peter-petkov/platypicker.git"
