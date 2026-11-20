@@ -25,14 +25,6 @@ export default class PlatyPicker extends HTMLElement {
         return new Promise(resolve => requestAnimationFrame(() => setTimeout(resolve)));
     }
 
-    static get maxHighlights() {
-        return Highlighter.maxHighlights;
-    }
-
-    static set maxHighlights(value) {
-        Highlighter.maxHighlights = value;
-    }
-
     /** How many rows are rendered at a time. A batch-size attribute on the element overrides it. */
     static defaultBatchSize = 50;
 

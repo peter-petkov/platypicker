@@ -838,8 +838,6 @@ export default class ListView {
         if (!view.query) return;
 
         for (const entry of entries) {
-            if (this.#highlighter.isFull) return;
-
             const header = entry.group && this.#groupItems.get(entry.group)?.firstElementChild;
             if (header && view.groupMatches(entry.group) && !view.textMatches(entry))
                 this.#highlightText(view, header, "text", header.firstChild);
@@ -985,8 +983,6 @@ export default class ListView {
     }
 
     #highlightMatch(record, view) {
-        if (this.#highlighter.isFull) return;
-
         const { entry, button, text, small } = record;
         this.#highlightText(view, button, "text", text);
 

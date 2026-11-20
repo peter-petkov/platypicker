@@ -7,8 +7,6 @@
  * removes, the ranges it created itself.
  */
 export default class Highlighter {
-    static maxHighlights = 100;
-
     static #shared;
 
     // Created on first use, so browsers without the API can still load the module and keep the plain select.
@@ -21,13 +19,8 @@ export default class Highlighter {
         return Highlighter.#shared;
     }
 
-    #ranges = new WeakMap(); // owner element -> { [key]: Range }
+    #ranges = new WeakMap(); // owner element -> { [key]: Range[] }
     #owned = new Set();
-
-    /** True once the page-wide highlight holds as many ranges as allowed. */
-    get isFull() {
-        return Highlighter.#highlight.size >= Highlighter.maxHighlights;
-    }
 
     /**
      * Highlights the parts of a text node where search matched, as { start, end } in its text (see

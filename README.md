@@ -444,9 +444,6 @@ PlatyPicker.languages.de = { noMatchesLabel: "Nichts gefunden" };
 
 // The extra classes each part gets. See Class plugs.
 PlatyPicker.classes.search = "input input-sm";
-
-// The most search matches highlighted at once, across the page.
-PlatyPicker.maxHighlights = 100;
 ```
 
 ### Events
