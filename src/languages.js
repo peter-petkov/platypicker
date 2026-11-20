@@ -110,22 +110,23 @@ export default class Languages {
      */
     static prepare(text, locale) {
         const folded = Languages.fold(text, locale);
+
+        // Plain ASCII folds one letter to one unit, so the folded text lines up with the text as it is (starts and
+        // ends are left out), and its words are told apart by character codes, which is quicker than patterns.
+        if (folded.length === text.length && /^[\x00-\x7f]*$/.test(text)) {
+            const words = new Uint8Array(text.length);
+            let previous = 0;
+            for (let i = 0; i < text.length; i++) {
+                const kind = Languages.#asciiKind(text.charCodeAt(i));
+                words[i] = kind && (!previous || (previous === 1 && kind === 2) || (previous === 3) !== (kind === 3));
+                previous = kind;
+            }
+            return { folded, starts: null, ends: null, words };
+        }
+
         const starts = [];
         const ends = [];
         const words = [];
-
-        // Plain ASCII folds one letter to one unit, so the folded text lines up with the text as it is.
-        if (folded.length === text.length && /^[\x00-\x7f]*$/.test(text)) {
-            let previous = "";
-            for (let i = 0; i < text.length; i++) {
-                starts.push(i);
-                ends.push(i + 1);
-                words.push(Languages.#startsWord(previous, text[i]));
-                previous = text[i];
-            }
-            return { folded, starts, ends, words };
-        }
-
         let joined = "";
         let previous = "";      // the last letter that wasn't an accent
         let units = [];         // the folded units of that letter
@@ -156,24 +157,26 @@ export default class Languages {
     }
 
     /**
-     * Where a folded query matches a prepared text (see prepare), as a list of { start, end } in the text itself, or
-     * null when it doesn't.
+     * Where a folded query matches a prepared text (see prepare), or null when it doesn't: `parts` lists the pieces
+     * that matched as { start, end } in the text itself, and `strong` says whether each of them starts a word.
      *
      * The query's letters match in order, the first at the start of a word and the rest anywhere after it, so "nyc"
      * matches New York City, "unk" United Kingdom and "lt" Laptop. Spaces in the query are left out of this. Among
      * the ways to match, the one with the fewest pieces starting inside a word wins, then the one in the fewest
      * pieces, then the earliest. When the query's first letter starts no word, it still matches wherever it occurs as
-     * a whole, as "rich" does in Zürich.
+     * a whole, as "rich" does in Zürich, which is never strong.
      */
     static match(prepared, query) {
         if (!query) return null;
 
         const { folded, starts, ends } = prepared;
-        const runs = Languages.#initials(prepared, query.replace(/\s+/g, ""));
-        if (runs) return runs.map(([first, last]) => ({ start: starts[first], end: ends[last] }));
+        const part = (first, last) => ({ start: starts?.[first] ?? first, end: ends?.[last] ?? last + 1 });
+
+        const initials = Languages.#initials(prepared, query.replace(/\s+/g, ""));
+        if (initials) return { parts: initials.runs.map(([first, last]) => part(first, last)), strong: initials.strong };
 
         const at = folded.indexOf(query);
-        return at < 0 ? null : [{ start: starts[at], end: ends[at + query.length - 1] }];
+        return at < 0 ? null : { parts: [part(at, at + query.length - 1)], strong: false };
     }
 
     /** Whether the letters of a query occur in a folded text in order, spaces in the query left out. */
@@ -197,10 +200,18 @@ export default class Languages {
         return /\p{L}/u.test(previous) !== /\p{L}/u.test(letter);
     }
 
+    // An ASCII character as #startsWord tells them apart: 0 for neither a letter nor a digit, 1 for a lower case
+    // letter, 2 for an upper case one, 3 for a digit.
+    static #asciiKind(code) {
+        if (code >= 97 && code <= 122) return 1;
+        if (code >= 65 && code <= 90) return 2;
+        return code >= 48 && code <= 57 ? 3 : 0;
+    }
+
     /**
      * The best way the query's letters match in order, the first at the start of a word and the rest anywhere after
-     * it, as [first, last] runs of folded units; null when there's none. The best way has the fewest pieces that
-     * start inside a word, then the fewest pieces, then comes earliest.
+     * it, as `runs` of [first, last] folded units, with `strong` true when every run starts a word; null when there's
+     * none. The best way has the fewest pieces that start inside a word, then the fewest pieces, then comes earliest.
      */
     static #initials({ folded, words }, query) {
         const length = folded.length;
@@ -252,7 +263,7 @@ export default class Languages {
             if (t === run[1] + 1) run[1] = t;
             else runs.push([t, t]);
         }
-        return runs;
+        return { runs, strong: cost[first] < inside };
     }
 
     // "zh-Hant-TW" -> ["zh-hant-tw", "zh-hant", "zh"], in lower case: from the exact tag to its base language.

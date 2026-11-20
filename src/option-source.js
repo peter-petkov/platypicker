@@ -64,32 +64,48 @@ export class OptionEntry {
  * never searched in one go, and a view that is no longer wanted is simply dropped.
  *
  * An entry matches when the query matches its label or subtext, or its option group's label (which includes the
- * whole group), as Languages.match matches: by its letters in order, each one following the one before or starting
- * a word, or as a whole. Both sides are compared folded (see Languages.fold), so case and accents don't matter. A
- * divider is kept only between two matches, so one that sits between entries that were
- * filtered out is carried forward to the next match, and there is never one before the first match.
+ * whole group), as Languages.match matches: by its letters in order, the first starting a word, or as a whole. Both
+ * sides are compared folded (see Languages.fold), so case and accents don't matter.
+ *
+ * Tiered, strong matches come first, those where every matched piece starts a word, then the weak ones, each in
+ * list order: the list is scanned twice, the second time for the weak matches. An option group moves as a whole,
+ * with the tier of its best match, so its matches stay together under one header. A divider is kept only between
+ * two matches of the same tier, so one that sits between entries that were filtered out is carried forward to the
+ * next match, and there is never one before the first match of a tier.
  */
 export class FilteredView {
+    static #none = 1;
+    static #weak = 2;
+    static #strong = 3;
+
     #entries;
     #query;
+    #tiered;
     #index = 0;
+    #tier = FilteredView.#strong;   // the tier being scanned for
     #matchCount = 0;
-    #count;                  // All the matches, once count() has counted them.
+    #tierCount = 0;                 // matches pulled in the tier being scanned for
+    #count;                         // All the matches, once count() has counted them.
     #dividerPending = false;
-    #dividers = new Set();   // matches that have a divider before them
-    #groupMatches = new Map();
+    #dividers = new Set();          // matches that have a divider before them
+    #tiers = new Map();             // entry -> how its own label or subtext matches
+    #groupTiers = new Map();        // group -> how its label matches
+    #blockTiers = new Map();        // group -> the tier the group goes in: that of its best match
 
     #fold;
     #prepare;
 
     /**
      * `query` is folded already; `fold` folds a text the same way, and `prepare` makes it ready for Languages.match.
+     * Without `tiered`, the matches come in list order.
      */
-    constructor(entries, query, fold, prepare) {
+    constructor(entries, query, fold, prepare, tiered = true) {
         this.#entries = entries;
         this.#query = query;
         this.#fold = fold;
         this.#prepare = prepare;
+        this.#tiered = tiered && Boolean(query);
+        if (!this.#tiered) this.#tier = FilteredView.#weak;
     }
 
     get query() {
@@ -116,7 +132,7 @@ export class FilteredView {
 
     /** Whether part of the list has not been scanned yet. */
     get hasMore() {
-        return this.#index < this.#entries.length;
+        return this.#index < this.#entries.length || this.#tier === FilteredView.#strong;
     }
 
     /**
@@ -128,13 +144,22 @@ export class FilteredView {
         const deadline = performance.now() + budget;
 
         for (let scanned = 1; this.hasMore && found.length < count; scanned++) {
+            // Done with the strong matches: the weak ones, from the top.
+            if (this.#index === this.#entries.length) {
+                this.#tier = FilteredView.#weak;
+                this.#index = this.#tierCount = 0;
+                this.#dividerPending = false;
+                continue;
+            }
+
             const entry = this.#entries[this.#index++];
             if (entry.dividerBefore) this.#dividerPending = true;
 
-            if (this.includes(entry)) {
-                if (this.#dividerPending && this.#matchCount) this.#dividers.add(entry);
+            if (this.includes(entry) && this.#placeOf(entry) === this.#tier) {
+                if (this.#dividerPending && this.#tierCount) this.#dividers.add(entry);
                 this.#dividerPending = false;
                 this.#matchCount++;
+                this.#tierCount++;
                 found.push(entry);
             }
 
@@ -152,30 +177,61 @@ export class FilteredView {
 
     /** Whether the query matches the entry's own label or subtext. */
     textMatches(entry) {
-        return Boolean(this.#query) && (this.#matches(entry.label) || this.#matches(entry.subtext));
+        return Boolean(this.#query) && this.#tierOf(entry) !== FilteredView.#none;
     }
 
-    /** Where the query matches a text, as Languages.match gives it, or null. */
+    /** Where the query matches a text, as { start, end } pieces of it (see Languages.match), or null. */
     locate(text) {
-        return Languages.match(this.#prepare(text), this.#query);
-    }
-
-    // The cheap tests on the folded text first, since most texts fail the second one and preparing a text costs more.
-    #matches(text) {
-        const folded = this.#fold(text);
-        if (folded.includes(this.#query)) return true;
-        return Languages.mayMatch(folded, this.#query) && this.locate(text) !== null;
+        return Languages.match(this.#prepare(text), this.#query)?.parts ?? null;
     }
 
     /** Whether the query matches the label of the entry's option group. */
     groupMatches(group) {
-        if (!group || !this.#query) return false;
+        return Boolean(group && this.#query) && this.#groupTierOf(group) !== FilteredView.#none;
+    }
 
-        let matches = this.#groupMatches.get(group);
-        if (matches === undefined)
-            this.#groupMatches.set(group, matches = this.#matches(group.label.trim()));
+    // The tier a match goes in: that of the group it's in, or its own. Untiered, all go in the weak one.
+    #placeOf(entry) {
+        if (!this.#tiered) return FilteredView.#weak;
+        if (!entry.group) return this.#tierOf(entry);
 
-        return matches;
+        let tier = this.#blockTiers.get(entry.group);
+        if (tier === undefined) {
+            // A group's options sit together in the list, and the strong scan meets the first of them first.
+            tier = FilteredView.#none;
+            for (let i = this.#index - 1; i < this.#entries.length && this.#entries[i].group === entry.group; i++)
+                tier = Math.max(tier, this.#tierOf(this.#entries[i]));
+
+            this.#blockTiers.set(entry.group, tier = Math.max(tier, this.#groupTierOf(entry.group)));
+        }
+        return tier;
+    }
+
+    // How the query matches an entry's own label or subtext.
+    #tierOf(entry) {
+        let tier = this.#tiers.get(entry);
+        if (tier === undefined) {
+            tier = this.#match(entry.label);
+            if (tier !== FilteredView.#strong) tier = Math.max(tier, this.#match(entry.subtext));
+            this.#tiers.set(entry, tier);
+        }
+        return tier;
+    }
+
+    #groupTierOf(group) {
+        if (!group) return FilteredView.#none;
+
+        let tier = this.#groupTiers.get(group);
+        if (tier === undefined) this.#groupTiers.set(group, tier = this.#match(group.label.trim()));
+        return tier;
+    }
+
+    // The cheap test on the folded text first, since most texts fail it and preparing a text costs more.
+    #match(text) {
+        if (!text || !Languages.mayMatch(this.#fold(text), this.#query)) return FilteredView.#none;
+
+        const match = Languages.match(this.#prepare(text), this.#query);
+        return !match ? FilteredView.#none : match.strong ? FilteredView.#strong : FilteredView.#weak;
     }
 
     /** Whether a divider is shown right before this match. Only known for matches already pulled. */
@@ -280,11 +336,12 @@ export default class OptionSource {
 
     /**
      * The entries matching a search, found lazily. The query is trimmed and folded for the locale (see
-     * Languages.fold); an empty one matches all.
+     * Languages.fold); an empty one matches all. Strong matches come first unless `tiered` is false (see
+     * FilteredView).
      */
-    filter(query, locale = "") {
+    filter(query, locale = "", tiered = true) {
         return new FilteredView(this.#entries, query, text => this.fold(text, locale),
-            text => this.prepare(text, locale));
+            text => this.prepare(text, locale), tiered);
     }
 
     /**

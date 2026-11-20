@@ -340,6 +340,10 @@ export default class ListView {
         if (loadingChanged) {
             this.#list.setAttribute("aria-busy", Boolean(config.loading));
             this.#syncEmpty();
+
+            // While loading, a search keeps list order, since stronger matches may still come. Once every option
+            // is in, its matches are put in tiers.
+            if (!config.loading && this.#view?.query && this.#popover.matches(":popover-open")) this.reconcile();
         }
         this.#syncCounter();
     }
@@ -496,7 +500,7 @@ export default class ListView {
      * the one being shown.
      */
     #showMatches(query) {
-        const view = this.#view = this.#source.filter(query, this.#config.locale);
+        const view = this.#view = this.#source.filter(query, this.#config.locale, !this.#config.loading);
 
         this.#prepared = [];
         this.#askedForMore = false;
@@ -643,7 +647,7 @@ export default class ListView {
         const keep = Math.max(this.#rows.length, this.#stepSize);
         const previous = { records: this.#recordsByEntry, groups: this.#groupItems, dividers: this.#dividerItems };
 
-        const view = this.#view = this.#source.filter(this.#query(), this.#config.locale);
+        const view = this.#view = this.#source.filter(this.#query(), this.#config.locale, !this.#config.loading);
 
         this.#prepared = [];
         this.#askedForMore = false;
