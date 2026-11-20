@@ -1,5 +1,12 @@
 # Platypicker
 
+[![npm](https://img.shields.io/npm/v/platypicker)](https://www.npmjs.com/package/platypicker)
+[![Publish](https://img.shields.io/github/actions/workflow/status/peter-petkov/platypicker/publish.yml?label=publish)](https://github.com/peter-petkov/platypicker/actions/workflows/publish.yml)
+[![Docs](https://img.shields.io/github/actions/workflow/status/peter-petkov/platypicker/pages.yml?label=docs)](https://github.com/peter-petkov/platypicker/actions/workflows/pages.yml)
+[![Downloads](https://img.shields.io/npm/dm/platypicker)](https://www.npmjs.com/package/platypicker)
+[![Size](https://img.shields.io/npm/unpacked-size/platypicker)](https://www.npmjs.com/package/platypicker?activeTab=code)
+[![License](https://img.shields.io/npm/l/platypicker)](LICENSE)
+
 A drop-in enhancement for the native `<select>` element: search-to-filter, select-all/none for multi-selects, badges for the selected options, and fast rendering of long option lists. It brings its own neutral look and needs no CSS framework.
 
 **[Docs and live examples](https://peter-petkov.github.io/platypicker/)**, with a playground to try every attribute.
