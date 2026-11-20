@@ -11,13 +11,16 @@
     "url": "git+https://github.com/peter-petkov/platypicker.git"
   },
   "files": [
-    "src"
+    "src",
+    "dist"
   ],
   "devDependencies": {
+    "esbuild": "^0.28.2",
     "playwright-core": "^1.65.1",
     "puppeteer-core": "^25.18.1"
   },
   "scripts": {
+    "build": "node tools/build.mjs",
     "check:firefox": "node tools/browser-check.mjs firefox",
     "check:webkit": "node tools/browser-check.mjs webkit"
   }
