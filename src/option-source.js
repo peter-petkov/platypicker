@@ -71,12 +71,17 @@ export class OptionEntry {
  * list order: the list is scanned twice, the second time for the weak matches. An option group moves as a whole,
  * with the tier of its best match, so its matches stay together under one header. A divider is kept only between
  * two matches of the same tier, so one that sits between entries that were filtered out is carried forward to the
- * next match, and there is never one before the first match of a tier.
+ * next match, and there is never one before the first match of a tier. A list longer than #tierLimit keeps list
+ * order.
  */
 export class FilteredView {
     static #none = 1;
     static #weak = 2;
     static #strong = 3;
+
+    // The longest list put in tiers. The first weak match waits for the strong scan to cover the whole list, which
+    // takes about 170ms at this size; longer lists keep list order, so their first matches show right away.
+    static #tierLimit = 50000;
 
     #entries;
     #query;
@@ -104,7 +109,7 @@ export class FilteredView {
         this.#query = query;
         this.#fold = fold;
         this.#prepare = prepare;
-        this.#tiered = tiered && Boolean(query);
+        this.#tiered = tiered && Boolean(query) && entries.length <= FilteredView.#tierLimit;
         if (!this.#tiered) this.#tier = FilteredView.#weak;
     }
 
