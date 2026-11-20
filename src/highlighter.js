@@ -1,7 +1,5 @@
 "use strict";
 
-import Languages from "./languages.js";
-
 /**
  * Wraps the CSS Custom Highlight API for search matches.
  *
@@ -32,12 +30,11 @@ export default class Highlighter {
     }
 
     /**
-     * Highlights the first occurrence of the (folded) query in a text node, compared as search compares it, so
-     * "zur" marks the "Zür" of "Zürich". Drops the range if there is none.
+     * Highlights the parts of a text node where search matched, as { start, end } in its text (see
+     * Languages.match), so "nyc" marks the N, Y and C of "New York City". Drops the ranges when there are none.
      */
-    apply(owner, key, node, query, locale) {
-        const match = node ? Languages.locate(node.data, query, locale) : null;
-        if (!match) {
+    apply(owner, key, node, match) {
+        if (!node || !match?.length) {
             this.drop(owner, key);
             return;
         }
@@ -45,21 +42,30 @@ export default class Highlighter {
         let ranges = this.#ranges.get(owner);
         if (!ranges) this.#ranges.set(owner, ranges = {});
 
-        const range = ranges[key] ??= new Range();
-        range.setStart(node, match.start);
-        range.setEnd(node, match.end);
+        const list = ranges[key] ??= [];
+        for (const range of list.splice(match.length)) this.#forget(range);
 
-        Highlighter.#highlight.add(range);
-        this.#owned.add(range);
+        match.forEach(({ start, end }, i) => {
+            const range = list[i] ??= new Range();
+            range.setStart(node, start);
+            range.setEnd(node, end);
+
+            Highlighter.#highlight.add(range);
+            this.#owned.add(range);
+        });
     }
 
     drop(owner, key) {
-        const range = this.#ranges.get(owner)?.[key];
-        if (!range) return;
+        const list = this.#ranges.get(owner)?.[key];
+        if (!list) return;
 
+        for (const range of list) this.#forget(range);
+        delete this.#ranges.get(owner)[key];
+    }
+
+    #forget(range) {
         Highlighter.#highlight.delete(range);
         this.#owned.delete(range);
-        delete this.#ranges.get(owner)[key];
     }
 
     clear() {

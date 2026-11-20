@@ -63,8 +63,10 @@ export class OptionEntry {
  * The entries matching a search. Matching is lazy: `pull()` scans only as far as it is asked to, so a long list is
  * never searched in one go, and a view that is no longer wanted is simply dropped.
  *
- * An entry matches when its label or subtext contains the query, or when its option group's label does (which
- * includes the whole group). Both sides are compared folded (see Languages.fold), so case and accents don't matter. A divider is kept only between two matches, so one that sits between entries that were
+ * An entry matches when the query matches its label or subtext, or its option group's label (which includes the
+ * whole group), as Languages.match matches: by its letters in order, each one following the one before or starting
+ * a word, or as a whole. Both sides are compared folded (see Languages.fold), so case and accents don't matter. A
+ * divider is kept only between two matches, so one that sits between entries that were
  * filtered out is carried forward to the next match, and there is never one before the first match.
  */
 export class FilteredView {
@@ -78,12 +80,16 @@ export class FilteredView {
     #groupMatches = new Map();
 
     #fold;
+    #prepare;
 
-    /** `query` is folded already; `fold` folds a text the same way. */
-    constructor(entries, query, fold) {
+    /**
+     * `query` is folded already; `fold` folds a text the same way, and `prepare` makes it ready for Languages.match.
+     */
+    constructor(entries, query, fold, prepare) {
         this.#entries = entries;
         this.#query = query;
         this.#fold = fold;
+        this.#prepare = prepare;
     }
 
     get query() {
@@ -144,19 +150,30 @@ export class FilteredView {
         return !this.#query || this.textMatches(entry) || this.groupMatches(entry.group);
     }
 
-    /** Whether the entry's own label or subtext contains the query. */
+    /** Whether the query matches the entry's own label or subtext. */
     textMatches(entry) {
-        return Boolean(this.#query) &&
-            (this.#fold(entry.label).includes(this.#query) || this.#fold(entry.subtext).includes(this.#query));
+        return Boolean(this.#query) && (this.#matches(entry.label) || this.#matches(entry.subtext));
     }
 
-    /** Whether the label of the entry's option group contains the query. */
+    /** Where the query matches a text, as Languages.match gives it, or null. */
+    locate(text) {
+        return Languages.match(this.#prepare(text), this.#query);
+    }
+
+    // The cheap tests on the folded text first, since most texts fail the second one and preparing a text costs more.
+    #matches(text) {
+        const folded = this.#fold(text);
+        if (folded.includes(this.#query)) return true;
+        return Languages.mayMatch(folded, this.#query) && this.locate(text) !== null;
+    }
+
+    /** Whether the query matches the label of the entry's option group. */
     groupMatches(group) {
         if (!group || !this.#query) return false;
 
         let matches = this.#groupMatches.get(group);
         if (matches === undefined)
-            this.#groupMatches.set(group, matches = this.#fold(group.label.trim()).includes(this.#query));
+            this.#groupMatches.set(group, matches = this.#matches(group.label.trim()));
 
         return matches;
     }
@@ -177,6 +194,7 @@ export default class OptionSource {
     #groupsByElement = new WeakMap();
     #observer;
     #folded = new Map();    // text -> its folded form, for #foldedLocale
+    #prepared = new Map();  // text -> its form for Languages.match, for #foldedLocale
     #foldedLocale = null;
 
     constructor(select) {
@@ -265,7 +283,8 @@ export default class OptionSource {
      * Languages.fold); an empty one matches all.
      */
     filter(query, locale = "") {
-        return new FilteredView(this.#entries, query, text => this.fold(text, locale));
+        return new FilteredView(this.#entries, query, text => this.fold(text, locale),
+            text => this.prepare(text, locale));
     }
 
     /**
@@ -274,14 +293,25 @@ export default class OptionSource {
      * changes or it grows past the number of texts the list can have.
      */
     fold(text, locale = "") {
-        if (locale !== this.#foldedLocale || this.#folded.size > 4 * this.#entries.length + 100) {
+        return this.#remember(this.#folded, text, locale, Languages.fold);
+    }
+
+    /** Makes a text ready for Languages.match (see Languages.prepare), remembering it as fold() does. */
+    prepare(text, locale = "") {
+        return this.#remember(this.#prepared, text, locale, Languages.prepare);
+    }
+
+    #remember(memory, text, locale, make) {
+        if (locale !== this.#foldedLocale) {
             this.#folded.clear();
+            this.#prepared.clear();
             this.#foldedLocale = locale;
         }
+        if (memory.size > 4 * this.#entries.length + 100) memory.clear();
 
-        let folded = this.#folded.get(text);
-        if (folded === undefined) this.#folded.set(text, folded = Languages.fold(text, locale));
-        return folded;
+        let made = memory.get(text);
+        if (made === undefined) memory.set(text, made = make(text, locale));
+        return made;
     }
 
     /**

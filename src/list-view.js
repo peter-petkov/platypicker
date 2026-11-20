@@ -842,10 +842,10 @@ export default class ListView {
 
             const header = entry.group && this.#groupItems.get(entry.group)?.firstElementChild;
             if (header && view.groupMatches(entry.group) && !view.textMatches(entry))
-                this.#highlighter.apply(header, "text", header.firstChild, view.query, this.#config.locale);
+                this.#highlightText(view, header, "text", header.firstChild);
 
             const record = this.#recordsByEntry.get(entry);
-            if (record && view.textMatches(entry)) this.#highlightMatch(record, view.query);
+            if (record && view.textMatches(entry)) this.#highlightMatch(record, view);
         }
     }
 
@@ -984,16 +984,19 @@ export default class ListView {
         return Languages.fold(this.#search.value.trim(), this.#config.locale);
     }
 
-    #highlightMatch(record, query) {
+    #highlightMatch(record, view) {
         if (this.#highlighter.isFull) return;
 
         const { entry, button, text, small } = record;
-        const locale = this.#config.locale;
-        this.#highlighter.apply(button, "text", text, query, locale);
+        this.#highlightText(view, button, "text", text);
 
         const subtext = entry.subtext.toLowerCase();
         if (subtext && subtext !== entry.label.toLowerCase())
-            this.#highlighter.apply(button, "subtext", small.firstChild, query, locale);
+            this.#highlightText(view, button, "subtext", small.firstChild);
+    }
+
+    #highlightText(view, owner, key, node) {
+        this.#highlighter.apply(owner, key, node, node && view.locate(node.data));
     }
 
     // -----------------------------------------------------------------

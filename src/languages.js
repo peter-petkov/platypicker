@@ -104,33 +104,156 @@ export default class Languages {
     }
 
     /**
-     * Where a folded query first occurs in a text, as { start, end } in the text itself, or null. A match that ends
-     * on a letter keeps the accents that follow it, so a highlight never cuts one off.
+     * A text made ready for match(): folded a letter at a time, remembering which letters of the text each folded
+     * unit came from and whether it starts a word. A letter's accents count as part of it, so a match never cuts one
+     * off.
      */
-    static locate(text, query, locale) {
-        if (!query) return null;
-
-        // The text folded a letter at a time, remembering which letters of the text each folded unit came from.
-        let folded = "";
+    static prepare(text, locale) {
+        const folded = Languages.fold(text, locale);
         const starts = [];
         const ends = [];
+        const words = [];
+
+        // Plain ASCII folds one letter to one unit, so the folded text lines up with the text as it is.
+        if (folded.length === text.length && /^[\x00-\x7f]*$/.test(text)) {
+            let previous = "";
+            for (let i = 0; i < text.length; i++) {
+                starts.push(i);
+                ends.push(i + 1);
+                words.push(Languages.#startsWord(previous, text[i]));
+                previous = text[i];
+            }
+            return { folded, starts, ends, words };
+        }
+
+        let joined = "";
+        let previous = "";      // the last letter that wasn't an accent
+        let units = [];         // the folded units of that letter
         for (let i = 0; i < text.length;) {
             const letter = String.fromCodePoint(text.codePointAt(i));
             const part = Languages.fold(letter, locale);
-            for (let unit = 0; unit < part.length; unit++) {
-                starts.push(i);
-                ends.push(i + letter.length);
+            const next = i + letter.length;
+
+            if (part) {
+                units = [];
+                for (let unit = 0; unit < part.length; unit++) {
+                    units.push(starts.length);
+                    starts.push(i);
+                    ends.push(next);
+                    words.push(unit === 0 && Languages.#startsWord(previous, letter));
+                }
+                joined += part;
+                previous = letter;
+            } else {
+                // An accent, or another mark searching ignores: it goes with the letter before it.
+                for (const unit of units) ends[unit] = next;
             }
-            folded += part;
-            i += letter.length;
+
+            i = next;
         }
 
-        const at = folded.indexOf(query);
-        if (at < 0) return null;
+        return { folded: joined, starts, ends, words };
+    }
 
-        let end = ends[at + query.length - 1];
-        while (end < text.length && Languages.fold(text[end], locale) === "") end++;
-        return { start: starts[at], end };
+    /**
+     * Where a folded query matches a prepared text (see prepare), as a list of { start, end } in the text itself, or
+     * null when it doesn't.
+     *
+     * The query's letters match in order, each one either right after the one before it or at the start of a word,
+     * so "nyc" matches New York City and "unk" United Kingdom. Spaces in the query are left out of this. Among the
+     * ways to match, the one in the fewest pieces wins, then the earliest. When the letters can't match like that,
+     * the query still matches wherever it occurs as a whole, as "rich" does in Zürich.
+     */
+    static match(prepared, query) {
+        if (!query) return null;
+
+        const { folded, starts, ends } = prepared;
+        const runs = Languages.#initials(prepared, query.replace(/\s+/g, ""));
+        if (runs) return runs.map(([first, last]) => ({ start: starts[first], end: ends[last] }));
+
+        const at = folded.indexOf(query);
+        return at < 0 ? null : [{ start: starts[at], end: ends[at + query.length - 1] }];
+    }
+
+    /** Whether the letters of a query occur in a folded text in order, spaces in the query left out. */
+    static mayMatch(folded, query) {
+        let at = 0;
+        for (const unit of query) {
+            if (/\s/.test(unit)) continue;
+
+            at = folded.indexOf(unit, at) + 1;
+            if (!at) return false;
+        }
+        return true;
+    }
+
+    // A letter starts a word when it's a letter or a digit and comes first, after a space or punctuation, as an
+    // upper case letter after a lower case one ("macOS"), or where letters and digits meet ("iPhone15").
+    static #startsWord(previous, letter) {
+        if (!/[\p{L}\p{N}]/u.test(letter)) return false;
+        if (!previous || !/[\p{L}\p{N}]/u.test(previous)) return true;
+        if (/\p{Ll}/u.test(previous) && /\p{Lu}/u.test(letter)) return true;
+        return /\p{L}/u.test(previous) !== /\p{L}/u.test(letter);
+    }
+
+    /**
+     * The best way the query's letters match in order, each right after the one before or at the start of a word,
+     * as [first, last] runs of folded units; null when there's none.
+     */
+    static #initials({ folded, words }, query) {
+        const length = folded.length;
+        if (!query || query.length > length || !Languages.mayMatch(folded, query)) return null;
+
+        const wordStarts = [];
+        for (let i = 0; i < length; i++) if (words[i]) wordStarts.push(i);
+
+        // pieces[q * length + t]: the fewest further pieces the rest of the query needs once its letter q matched
+        // at t; next[...] is where letter q + 1 then goes.
+        const none = 0x7fff;
+        const pieces = new Int16Array(query.length * length).fill(none);
+        const next = new Int32Array(query.length * length);
+
+        for (let q = query.length - 1; q >= 0; q--) {
+            for (let t = 0; t < length; t++) {
+                if (folded[t] !== query[q]) continue;
+
+                const cell = q * length + t;
+                if (q === query.length - 1) {
+                    pieces[cell] = 0;
+                    continue;
+                }
+
+                const after = cell + length;    // letter q + 1, at t
+                if (t + 1 < length && pieces[after + 1] !== none) {
+                    pieces[cell] = pieces[after + 1];
+                    next[cell] = t + 1;
+                }
+
+                for (const start of wordStarts) {
+                    if (start <= t + 1 || pieces[after + start - t] === none) continue;
+
+                    const count = pieces[after + start - t] + 1;
+                    if (count < pieces[cell]) {
+                        pieces[cell] = count;
+                        next[cell] = start;
+                    }
+                }
+            }
+        }
+
+        let first = -1;
+        for (const start of wordStarts)
+            if (pieces[start] !== none && (first < 0 || pieces[start] < pieces[first])) first = start;
+        if (first < 0) return null;
+
+        const runs = [[first, first]];
+        for (let q = 0, t = first; q < query.length - 1; q++) {
+            t = next[q * length + t];
+            const run = runs[runs.length - 1];
+            if (t === run[1] + 1) run[1] = t;
+            else runs.push([t, t]);
+        }
+        return runs;
     }
 
     // "zh-Hant-TW" -> ["zh-hant-tw", "zh-hant", "zh"], in lower case: from the exact tag to its base language.
