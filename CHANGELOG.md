@@ -2,6 +2,17 @@
 
 What's new in each release of Platypicker. Each major version has its own section; the bugfix releases in between are folded into the version they led up to. The [docs page](https://peter-petkov.github.io/platypicker/) shows every feature live.
 
+## 2.1
+
+### Changed
+
+- **Search matches initials.** The letters you type match in order, each one right after the one before or at the start of a word, the way an IDE finds a method by its initials: "nyc" finds New York City, "rdj" Rio de Janeiro, "newyo" New York. Each matched part is highlighted. Everything that matched before still does, and the list keeps its order.
+- Every search match is highlighted, not only the first 100 on the page.
+
+### Removed
+
+- `PlatyPicker.maxHighlights`. Setting it does nothing now.
+
 ## 2.0
 
 Platypicker 2 drops Bootstrap and brings a look of its own, renders long lists fast, opens as a sheet on phones, speaks 22 languages, and works in Firefox. It's a breaking release for pages that relied on Bootstrap's classes: see [Upgrading from 1.x](README.md#upgrading-from-1x).
