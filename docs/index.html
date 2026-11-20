@@ -111,7 +111,7 @@
             <h2>Search</h2>
             <p><code>search</code> adds a filter box that matches as you type. It looks at the option text, the <code>data-subtext</code> shown on the right of a row, and group labels. Matches are highlighted.</p>
             <p>The letters you type match in order, the first at the start of a word and the rest anywhere after it, so initials find an option: try "rdj" for Rio de Janeiro, or "tky", which finds Tokyo and, by its subtext, Istanbul in Turkey. Text inside a word matches too, as "bul" does in Istanbul. Case and accents don't matter.</p>
-            <p>Strong matches come first, those where every matched part starts a word, then the rest, each in list order. Type "s": New York, Cape Town, Sydney and Seoul come first, by a word starting with S in the city or its country, then Paris, Istanbul and Buenos Aires. An option group moves as a whole, with its best match.</p>
+            <p>Strong matches come first, those where every matched part starts a word, then the rest, each in list order. Type "s": New York, Cape Town, Sydney and Seoul come first, by a word starting with S in the city or its country, then Paris, Istanbul and Buenos Aires. An option group moves as a whole, with its best match. Rows only ever join below the ones shown, so nothing moves while you're about to pick it. While <code>loading</code> is set, and in lists of more than 50,000 options, matches stay in list order.</p>
             <div class="example">
                 <template>
                     <platy-picker search>
@@ -193,7 +193,7 @@
             </div>
             <h3>Loading as you scroll</h3>
             <p>When the options come from a server, add them as they arrive. <code>loading</code> says more are on their way: the end of the list stays marked, and the picker fires <code>loadmore</code> to ask for more before the list runs out, as soon as fewer than a batch are left to show. Fetch about <code>event.detail.batchSize</code> options then, and remove <code>loading</code> once there's nothing left.</p>
-            <p>The event also fires whenever the end of the list comes into view, which can be while a fetch is still running, so ignore it then. While loading, search, select all, End and type-ahead only know the options loaded so far. The <a href="https://github.com/peter-petkov/platypicker#loading-as-you-scroll">README</a> has the details, including searching on the server.</p>
+            <p>The event also fires whenever the end of the list comes into view, which can be while a fetch is still running, so ignore it then. While loading, search, select all, End and type-ahead only know the options loaded so far, and matches stay in list order rather than putting the strong ones first. The <a href="https://github.com/peter-petkov/platypicker#loading-as-you-scroll">README</a> has the details, including searching on the server.</p>
             <p><code>placeholders</code> shows skeleton rows at the end while you wait (10, or as many as you give it), and <code>counter</code> says how many options have loaded so far. This one waits most of a second per page.</p>
             <div class="example" data-loading>
                 <template>
@@ -399,10 +399,11 @@
                 </template>
             </div>
             <ul>
-                <li>It opens at a little over half the screen. Drag its handle or heading up or down, or pull the list down from the top; let go, it settles at half or full height, or closes if it's low enough, with a light tick on Android. On a phone on its side it opens at full height, narrower and centred.</li>
+                <li>It opens at a little over half the screen. Drag its handle or heading up or down, or pull the list down from the top; let go, it springs to half or full height, carrying on from the speed of the drag, or closes if it's low enough, with a light tick on Android. On a phone on its side it opens at full height, narrower and centred.</li>
                 <li>The select's label names it, with how many options are selected underneath. None and All sit either side.</li>
                 <li>Opening leaves the search box alone, so the keyboard stays down. Tap the search box and the sheet grows to full height above the keyboard, with Cancel beside it. Picking keeps the keyboard up; scrolling the list or Cancel puts it away, and the sheet goes back to its height.</li>
                 <li>A tap on the dimmed page only closes the sheet, so nothing under it reacts. On Android, Back closes it too.</li>
+                <li>It moves: the rows rise into place as it opens, a picked row dips as its check mark wipes in, the selected count rolls to its new number, and a search glides the rows that stay to their new places. With <code>prefers-reduced-motion</code>, none of it plays.</li>
             </ul>
             <p><code>layout="auto"</code>, the default, opens a sheet where <code>PlatyPicker.sheetMedia</code> matches, a touch screen the size of a phone either way up, checked each time a picker opens. <code>layout="popover"</code> never opens one. The sheet's look has <a href="#theming">variables of its own</a>.</p>
             <script type="text/plain" data-code="JS">
@@ -733,6 +734,7 @@ PlatyPicker.languages.pl = {
             </div>
             <h4>Also in this release</h4>
             <ul>
+                <li><strong>Steady results:</strong> the rows of a search never reorder as more matches are found or loading ends, only when the search changes. While <code>loading</code> is set, and in lists of more than 50,000 options, matches stay in list order.</li>
                 <li><strong>Highlights:</strong> every search match is highlighted, not only the first 100 on the page. <code>PlatyPicker.maxHighlights</code> is gone, and setting it does nothing.</li>
             </ul>
 

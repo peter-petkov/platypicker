@@ -1,6 +1,6 @@
 # Changelog
 
-What's new in each release of Platypicker. Each major version has its own section; the bugfix releases in between are folded into the version they led up to. The [docs page](https://peter-petkov.github.io/platypicker/) shows every feature live.
+What's new in each release of Platypicker. Each feature release has its own section; the bugfix releases in between are folded into the version they led up to. The [docs page](https://peter-petkov.github.io/platypicker/) shows every feature live.
 
 ## 2.1
 
