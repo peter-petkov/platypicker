@@ -13,7 +13,7 @@ Platypicker 2.1 finds options by their initials, and puts the sheet on phones in
 ### Changed
 
 - **Search matches initials.** The letters you type match in order, the first at the start of a word and the rest anywhere after it, the way an IDE finds a method by its initials: "nyc" finds New York City, "rdj" Rio de Janeiro, "lt" Laptop. Each matched part is highlighted, preferring the starts of words. Everything that matched before still does.
-- **Strong matches first.** Matches where every matched part starts a word come first, then the rest, each in list order, so the best match is usually the first row. An option group moves as a whole, with its best match. While `loading` is set, and in lists of more than 50,000 options, matches stay in list order.
+- **Strong matches first.** Matches where every matched part starts a word come first, then the rest, each in list order, so the best match is usually the first row. An option group moves as a whole, with its best match. While `loading` is set, and in lists of more than 50,000 options, matches stay in list order. The rows of a search don't reorder as more matches are found or loading ends, only when the search changes.
 - Every search match is highlighted, not only the first 100 on the page.
 
 ### Removed

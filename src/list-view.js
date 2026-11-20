@@ -340,10 +340,6 @@ export default class ListView {
         if (loadingChanged) {
             this.#list.setAttribute("aria-busy", Boolean(config.loading));
             this.#syncEmpty();
-
-            // While loading, a search keeps list order, since stronger matches may still come. Once every option
-            // is in, its matches are put in tiers.
-            if (!config.loading && this.#view?.query && this.#popover.matches(":popover-open")) this.reconcile();
         }
         this.#syncCounter();
     }
