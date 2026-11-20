@@ -79,6 +79,11 @@
                 <link rel="stylesheet" href="node_modules/platypicker/src/platypicker.css">
                 <script type="module">import "platypicker";</script>
             </template>
+            <p>Without a build step, load the minified files in <code>dist/</code> from a CDN, about 24 kB gzipped. Take a skin or a translation from <code>dist/</code> too, never mixing it with <code>src/</code>.</p>
+            <template data-code="HTML">
+                <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/platypicker@2/dist/platypicker.css">
+                <script type="module" src="https://cdn.jsdelivr.net/npm/platypicker@2/dist/platypicker.js"></script>
+            </template>
             <p>Then wrap any select in <code>&lt;platy-picker&gt;</code>. Pick with the mouse or the keyboard, or type the first letters of an option.</p>
             <div class="example">
                 <template>

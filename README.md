@@ -4,7 +4,6 @@
 [![Publish](https://img.shields.io/github/actions/workflow/status/peter-petkov/platypicker/publish.yml?label=publish)](https://github.com/peter-petkov/platypicker/actions/workflows/publish.yml)
 [![Docs](https://img.shields.io/github/actions/workflow/status/peter-petkov/platypicker/pages.yml?label=docs)](https://github.com/peter-petkov/platypicker/actions/workflows/pages.yml)
 [![Downloads](https://img.shields.io/npm/dm/platypicker)](https://www.npmjs.com/package/platypicker)
-[![Size](https://img.shields.io/npm/unpacked-size/platypicker)](https://www.npmjs.com/package/platypicker?activeTab=code)
 [![License](https://img.shields.io/npm/l/platypicker)](LICENSE)
 
 A drop-in enhancement for the native `<select>` element: search-to-filter, select-all/none for multi-selects, badges for the selected options, and fast rendering of long option lists. It brings its own neutral look and needs no CSS framework.
@@ -30,6 +29,17 @@ You'll also need the stylesheet, `src/platypicker.css` in the package:
 ```html
 <link rel="stylesheet" href="node_modules/platypicker/src/platypicker.css">
 ```
+
+### Minified files
+
+Next to `src/`, the package has `dist/`, the same files minified, each with a source map back to `src/` (since 2.1.1). A page loads about 24 kB of them, gzipped, script and stylesheet together, against 57 kB from `src/`; a translation or a skin adds a kilobyte or two, and only where it's used. A bundler minifies `src/` just as well, so `dist/` is for pages without one, such as one loading Platypicker from a CDN:
+
+```html
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/platypicker@2/dist/platypicker.css">
+<script type="module" src="https://cdn.jsdelivr.net/npm/platypicker@2/dist/platypicker.js"></script>
+```
+
+The files in `dist/` import each other by the same paths as in `src/`, so a skin, a translation or `classes.js` comes from the folder the picker does: `platypicker/dist/skins/bootstrap.js` with `platypicker/dist/platypicker.js`. Taking some from `src/` and some from `dist/` loads two copies, and the skin or the class plugs no longer reach the picker.
 
 ## Usage
 
