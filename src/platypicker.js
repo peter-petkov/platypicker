@@ -129,6 +129,15 @@ export default class PlatyPicker extends HTMLElement {
 
     connectedCallback() {
         this.#select = this.querySelector(":scope > select");
+
+        // Defined by a plain script in the head, the element connects while the page is still being read, before its
+        // select is, so it waits for the rest of the page.
+        if (!this.#select && document.readyState === "loading") {
+            document.addEventListener("DOMContentLoaded", () => this.isConnected && this.connectedCallback(),
+                { once: true });
+            return;
+        }
+
         if (!this.#select || PlatyPicker.#registry.has(this.#select)) return;
 
         if (!PlatyPicker.#isSupported) return; // graceful degradation: leave the native <select> untouched
