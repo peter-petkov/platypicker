@@ -580,6 +580,11 @@ p {
     p {
         margin: 0;
     }
+
+    /* A release whose features have no pictures: the text takes the whole row. */
+    .plain > &, .plain > &:nth-child(even) {
+        grid-template-columns: minmax(0, 1fr);
+    }
 }
 
 .feature-media {

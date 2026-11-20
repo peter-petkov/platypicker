@@ -4,6 +4,12 @@ What's new in each release of Platypicker. Each major version has its own sectio
 
 ## 2.1
 
+Platypicker 2.1 finds options by their initials, and puts the sheet on phones in motion.
+
+### Added
+
+- **Motion in the sheet.** As the sheet opens, the rows in view rise into place one after another. It springs between half and full height, carrying on from the speed of a drag. A picked row dips slightly as its check mark wipes in, and the digits of "N selected" roll to the new count like an odometer. As a search filters the list, the rows that stay glide to their new places while the others fade in or out. All of it is left out with `prefers-reduced-motion`.
+
 ### Changed
 
 - **Search matches initials.** The letters you type match in order, each one right after the one before or at the start of a word, the way an IDE finds a method by its initials: "nyc" finds New York City, "rdj" Rio de Janeiro, "newyo" New York. Each matched part is highlighted. Everything that matched before still does, and the list keeps its order.

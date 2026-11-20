@@ -712,7 +712,28 @@ PlatyPicker.languages.pl = {
 
         <section id="whats-new">
             <h2>What's new</h2>
-            <p>The highlights of each major version. The <a href="https://github.com/peter-petkov/platypicker/blob/main/CHANGELOG.md">changelog</a> has the full list.</p>
+            <p>The highlights of each feature release. The <a href="https://github.com/peter-petkov/platypicker/blob/main/CHANGELOG.md">changelog</a> has the full list.</p>
+
+            <h3>2.1</h3>
+            <p>Platypicker 2.1 finds options by their initials, and puts the sheet on phones in motion.</p>
+            <div class="features plain">
+                <article class="feature">
+                    <div class="feature-text">
+                        <h4>Search by initials</h4>
+                        <p>The letters you type in the <a href="#search">search box</a> match in order, each one right after the one before or at the start of a word, the way an IDE finds a method by its initials: "nyc" finds New York City, "rdj" Rio de Janeiro and "newyo" New York, with each matched part highlighted. A word starts after a space or punctuation, at an upper case letter after a lower case one, and where letters and digits meet. Text inside a word still matches, as "rich" does in Zürich, so every search that found an option before still finds it, and the list keeps its order.</p>
+                    </div>
+                </article>
+                <article class="feature">
+                    <div class="feature-text">
+                        <h4>Motion in the sheet</h4>
+                        <p>As the <a href="#phones">sheet</a> opens, the rows in view rise into place one after another. It springs between half and full height, carrying on from the speed of a drag. A picked row dips slightly as its check mark wipes in, and the digits of "N selected" roll to the new count like an odometer. As a search filters the list, the rows that stay glide to their new places while the others fade in or out. All of it is left out with <code>prefers-reduced-motion</code>.</p>
+                    </div>
+                </article>
+            </div>
+            <h4>Also in this release</h4>
+            <ul>
+                <li><strong>Highlights:</strong> every search match is highlighted, not only the first 100 on the page. <code>PlatyPicker.maxHighlights</code> is gone, and setting it does nothing.</li>
+            </ul>
 
             <h3>2.0</h3>
             <p>Platypicker 2.0 drops the Bootstrap dependency in favour of a look of its own, and adds framework skins, batched rendering for long lists, a bottom sheet on phones, and localization.</p>
