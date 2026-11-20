@@ -12,7 +12,7 @@ Platypicker 2.1 finds options by their initials, and puts the sheet on phones in
 
 ### Changed
 
-- **Search matches initials.** The letters you type match in order, each one right after the one before or at the start of a word, the way an IDE finds a method by its initials: "nyc" finds New York City, "rdj" Rio de Janeiro, "newyo" New York. Each matched part is highlighted. Everything that matched before still does, and the list keeps its order.
+- **Search matches initials.** The letters you type match in order, the first at the start of a word and the rest anywhere after it, the way an IDE finds a method by its initials: "nyc" finds New York City, "rdj" Rio de Janeiro, "lt" Laptop. Each matched part is highlighted, preferring the starts of words. Everything that matched before still does, and the list keeps its order.
 - Every search match is highlighted, not only the first 100 on the page.
 
 ### Removed

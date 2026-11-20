@@ -110,7 +110,7 @@
         <section id="search">
             <h2>Search</h2>
             <p><code>search</code> adds a filter box that matches as you type. It looks at the option text, the <code>data-subtext</code> shown on the right of a row, and group labels. Matches are highlighted.</p>
-            <p>The letters you type match in order, each one right after the one before or at the start of a word, so initials find an option: try "ct" for Cape Town, or "rdj" for Rio de Janeiro. Text inside a word matches too, as "bul" does in Istanbul. Case and accents don't matter, and the list keeps its order.</p>
+            <p>The letters you type match in order, the first at the start of a word and the rest anywhere after it, so initials find an option: try "rdj" for Rio de Janeiro, or "tky", which finds Tokyo and, by its subtext, Istanbul in Turkey. Text inside a word matches too, as "bul" does in Istanbul. Case and accents don't matter, and the list keeps its order.</p>
             <div class="example">
                 <template>
                     <platy-picker search>
@@ -720,7 +720,7 @@ PlatyPicker.languages.pl = {
                 <article class="feature">
                     <div class="feature-text">
                         <h4>Search by initials</h4>
-                        <p>The letters you type in the <a href="#search">search box</a> match in order, each one right after the one before or at the start of a word, the way an IDE finds a method by its initials: "nyc" finds New York City, "rdj" Rio de Janeiro and "newyo" New York, with each matched part highlighted. A word starts after a space or punctuation, at an upper case letter after a lower case one, and where letters and digits meet. Text inside a word still matches, as "rich" does in Zürich, so every search that found an option before still finds it, and the list keeps its order.</p>
+                        <p>The letters you type in the <a href="#search">search box</a> match in order, the first at the start of a word and the rest anywhere after it, the way an IDE finds a method by its initials: "nyc" finds New York City, "rdj" Rio de Janeiro and "lt" Laptop, with each matched part highlighted and the starts of words preferred. A word starts after a space or punctuation, at an upper case letter after a lower case one, and where letters and digits meet. Text inside a word still matches, as "rich" does in Zürich, so every search that found an option before still finds it, and the list keeps its order.</p>
                     </div>
                 </article>
                 <article class="feature">

@@ -159,10 +159,11 @@ export default class Languages {
      * Where a folded query matches a prepared text (see prepare), as a list of { start, end } in the text itself, or
      * null when it doesn't.
      *
-     * The query's letters match in order, each one either right after the one before it or at the start of a word,
-     * so "nyc" matches New York City and "unk" United Kingdom. Spaces in the query are left out of this. Among the
-     * ways to match, the one in the fewest pieces wins, then the earliest. When the letters can't match like that,
-     * the query still matches wherever it occurs as a whole, as "rich" does in Zürich.
+     * The query's letters match in order, the first at the start of a word and the rest anywhere after it, so "nyc"
+     * matches New York City, "unk" United Kingdom and "lt" Laptop. Spaces in the query are left out of this. Among
+     * the ways to match, the one with the fewest pieces starting inside a word wins, then the one in the fewest
+     * pieces, then the earliest. When the query's first letter starts no word, it still matches wherever it occurs as
+     * a whole, as "rich" does in Zürich.
      */
     static match(prepared, query) {
         if (!query) return null;
@@ -197,53 +198,51 @@ export default class Languages {
     }
 
     /**
-     * The best way the query's letters match in order, each right after the one before or at the start of a word,
-     * as [first, last] runs of folded units; null when there's none.
+     * The best way the query's letters match in order, the first at the start of a word and the rest anywhere after
+     * it, as [first, last] runs of folded units; null when there's none. The best way has the fewest pieces that
+     * start inside a word, then the fewest pieces, then comes earliest.
      */
     static #initials({ folded, words }, query) {
         const length = folded.length;
         if (!query || query.length > length || !Languages.mayMatch(folded, query)) return null;
 
-        const wordStarts = [];
-        for (let i = 0; i < length; i++) if (words[i]) wordStarts.push(i);
+        // Where each letter of the query occurs in the text.
+        const at = new Map();
+        for (const unit of new Set(query)) at.set(unit, []);
+        for (let t = 0; t < length; t++) at.get(folded[t])?.push(t);
 
-        // pieces[q * length + t]: the fewest further pieces the rest of the query needs once its letter q matched
-        // at t; next[...] is where letter q + 1 then goes.
-        const none = 0x7fff;
-        const pieces = new Int16Array(query.length * length).fill(none);
+        // cost[q * length + t]: what the rest of the query costs once its letter q matched at t, a piece inside a
+        // word counting as more than any number of pieces at word starts; next[...] is where letter q + 1 then goes.
+        const inside = 1 << 16;
+        const none = 0x7fffffff;
+        const cost = new Int32Array(query.length * length).fill(none);
         const next = new Int32Array(query.length * length);
 
         for (let q = query.length - 1; q >= 0; q--) {
-            for (let t = 0; t < length; t++) {
-                if (folded[t] !== query[q]) continue;
-
+            for (const t of at.get(query[q])) {
                 const cell = q * length + t;
                 if (q === query.length - 1) {
-                    pieces[cell] = 0;
+                    cost[cell] = 0;
                     continue;
                 }
 
-                const after = cell + length;    // letter q + 1, at t
-                if (t + 1 < length && pieces[after + 1] !== none) {
-                    pieces[cell] = pieces[after + 1];
-                    next[cell] = t + 1;
-                }
+                // Letter q + 1 at s: right after t, where it continues the piece, or further on, where it starts one.
+                const after = cell + length - t;
+                for (const s of at.get(query[q + 1])) {
+                    if (s <= t || cost[after + s] === none) continue;
 
-                for (const start of wordStarts) {
-                    if (start <= t + 1 || pieces[after + start - t] === none) continue;
-
-                    const count = pieces[after + start - t] + 1;
-                    if (count < pieces[cell]) {
-                        pieces[cell] = count;
-                        next[cell] = start;
+                    const total = cost[after + s] + (s === t + 1 ? 0 : words[s] ? 1 : inside + 1);
+                    if (total < cost[cell]) {
+                        cost[cell] = total;
+                        next[cell] = s;
                     }
                 }
             }
         }
 
         let first = -1;
-        for (const start of wordStarts)
-            if (pieces[start] !== none && (first < 0 || pieces[start] < pieces[first])) first = start;
+        for (const t of at.get(query[0]))
+            if (words[t] && cost[t] !== none && (first < 0 || cost[t] < cost[first])) first = t;
         if (first < 0) return null;
 
         const runs = [[first, first]];
