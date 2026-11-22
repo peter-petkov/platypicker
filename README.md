@@ -533,7 +533,7 @@ Without `appearance: base-select`, the select is an ordinary one styled with `ap
 
 ## About
 
-Platypicker is an open-source web component that enhances native selects, with no dependencies. It's developed here on GitHub and published to [npm](https://www.npmjs.com/package/platypicker). Bug reports and feature requests go to [GitHub issues](https://github.com/peter-petkov/platypicker/issues), and pull requests are welcome, including corrections to the translations.
+Platypicker is an open-source web component that enhances native selects, with no dependencies. It's developed on GitHub and published to [npm](https://www.npmjs.com/package/platypicker). Bug reports and feature requests go to [GitHub issues](https://github.com/peter-petkov/platypicker/issues), and pull requests are welcome, including corrections to the translations. This project is tested with BrowserStack.
 
 ### License
 
