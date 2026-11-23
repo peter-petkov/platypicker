@@ -2,6 +2,18 @@
 
 What's new in each release of Platypicker. Each feature release has its own section; the bugfix releases in between are folded into the version they led up to. The [docs page](https://peter-petkov.github.io/platypicker/) shows every feature live.
 
+## 2.2.2
+
+### Changed
+
+- In the sheet, a group's header sticks to the top of the list while its rows scroll, until the next group's header pushes it away. The header has no background: the rows are cut off at its bottom, so the sheet shows behind it as everywhere else.
+- The sheet can be dragged from its search box too, by a touch that moves up or down. A tap still brings up the keyboard.
+- The Bootstrap skin's rows in the sheet are as tall as Platypicker's own, a comfortable size for a finger.
+
+### Fixed
+
+- Page Down and End could leave the row they moved to under the counter.
+
 ## 2.2.1
 
 ### Fixed
