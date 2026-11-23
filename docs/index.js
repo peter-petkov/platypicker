@@ -238,16 +238,12 @@ function setupPagePickers() {
 function setupSkinSwitch() {
     const select = document.querySelector("[data-skin-switch]");
 
-    const icon = document.querySelector("[data-skin-icon]");
-
-    // Each skin's icon on its row, through data-image. A closed single select shows only its text, so the icon of
-    // the current skin is laid over it.
+    // Each skin's icon on its row, through data-image. The closed switch shows only the name.
     for (const [name, entry] of Object.entries(PLATY_SKINS)) {
         const option = new Option(entry.label, name, false, name === skinName);
         option.dataset.image = entry.icon;
         select.add(option);
     }
-    icon.src = skin.icon;
 
     // Reloads the page in the chosen skin, at the same place.
     select.addEventListener("change", () => {
