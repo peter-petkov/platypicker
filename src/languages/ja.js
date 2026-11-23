@@ -14,5 +14,7 @@ export default {
     loadedLabel: { other: "これまでに{count} 件の選択肢" },
     filteredLabel: "{total} 件中 {count} 件",
     selectedLabel: "{count} 件選択",
+    selectedOfMaxLabel: "{max} 件中 {count} 件選択",
+    limitReachedLabel: "上限の {max} 件に達しました",
     cancelLabel: "キャンセル",
 };

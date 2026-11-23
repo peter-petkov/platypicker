@@ -14,5 +14,7 @@ export default {
     loadedLabel: { one: "{count} Option bisher", other: "{count} Optionen bisher" },
     filteredLabel: "{count} von {total}",
     selectedLabel: "{count} ausgewählt",
+    selectedOfMaxLabel: "{count} von {max} ausgewählt",
+    limitReachedLabel: "Höchstzahl von {max} erreicht",
     cancelLabel: "Abbrechen",
 };

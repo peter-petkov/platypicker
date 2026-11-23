@@ -14,5 +14,7 @@ export default {
     loadedLabel: { one: "{count} вариант пока", few: "{count} варианта пока", many: "{count} вариантов пока", other: "{count} варианта пока" },
     filteredLabel: "{count} из {total}",
     selectedLabel: "Выбрано: {count}",
+    selectedOfMaxLabel: "Выбрано: {count} из {max}",
+    limitReachedLabel: "Достигнут предел: {max}",
     cancelLabel: "Отмена",
 };

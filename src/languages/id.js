@@ -14,5 +14,7 @@ export default {
     loadedLabel: { other: "{count} opsi sejauh ini" },
     filteredLabel: "{count} dari {total}",
     selectedLabel: "{count} dipilih",
+    selectedOfMaxLabel: "{count} dari {max} dipilih",
+    limitReachedLabel: "Batas {max} tercapai",
     cancelLabel: "Batal",
 };

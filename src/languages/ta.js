@@ -14,5 +14,7 @@ export default {
     loadedLabel: { one: "இதுவரை {count} தேர்வு", other: "இதுவரை {count} தேர்வுகள்" },
     filteredLabel: "{total} இல் {count}",
     selectedLabel: "{count} தேர்ந்தெடுக்கப்பட்டன",
+    selectedOfMaxLabel: "{max} இல் {count} தேர்ந்தெடுக்கப்பட்டன",
+    limitReachedLabel: "{max} வரம்பை எட்டியது",
     cancelLabel: "ரத்துசெய்",
 };

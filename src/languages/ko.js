@@ -14,5 +14,7 @@ export default {
     loadedLabel: { other: "지금까지 옵션 {count}개" },
     filteredLabel: "{total}개 중 {count}개",
     selectedLabel: "{count}개 선택됨",
+    selectedOfMaxLabel: "{max}개 중 {count}개 선택됨",
+    limitReachedLabel: "최대 {max}개에 도달했습니다",
     cancelLabel: "취소",
 };

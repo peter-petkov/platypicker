@@ -14,5 +14,7 @@ export default {
     loadedLabel: { zero: "لا خيارات حتى الآن", one: "خيار واحد حتى الآن", two: "خياران حتى الآن", few: "{count} خيارات حتى الآن", many: "{count} خيارًا حتى الآن", other: "{count} خيار حتى الآن" },
     filteredLabel: "{count} من {total}",
     selectedLabel: "المحدد: {count}",
+    selectedOfMaxLabel: "المحدد: {count} من {max}",
+    limitReachedLabel: "تم بلوغ الحد الأقصى: {max}",
     cancelLabel: "إلغاء",
 };

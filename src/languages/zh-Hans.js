@@ -14,5 +14,7 @@ export default {
     loadedLabel: { other: "目前 {count} 个选项" },
     filteredLabel: "{count} / {total}",
     selectedLabel: "已选 {count} 项",
+    selectedOfMaxLabel: "已选 {count}/{max} 项",
+    limitReachedLabel: "已达上限 {max} 项",
     cancelLabel: "取消",
 };

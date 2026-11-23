@@ -14,5 +14,7 @@ export default {
     loadedLabel: { one: "şimdilik {count} seçenek", other: "şimdilik {count} seçenek" },
     filteredLabel: "{total} içinden {count}",
     selectedLabel: "{count} seçili",
+    selectedOfMaxLabel: "{count}/{max} seçili",
+    limitReachedLabel: "{max} sınırına ulaşıldı",
     cancelLabel: "İptal",
 };

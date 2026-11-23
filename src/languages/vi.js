@@ -14,5 +14,7 @@ export default {
     loadedLabel: { other: "hiện có {count} lựa chọn" },
     filteredLabel: "{count} trên {total}",
     selectedLabel: "Đã chọn {count}",
+    selectedOfMaxLabel: "Đã chọn {count}/{max}",
+    limitReachedLabel: "Đã đạt giới hạn {max}",
     cancelLabel: "Hủy",
 };

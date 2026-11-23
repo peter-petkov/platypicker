@@ -14,5 +14,7 @@ export default {
     loadedLabel: { one: "{count} опция досега", other: "{count} опции досега" },
     filteredLabel: "{count} от {total}",
     selectedLabel: "Избрани: {count}",
+    selectedOfMaxLabel: "Избрани: {count} от {max}",
+    limitReachedLabel: "Достигнат е максимумът: {max}",
     cancelLabel: "Отказ",
 };

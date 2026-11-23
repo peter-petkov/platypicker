@@ -14,5 +14,7 @@ export default {
     loadedLabel: { one: "{count} option pour l’instant", many: "{count} d’options pour l’instant", other: "{count} options pour l’instant" },
     filteredLabel: "{count} sur {total}",
     selectedLabel: { one: "{count} sélectionnée", other: "{count} sélectionnées" },
+    selectedOfMaxLabel: { one: "{count} sur {max} sélectionnée", other: "{count} sur {max} sélectionnées" },
+    limitReachedLabel: "Limite de {max} atteinte",
     cancelLabel: "Annuler",
 };

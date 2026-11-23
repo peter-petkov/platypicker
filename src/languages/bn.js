@@ -14,5 +14,7 @@ export default {
     loadedLabel: { other: "এখন পর্যন্ত {count}টি বিকল্প" },
     filteredLabel: "{total}টির মধ্যে {count}টি",
     selectedLabel: "{count}টি নির্বাচিত",
+    selectedOfMaxLabel: "{max}টির মধ্যে {count}টি নির্বাচিত",
+    limitReachedLabel: "সর্বোচ্চ সীমায় পৌঁছেছে: {max}",
     cancelLabel: "বাতিল",
 };

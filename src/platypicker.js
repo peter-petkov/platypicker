@@ -62,6 +62,9 @@ export default class PlatyPicker extends HTMLElement {
         filteredLabel: "{count} of {total}",
         // Under the sheet's title (layout="sheet") in a multiple select: how many options are selected.
         selectedLabel: "{count} selected",
+        // The same with a limit (the max attribute), and what screen readers hear when the limit is reached.
+        selectedOfMaxLabel: "{count} of {max} selected",
+        limitReachedLabel: "Limit of {max} reached",
         // Beside the sheet's search box while searching: clears the search and puts the keyboard away.
         cancelLabel: "Cancel",
     };
@@ -374,6 +377,7 @@ export default class PlatyPicker extends HTMLElement {
             cancelLabel: this.#text("cancelLabel"),
             noMatchesLabel: this.#text("noMatchesLabel"),
             matchesLabel: count => Languages.format(this.#text("matchesLabel"), count, this.#locale),
+            limitReachedLabel: max => Languages.format(this.#text("limitReachedLabel"), max, this.#locale, { max }),
             counterLabel: ({ shown, matches, total, search, loading }) => search
                 ? Languages.format(this.#text("filteredLabel"), matches, this.#locale, { total })
                 : loading
@@ -736,13 +740,22 @@ export default class PlatyPicker extends HTMLElement {
     }
 
     /**
-     * Tells the sheet's heading how many options are selected, in a multiple select. Only the sheet shows the count,
-     * so the popover doesn't count them; counting the selected options of a long select takes a moment.
+     * Tells the sheet's heading how many options are selected, in a multiple select, and of how many with a max (where
+     * disabled ones don't count, as for the limit). Only the sheet shows the count, so the popover doesn't count them;
+     * counting the selected options of a long select takes a moment.
      */
     #syncSelectedCount() {
-        const shown = this.#select.multiple && this.#internals.states.has("sheet");
-        const count = shown ? this.#select.selectedOptions.length : 0;
-        this.#view.setSelectedCount(shown ? Languages.format(this.#text("selectedLabel"), count, this.#locale) : "", count);
+        if (!this.#select.multiple || !this.#internals.states.has("sheet")) {
+            this.#view.setSelectedCount("", 0);
+            return;
+        }
+
+        const max = this.max;
+        const count = max === undefined ? this.#select.selectedOptions.length : this.#source.selectedCount;
+        const text = max === undefined
+            ? Languages.format(this.#text("selectedLabel"), count, this.#locale)
+            : Languages.format(this.#text("selectedOfMaxLabel"), count, this.#locale, { max });
+        this.#view.setSelectedCount(text, count);
     }
 
     /** Whether the browser's own picker opens rather than the popover: layout="native". */

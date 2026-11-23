@@ -55,8 +55,9 @@ export default class ListView {
     #busy = false;                      // Whether select all or select none is running.
     #list;
     #empty;                             // "No matches", shown under the list when a search finds nothing.
-    #status;                            // Tells screen readers how many options match the search.
+    #status;                            // Tells screen readers how many options match the search, or that max is reached.
     #announceTimer;
+    #limitSaid = null;                  // What the status line said when max was last reached.
     #counter;                           // How many options there are, or match the search, under the list.
     #counterTimer;
     #title;                             // The sheet's title and selected count, above the search box.
@@ -291,7 +292,11 @@ export default class ListView {
         this.#list.addEventListener("click", e => {
             const button = e.target.closest(".pp-item");
             const record = button && this.#recordsByButton.get(button);
-            if (!record || record.disabled) return;
+            if (!record) return;
+            if (record.disabled) {
+                if (!record.entry.disabled) this.#sayLimitReached(); // Disabled by the limit: says why it does nothing.
+                return;
+            }
 
             this.#actions.activate(record.entry);
         }, { signal: this.#signal });
@@ -316,7 +321,7 @@ export default class ListView {
 
     /**
      * Applies the element's settings: { search, controls, counter, searchPlaceholder, selectAllLabel,
-     * selectNoneLabel, counterLabel, placeholders, batchSize, loading, max }. Safe to call again whenever any of them changes. A new batch size is used
+     * selectNoneLabel, counterLabel, limitReachedLabel, placeholders, batchSize, loading, max }. Safe to call again whenever any of them changes. A new batch size is used
      * from the next batch on, and the rows already rendered stay.
      */
     configure(config) {
@@ -917,8 +922,9 @@ export default class ListView {
     }
 
     /**
-     * Works out whether max options are selected (see #full), and tells the picker when that changes. Counts the
-     * selected options only while there is a max, as that takes a moment on a long select.
+     * Works out whether max options are selected (see #full), and tells the picker when that changes. Reaching the
+     * limit while the popover is open is told to screen readers. Counts the selected options only while there is a
+     * max, as that takes a moment on a long select.
      */
     #syncFull() {
         const max = this.#config.max;
@@ -927,6 +933,21 @@ export default class ListView {
 
         this.#full = full;
         this.#actions.full?.(full);
+        if (full && this.#popover.matches(":popover-open")) this.#sayLimitReached();
+        else if (!full && this.#status.textContent === this.#limitSaid)
+            this.#status.textContent = ""; // No longer so, for a screen reader that goes over the page.
+    }
+
+    /**
+     * Tells screen readers that max options are selected, through the status line. It's emptied first, and filled a
+     * frame later, so that saying it again is heard again.
+     */
+    #sayLimitReached() {
+        this.#status.textContent = "";
+        requestAnimationFrame(() => {
+            if (!this.#signal.aborted && this.#full)
+                this.#status.textContent = this.#limitSaid = this.#config.limitReachedLabel(this.#config.max);
+        });
     }
 
     #wrapInListItem(element) {

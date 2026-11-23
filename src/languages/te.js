@@ -14,5 +14,7 @@ export default {
     loadedLabel: { one: "ఇప్పటివరకు {count} ఎంపిక", other: "ఇప్పటివరకు {count} ఎంపికలు" },
     filteredLabel: "{total}లో {count}",
     selectedLabel: "{count} ఎంచుకోబడ్డాయి",
+    selectedOfMaxLabel: "{max}లో {count} ఎంచుకోబడ్డాయి",
+    limitReachedLabel: "{max} పరిమితిని చేరుకున్నారు",
     cancelLabel: "రద్దు చేయి",
 };

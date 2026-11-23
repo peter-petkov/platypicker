@@ -14,5 +14,7 @@ export default {
     loadedLabel: { one: "اب تک {count} آپشن", other: "اب تک {count} آپشنز" },
     filteredLabel: "{total} میں سے {count}",
     selectedLabel: "{count} منتخب",
+    selectedOfMaxLabel: "{max} میں سے {count} منتخب",
+    limitReachedLabel: "{max} کی حد پوری ہو گئی",
     cancelLabel: "منسوخ کریں",
 };

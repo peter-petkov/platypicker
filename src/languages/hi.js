@@ -14,5 +14,7 @@ export default {
     loadedLabel: { one: "अब तक {count} विकल्प", other: "अब तक {count} विकल्प" },
     filteredLabel: "{total} में से {count}",
     selectedLabel: "{count} चयनित",
+    selectedOfMaxLabel: "{max} में से {count} चयनित",
+    limitReachedLabel: "{max} की सीमा पूरी हुई",
     cancelLabel: "रद्द करें",
 };

@@ -428,9 +428,11 @@ PlatyPicker.languages.de = { noMatchesLabel: "Nichts gefunden" };
 | `loadedLabel`       | {count} option so far, {count} options so far | the `counter` while `loading`  |
 | `filteredLabel`     | {count} of {total}             | the `counter`, with a search                 |
 | `selectedLabel`     | {count} selected               | under the sheet's title, in a multiple select |
+| `selectedOfMaxLabel` | {count} of {max} selected     | the same, with a `max`                       |
+| `limitReachedLabel` | Limit of {max} reached         | read out to screen readers when `max` is reached |
 | `cancelLabel`       | Cancel                         | beside the sheet's search box                |
 
-A text with a count gives its plural forms, and the browser picks the one the language's rules call for. `{count}` is the number, formatted for the language, and `other` stands in for any form left out. `shownLabel` and `filteredLabel` also have `{total}`, the number of options; their form is picked by `{count}`. A function works too, and gets the count, then the other numbers (`{ total }`).
+A text with a count gives its plural forms, and the browser picks the one the language's rules call for. `{count}` is the number, formatted for the language, and `other` stands in for any form left out. `shownLabel` and `filteredLabel` also have `{total}`, the number of options; their form is picked by `{count}`. `selectedOfMaxLabel` also has `{max}`, the limit, with its form picked by `{count}`; `limitReachedLabel` has only `{max}`, which picks its form. A function works too, and gets the count, then the other numbers (`{ total }`).
 
 ```js
 PlatyPicker.languages.pl = {
