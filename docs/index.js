@@ -70,7 +70,7 @@ function init() {
 
 // ---------------------------------------------------------------------------
 // Demo data. An item is a label, or [label, subtext]. Subtext is only used when the select asks for it,
-// as in data-fill="cities:subtext".
+// as in data-fill="cities:subtext". An emoji at the start of a label becomes the option's data-icon.
 // ---------------------------------------------------------------------------
 
 const DATA = {
@@ -83,16 +83,23 @@ const DATA = {
     cities: [["Tokyo", "Japan"], ["Paris", "France"], ["New York", "United States"], ["Cape Town", "South Africa"], ["Sydney", "Australia"], ["Rio de Janeiro", "Brazil"], ["Cairo", "Egypt"], ["Mumbai", "India"], ["Istanbul", "Turkey"], ["Mexico City", "Mexico"], ["Berlin", "Germany"], ["Toronto", "Canada"], ["Seoul", "South Korea"], ["Buenos Aires", "Argentina"]]
 };
 
+// Makes an option from a demo item: "🧀 Cheese" is data-icon="🧀" and the label Cheese.
+function demoOption(item, withSubtext = true) {
+    const [text, subtext] = Array.isArray(item) ? item : [item];
+    const [, icon, label] = text.match(/^([^\p{L}\p{N}\s]+)\s+(.+)$/u) ?? [, "", text];
+    const option = new Option(label);
+    if (icon) option.dataset.icon = icon;
+    if (withSubtext && subtext) option.dataset.subtext = subtext;
+    return option;
+}
+
 // Fills the selects under root (the document, or an example's template). The data-* attributes are removed afterwards,
 // so the code shown for an example is plain markup, and nothing is filled twice.
 function fillSelects(root) {
     for (const select of root.querySelectorAll("select[data-fill], select[data-cars]")) {
         const [key, withSubtext] = (select.dataset.fill ?? "").split(":");
 
-        if (DATA[key]) select.insertAdjacentHTML("beforeend", DATA[key].map(item => {
-            const [label, subtext] = Array.isArray(item) ? item : [item];
-            return `<option${withSubtext && subtext ? ` data-subtext="${subtext}"` : ""}>${label}</option>`;
-        }).join(""));
+        if (DATA[key]) select.append(...DATA[key].map(item => demoOption(item, Boolean(withSubtext))));
 
         // data-cars asks for that many generated car options, for lists that are long enough to need batches.
         if (select.dataset.cars) select.insertAdjacentHTML("beforeend", carOptions(Number(select.dataset.cars), false));
@@ -232,15 +239,15 @@ function setupSkinSwitch() {
     const select = document.querySelector("[data-skin-switch]");
 
     const icon = document.querySelector("[data-skin-icon]");
-    const style = document.createElement("style");
 
-    for (const [name, { label }] of Object.entries(PLATY_SKINS)) select.add(new Option(label, name, false, name === skinName));
-
-    // Each skin's icon, on the closed switch and on its row.
+    // Each skin's icon on its row, through data-image. A closed single select shows only its text, so the icon of
+    // the current skin is laid over it.
+    for (const [name, entry] of Object.entries(PLATY_SKINS)) {
+        const option = new Option(entry.label, name, false, name === skinName);
+        option.dataset.image = entry.icon;
+        select.add(option);
+    }
     icon.src = skin.icon;
-    style.textContent = Object.values(PLATY_SKINS).map((entry, index) =>
-        `.skin-switch .pp-list > li:nth-child(${index + 1}) > .pp-item::before { background-image: url("${entry.icon}"); }`).join("\n");
-    document.head.append(style);
 
     // Reloads the page in the chosen skin, at the same place.
     select.addEventListener("change", () => {
@@ -669,7 +676,7 @@ async function setupLiveDemo() {
             write(`setValue("${value}"), no change event`);
         },
         add() {
-            const option = new Option(extraOptions[added++ % extraOptions.length]);
+            const option = demoOption(extraOptions[added++ % extraOptions.length]);
             select.add(option);
             write(`added ${option.text}`);
         },
@@ -798,21 +805,21 @@ async function setupLoadingDemo() {
 // ---------------------------------------------------------------------------
 
 const PLAYGROUND_GROUPS = `
-    <option>💻 Laptop</option>
-    <option>📱 Phone</option>
+    <option data-icon="💻">Laptop</option>
+    <option data-icon="📱">Phone</option>
     <hr>
-    <option disabled data-subtext="discontinued">📠 Fax machine</option>
-    <option title="Mechanical or membrane">⌨️ Keyboard</option>
+    <option disabled data-subtext="discontinued" data-icon="📠">Fax machine</option>
+    <option title="Mechanical or membrane" data-icon="⌨️">Keyboard</option>
     <optgroup label="Audio">
-        <option>🎧 Headphones</option>
-        <option>🔊 Speaker</option>
-        <option>🎙️ Microphone</option>
+        <option data-icon="🎧">Headphones</option>
+        <option data-icon="🔊">Speaker</option>
+        <option data-icon="🎙️">Microphone</option>
     </optgroup>
     <optgroup label="Cameras">
-        <option>📷 Camera</option>
-        <option>📹 Camcorder</option>
+        <option data-icon="📷">Camera</option>
+        <option data-icon="📹">Camcorder</option>
     </optgroup>
-    <option>🔌 Charger</option>`;
+    <option data-icon="🔌">Charger</option>`;
 
 // The flags are in docs/flags, named by country code.
 const PLAYGROUND_COUNTRIES = [["at", "Austria"], ["fr", "France"], ["de", "Germany"], ["id", "Indonesia"],
@@ -872,12 +879,7 @@ async function setupPlayground() {
         if (list === "groups") select.innerHTML = PLAYGROUND_GROUPS;
         else if (list === "countries") select.innerHTML = PLAYGROUND_COUNTRIES;
         else if (list === "cars") select.innerHTML = carOptions(2000, false);
-        else select.innerHTML = DATA[list].map(item => {
-            const [label, subtext] = Array.isArray(item) ? item : [item];
-            const option = new Option(label);
-            if (subtext) option.dataset.subtext = subtext;
-            return option.outerHTML;
-        }).join("");
+        else select.innerHTML = DATA[list].map(item => demoOption(item).outerHTML).join("");
 
         // Keep the selection where the same values are still there. A single select keeps the first of them only.
         for (const option of select.options) {

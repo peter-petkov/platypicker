@@ -179,21 +179,21 @@
                 <template>
                     <platy-picker search controls>
                         <select name="tech" multiple size="1" aria-label="Technology">
-                            <option>💻 Laptop</option>
-                            <option>📱 Phone</option>
+                            <option data-icon="💻">Laptop</option>
+                            <option data-icon="📱">Phone</option>
                             <hr>
-                            <option disabled data-subtext="discontinued">📠 Fax machine</option>
-                            <option title="Mechanical or membrane">⌨️ Keyboard</option>
+                            <option disabled data-subtext="discontinued" data-icon="📠">Fax machine</option>
+                            <option title="Mechanical or membrane" data-icon="⌨️">Keyboard</option>
                             <optgroup label="Audio">
-                                <option>🎧 Headphones</option>
-                                <option>🔊 Speaker</option>
-                                <option>🎙️ Microphone</option>
+                                <option data-icon="🎧">Headphones</option>
+                                <option data-icon="🔊">Speaker</option>
+                                <option data-icon="🎙️">Microphone</option>
                             </optgroup>
                             <optgroup label="Wearables" disabled>
-                                <option>⌚ Smartwatch</option>
-                                <option>🥽 VR headset</option>
+                                <option data-icon="⌚">Smartwatch</option>
+                                <option data-icon="🥽">VR headset</option>
                             </optgroup>
-                            <option>🔌 Charger</option>
+                            <option data-icon="🔌">Charger</option>
                         </select>
                     </platy-picker>
                 </template>
@@ -306,8 +306,11 @@
 
                     select.addEventListener("change", () => console.log([...select.selectedOptions]));
 
-                    picker.setValue("🍕 Pizza");           // no change event
-                    select.add(new Option("🍰 Cake"));     // shows up in the list
+                    picker.setValue("Pizza");              // no change event
+
+                    const cake = new Option("Cake");
+                    cake.dataset.icon = "🍰";
+                    select.add(cake);                      // shows up in the list
                     select.lastElementChild.remove();
                     picker.search = false;                 // same as removeAttribute("search")
                 </script>
@@ -488,23 +491,23 @@
                     <div lang="de">
                         <platy-picker search controls placeholder="Wähle etwas">
                             <select name="essen" multiple size="1" aria-label="Essen">
-                                <option>🧀 Käse</option>
-                                <option>🥨 Brezel</option>
-                                <option>🌭 Würstchen</option>
-                                <option>🥔 Kartoffelsalat</option>
-                                <option>🍰 Käsekuchen</option>
-                                <option>🥟 Maultaschen</option>
+                                <option data-icon="🧀">Käse</option>
+                                <option data-icon="🥨">Brezel</option>
+                                <option data-icon="🌭">Würstchen</option>
+                                <option data-icon="🥔">Kartoffelsalat</option>
+                                <option data-icon="🍰">Käsekuchen</option>
+                                <option data-icon="🥟">Maultaschen</option>
                             </select>
                         </platy-picker>
                     </div>
                     <div lang="ja">
                         <platy-picker search>
                             <select name="ryouri" aria-label="料理">
-                                <option>🍣 寿司</option>
-                                <option>🍜 ラーメン</option>
-                                <option>🍤 天ぷら</option>
-                                <option>🍙 おにぎり</option>
-                                <option>🥟 餃子</option>
+                                <option data-icon="🍣">寿司</option>
+                                <option data-icon="🍜">ラーメン</option>
+                                <option data-icon="🍤">天ぷら</option>
+                                <option data-icon="🍙">おにぎり</option>
+                                <option data-icon="🥟">餃子</option>
                             </select>
                         </platy-picker>
                     </div>
