@@ -814,6 +814,11 @@ const PLAYGROUND_GROUPS = `
     </optgroup>
     <option>🔌 Charger</option>`;
 
+// The flags are in docs/flags, named by country code.
+const PLAYGROUND_COUNTRIES = [["at", "Austria"], ["fr", "France"], ["de", "Germany"], ["id", "Indonesia"],
+    ["it", "Italy"], ["jp", "Japan"], ["ng", "Nigeria"], ["pl", "Poland"], ["se", "Sweden"], ["ua", "Ukraine"]]
+    .map(([code, name]) => `\n    <option value="${code}" data-image="flags/${code}.svg">${name}</option>`).join("");
+
 // The form fields that become attributes of the same name. Checkboxes are boolean attributes, the rest are left off
 // while empty.
 const PICKER_ATTRIBUTES = ["search", "controls", "counter", "batch-size", "placeholders", "max", "placeholder", "layout"];
@@ -865,6 +870,7 @@ async function setupPlayground() {
         if (select.multiple) select.size = 1;
 
         if (list === "groups") select.innerHTML = PLAYGROUND_GROUPS;
+        else if (list === "countries") select.innerHTML = PLAYGROUND_COUNTRIES;
         else if (list === "cars") select.innerHTML = carOptions(2000, false);
         else select.innerHTML = DATA[list].map(item => {
             const [label, subtext] = Array.isArray(item) ? item : [item];

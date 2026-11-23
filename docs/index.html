@@ -45,6 +45,7 @@
             <a href="#controls">Select all / none</a>
             <a href="#max">Limit</a>
             <a href="#groups">Groups and dividers</a>
+            <a href="#images">Images and icons</a>
             <p>Lists</p>
             <a href="#long-lists">Long lists</a>
             <a href="#live-changes">Live changes</a>
@@ -199,6 +200,39 @@
             </div>
         </section>
 
+        <section id="images">
+            <h2>Images and icons</h2>
+            <p><code>data-image</code> on an option puts a picture before its label, such as a flag or an avatar. It's a square of <code>--platypicker-image-size</code> (<code>1.25em</code>), with the whole picture shown in it, so rows don't jump as the images arrive. Images load only once their row is near the view, so a long list fetches only the ones you scroll to, and one that fails to load is hidden.</p>
+            <p><code>data-icon</code> puts short text there instead, for an emoji, in a slot as wide as an image, so the labels line up. Unlike an emoji in the label, it isn't read out by screen readers. Both show in the badges of a multiple select, but not in a closed single select, which shows the browser's own text. Neither is searched. They're decorative: the label names the option.</p>
+            <div class="example">
+                <template>
+                    <platy-picker search placeholder="Pick some countries">
+                        <select name="countries" multiple size="1" aria-label="Countries">
+                            <option data-image="flags/at.svg">Austria</option>
+                            <option data-image="flags/fr.svg" selected>France</option>
+                            <option data-image="flags/de.svg">Germany</option>
+                            <option data-image="flags/id.svg">Indonesia</option>
+                            <option data-image="flags/it.svg" selected>Italy</option>
+                            <option data-image="flags/jp.svg">Japan</option>
+                            <option data-image="flags/ng.svg">Nigeria</option>
+                            <option data-image="flags/pl.svg">Poland</option>
+                            <option data-image="flags/se.svg">Sweden</option>
+                            <option data-image="flags/ua.svg">Ukraine</option>
+                        </select>
+                    </platy-picker>
+                    <platy-picker>
+                        <select name="drink" aria-label="Drink">
+                            <option data-icon="☕">Coffee</option>
+                            <option data-icon="🍵">Tea</option>
+                            <option data-icon="🧃" data-subtext="apple">Juice</option>
+                            <option data-icon="🥛">Milk</option>
+                            <option data-icon="💧">Water</option>
+                        </select>
+                    </platy-picker>
+                </template>
+            </div>
+        </section>
+
         <section id="long-lists">
             <h2>Long lists</h2>
             <p>Long lists start with a batch of rows, and more are shown a few at a time as you scroll, so the scrollbar shrinks smoothly instead of jumping. Searching still covers every option, and the arrow keys, End and type-ahead go past the rows shown so far. <code>batch-size</code> sets how many rows the list works with at a time (50 by default): the rows shown first, and how far ahead it searches. <code>batch-size="0"</code> renders everything at once.</p>
@@ -333,6 +367,7 @@
                     <tr><td><code>--platypicker-menu-radius</code></td><td>the popover (<code>8px</code>)</td></tr>
                     <tr><td><code>--platypicker-shadow</code></td><td>the popover's shadow</td></tr>
                     <tr><td><code>--platypicker-max-height</code></td><td>the popover's height limit (<code>45vh</code>)</td></tr>
+                    <tr><td><code>--platypicker-image-size</code></td><td>a row's <a href="#images">image</a>, and its icon's width (<code>1.25em</code>)</td></tr>
                     <tr><td><code>--platypicker-sheet-bg</code></td><td>the <a href="#phones">sheet</a>, see-through so the page shows blurred behind it</td></tr>
                     <tr><td><code>--platypicker-sheet-card-bg</code></td><td>the sheet's rows, grouped on cards</td></tr>
                     <tr><td><code>--platypicker-sheet-blur</code></td><td>how much the page behind the sheet is blurred (<code>24px</code>)</td></tr>
@@ -377,6 +412,8 @@
                     <tr><td><code>item</code></td><td><code>pp-item</code></td><td>an option's row</td></tr>
                     <tr><td><code>itemSelected</code></td><td></td><td>a row whose option is selected</td></tr>
                     <tr><td><code>itemDisabled</code></td><td></td><td>a row whose option is disabled</td></tr>
+                    <tr><td><code>image</code></td><td><code>pp-item-image</code></td><td>a row's image (<code>data-image</code>)</td></tr>
+                    <tr><td><code>icon</code></td><td><code>pp-item-icon</code></td><td>a row's icon (<code>data-icon</code>)</td></tr>
                     <tr><td><code>label</code></td><td><code>pp-item-label</code></td><td>a row's label</td></tr>
                     <tr><td><code>subtext</code></td><td><code>pp-item-subtext</code></td><td>a row's subtext</td></tr>
                     <tr><td><code>check</code></td><td><code>pp-item-check</code></td><td>a row's check mark</td></tr>
@@ -389,6 +426,8 @@
                     <tr><td><code>placeholderBar</code></td><td><code>pp-placeholder-bar</code></td><td>the bar inside it</td></tr>
                     <tr><td><code>tags</code></td><td><code>pp-tags</code></td><td>the badges over a closed multiple select</td></tr>
                     <tr><td><code>tag</code></td><td><code>pp-tag</code></td><td>a badge</td></tr>
+                    <tr><td><code>tagImage</code></td><td><code>pp-tag-image</code></td><td>a badge's image</td></tr>
+                    <tr><td><code>tagIcon</code></td><td><code>pp-tag-icon</code></td><td>a badge's icon</td></tr>
                     <tr><td><code>tagLabel</code></td><td><code>pp-tag-label</code></td><td>a badge's label</td></tr>
                     <tr><td><code>tagRemove</code></td><td><code>pp-tag-remove</code></td><td>a badge's remove button</td></tr>
                     <tr><td><code>tagCount</code></td><td><code>pp-tag-count</code></td><td>the "+N" count</td></tr>
@@ -428,7 +467,7 @@
             <script type="text/plain" data-code="JS">
                 PlatyPicker.sheetMedia = "(pointer: coarse) and ((max-width: 640px) or (max-height: 500px))"; // the default
             </script>
-            <p><code>layout="native"</code> leaves the select to the browser instead, on every device: its own picker opens, without search, controls or subtext, and a multiple select shows no badges. It shows only the options in the select, so <code>loadmore</code> never fires there: load them all up front.</p>
+            <p><code>layout="native"</code> leaves the select to the browser instead, on every device: its own picker opens, without search, controls, subtexts, images or icons, and a multiple select shows no badges. It shows only the options in the select, so <code>loadmore</code> never fires there: load them all up front.</p>
             <div class="example">
                 <template>
                     <platy-picker layout="native">
@@ -563,6 +602,7 @@ PlatyPicker.languages.pl = {
                     <tr><td><code>required</code> on the select</td><td>hides None, and keeps the last badge</td></tr>
                     <tr><td><code>&lt;optgroup label&gt;</code>, <code>&lt;hr&gt;</code></td><td>a group header, a divider</td></tr>
                     <tr><td><code>data-subtext</code> on an option</td><td>a second text on the right of its row, searched too</td></tr>
+                    <tr><td><code>data-image</code>, <code>data-icon</code> on an option</td><td>a picture or an emoji before its label and in its badge (see <a href="#images">Images and icons</a>)</td></tr>
                     <tr><td><code>disabled</code> on an option or group</td><td>shown, but can't be picked</td></tr>
                     <tr><td><code>hidden</code>, <code>label</code>, <code>title</code> on an option</td><td>left out; the row's text; a tooltip</td></tr>
                     </tbody>
@@ -654,6 +694,7 @@ PlatyPicker.languages.pl = {
                             <select name="list" aria-label="Option list">
                                 <option value="foods">Food</option>
                                 <option value="cities">Cities, with subtext</option>
+                                <option value="countries">Countries, with flags</option>
                                 <option value="groups">Technology, with groups</option>
                                 <option value="cars">Cars (2,000)</option>
                             </select>

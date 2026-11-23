@@ -121,6 +121,7 @@ The texts, such as the search box's placeholder and the All / None labels, come 
 - **Option groups & separators** - `<optgroup>` and `<hr>` inside your `<select>` are mirrored into headers and dividers in the popover. A group's header only shows when something in the group does, and a divider only shows between two visible rows.
 - **Option attributes** - disabled options and groups stay in the list but can't be picked, `hidden` options are left out, an option's `label` is its row's text, and its `title` becomes a tooltip.
 - **Subtext** - add `data-subtext="..."` to any `<option>` for a secondary text on the right of its label (also searchable).
+- **Images and icons** - `data-image="flags/de.svg"` on an `<option>` puts a picture before its label, and `data-icon="🧀"` puts short text there, for an emoji. An image is a square of `--platypicker-image-size` (`1.25em`), with the whole picture shown in it, so rows don't jump as images arrive; an icon is as wide, so labels line up. Images load only once their row is near the view, so a long list fetches only the ones you scroll to, and one that fails to load is hidden. With both, the image comes first. Both show in the badges of a multiple select, but not in a closed single select, which shows the browser's own text. They're decorative: images have `alt=""` and icons are hidden from screen readers, since the label names the option, and neither is searched.
 - **Localization** - pickers follow the page's `lang`, with translations for 22 languages loaded only when needed, plural-aware texts, search that ignores case and accents, and right-to-left layouts. See below.
 - **Keyboard type-ahead** - typing while the popover is open moves focus to the first option whose text starts with what you typed, mirroring native `<select>` behavior; <kbd>Enter</kbd> or <kbd>Space</kbd> then selects it. Emoji are ignored, so typing "ch" finds "🧀 Cheese", and options further down a long list are rendered as needed.
 - **Focus on open** - opening the popover scrolls to the selected option. Focus goes to the search input if there is one, otherwise to the selected option. The sheet on phones leaves the search box alone, so the on-screen keyboard doesn't come up by itself.
@@ -138,7 +139,7 @@ The texts, such as the search box's placeholder and the All / None labels, come 
   | <kbd>Tab</kbd> | the search box, the buttons, then the list as one stop (the selected or last focused row); past the end, it closes the popover |
   | <kbd>Esc</kbd> or <kbd>Alt</kbd>+<kbd>↑</kbd> | closes the popover, with focus back on the select |
 - **Anchored, overflow-aware popover** - positioned via CSS anchor positioning; flips above the control automatically if there is no room below.
-- **Live DOM sync** – add, remove, reorder or edit `<option>`/`<optgroup>` elements on the underlying `<select>` at any time, including their `disabled`, `hidden`, `label`, `title` and `data-subtext` attributes, and the popover updates to match. Only what changed is updated, so focus and scroll position survive. While the popover is closed, updates wait until it opens; the badges follow right away.
+- **Live DOM sync** – add, remove, reorder or edit `<option>`/`<optgroup>` elements on the underlying `<select>` at any time, including their `disabled`, `hidden`, `label`, `title`, `data-subtext`, `data-image` and `data-icon` attributes, and the popover updates to match. Only what changed is updated, so focus and scroll position survive. While the popover is closed, updates wait until it opens; the badges follow right away.
 - **Loading as you scroll** – for options that come from a server, `loading` and the `loadmore` event let you fetch them a page at a time, with `placeholders` showing skeleton rows while you wait. See below.
 - **Accessible** - the popover is a dialog named after the select, which says when it's open. The list is a listbox of options that screen readers announce as selected or not and by position ("3 of 20", even while long lists render in batches), with option groups and disabled options as on a native select. It works in Windows High Contrast and other forced-color modes.
 - **`:state(open)`** - the `<platy-picker>` host exposes a custom state while its popover is open, so you can style around it without a class, `:state(sheet)` while it opens as a sheet, `:state(native)` while the browser's own picker opens instead, and `:state(full)` while a `max` is reached:
@@ -233,7 +234,7 @@ Things to know:
 </platy-picker>
 ```
 
-None of the popover's extras work in the browser's picker: `search`, `controls`, `counter` and the `data-subtext` of options don't show there. It shows what's in the `<select>` and nothing more, so with [loading as you scroll](#loading-as-you-scroll) it shows only the options loaded so far, and `loadmore` never fires: load every option up front for a picker with `layout="native"`, or switch to another layout while some are still to come.
+None of the popover's extras work in the browser's picker: `search`, `controls`, `counter` and the `data-subtext`, `data-image` and `data-icon` of options don't show there. It shows what's in the `<select>` and nothing more, so with [loading as you scroll](#loading-as-you-scroll) it shows only the options loaded so far, and `loadmore` never fires: load every option up front for a picker with `layout="native"`, or switch to another layout while some are still to come.
 
 To have the browser's picker on phones only, switch `layout` with a media query of your own:
 
@@ -268,6 +269,7 @@ The stylesheet draws a neutral look meant to sit well in most pages, in light an
 | `--platypicker-menu-radius`        | the popover (`8px`)                               |
 | `--platypicker-shadow`             | the popover's shadow                              |
 | `--platypicker-max-height`         | the popover's height limit (`45vh`)               |
+| `--platypicker-image-size`         | a row's image, and its icon's width (`1.25em`)    |
 | `--platypicker-sheet-bg`           | the [sheet](#on-phones), see-through so the page shows blurred behind it |
 | `--platypicker-sheet-card-bg`      | the sheet's rows, grouped on cards                |
 | `--platypicker-sheet-blur`         | how much the page behind the sheet is blurred (`24px`) |
@@ -297,7 +299,7 @@ The look stays out of the way of your own CSS. Its colors, borders and spacing h
 
 ## Class plugs
 
-Every element Platypicker creates has a fixed `pp-*` class, which you can style directly: `pp-menu` (the popover), `pp-bar`, `pp-handle`, `pp-heading`, `pp-title` and `pp-selected-count` (the sheet's handle and heading, shown only in the sheet), `pp-search-row` (the search box and the sheet's Cancel), `pp-search`, `pp-button` (All, None and Cancel, told apart by `data-action="all"`, `"none"` and `"cancel"`), `pp-list`, `pp-item`, `pp-item-label`, `pp-item-subtext`, `pp-item-check`, `pp-group`, `pp-group-list`, `pp-header`, `pp-divider`, `pp-empty` ("No matches"), `pp-counter`, `pp-status` (the match count for screen readers, hidden), `pp-placeholder`, `pp-placeholder-bar`, and for the badges `pp-tags`, `pp-tag`, `pp-tag-label`, `pp-tag-remove`, `pp-tag-count` and `pp-tags-placeholder`. The `<select>` gets `pp-select`.
+Every element Platypicker creates has a fixed `pp-*` class, which you can style directly: `pp-menu` (the popover), `pp-bar`, `pp-handle`, `pp-heading`, `pp-title` and `pp-selected-count` (the sheet's handle and heading, shown only in the sheet), `pp-search-row` (the search box and the sheet's Cancel), `pp-search`, `pp-button` (All, None and Cancel, told apart by `data-action="all"`, `"none"` and `"cancel"`), `pp-list`, `pp-item`, `pp-item-image`, `pp-item-icon`, `pp-item-label`, `pp-item-subtext`, `pp-item-check`, `pp-group`, `pp-group-list`, `pp-header`, `pp-divider`, `pp-empty` ("No matches"), `pp-counter`, `pp-status` (the match count for screen readers, hidden), `pp-placeholder`, `pp-placeholder-bar`, and for the badges `pp-tags`, `pp-tag`, `pp-tag-image`, `pp-tag-icon`, `pp-tag-label`, `pp-tag-remove`, `pp-tag-count` and `pp-tags-placeholder`. The `<select>` gets `pp-select`.
 
 Each part also has a plug: extra classes added next to its fixed one, empty by default. They let you dress the picker in a framework's own classes, such as Bootstrap's or Tailwind's utilities. Two state plugs, `itemSelected` and `itemDisabled`, are added to a row while its option is selected or disabled. The full list, with what each part is, is in `src/classes.js`.
 

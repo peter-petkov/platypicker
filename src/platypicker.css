@@ -1182,6 +1182,11 @@
                 border-top: 1px solid var(--_pp-border);
             }
 
+            /* After an image or icon, the line starts at the label, as a phone's own lists do. */
+            :is(.pp-list, .pp-group-list) > li:not(.pp-group) + li:not(.pp-group) > .pp-item:has(> :is(.pp-item-image:not(.pp-item-image-broken), .pp-item-icon))::before {
+                inset-inline-start: calc(1rem + var(--platypicker-image-size, 1.25em) + .5rem);
+            }
+
             /* A divider is the full width of its card, and the row after it draws no line of its own. */
             .pp-divider {
                 margin: 0;
