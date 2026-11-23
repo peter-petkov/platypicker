@@ -4,12 +4,13 @@ What's new in each release of Platypicker. Each feature release has its own sect
 
 ## 2.2
 
-Platypicker 2.2 can limit how many options a multiple select takes, and shows images and icons beside options.
+Platypicker 2.2 can limit how many options a multiple select takes, shows images and icons beside options, and comes with TypeScript types.
 
 ### Added
 
 - **A limit for multiple selects.** `max="3"` lets a multiple select take three options at most. Once they're picked, the other rows act like disabled ones until one is unpicked, screen readers hear "Limit of 3 reached", the sheet's heading says "2 of 3 selected", and All is hidden. The picker has `:state(full)` meanwhile. It only holds back the user: markup and script can still select more. Two new texts, `selectedOfMaxLabel` and `limitReachedLabel`, in all 22 languages.
 - **Images and icons.** `data-image="flags/de.svg"` on an option shows a picture before its label, and `data-icon="🧀"` an emoji, in its row and in its badge. Images are a fixed square, `--platypicker-image-size`, and load only as their rows come near the view; one that fails to load is hidden. Both are decorative. Search finds an icon when you type its emoji. New parts `pp-item-image`, `pp-item-icon`, `pp-tag-image` and `pp-tag-icon`, with class plugs of their own.
+- **TypeScript types.** The package types the element, its attributes and properties, the `loadmore` event, the texts and the class plugs, so editors complete and explain them, in TypeScript and in checked JavaScript. `document.querySelector("platy-picker")` comes back as a `PlatyPicker`, and the imports by path (skins, translations) are typed too. The `dist/` global and `<platy-picker>` in React's JSX are opt-in. See TypeScript in the README.
 
 ## 2.1
 
