@@ -1117,7 +1117,8 @@ export default class ListView {
     /**
      * Scrolls the popover so that a row is in view, centred or by the least amount. Element.scrollIntoView() would
      * also scroll the page to bring the row to the middle of the window, which makes the page jump on open.
-     * The sticky bar covers the top of the popover, so the part under it doesn't count as in view.
+     * The sticky bar covers the top of the popover and the sticky counter its bottom, so the parts under them don't
+     * count as in view.
      */
     #reveal(button, center) {
         if (!this.#popover.matches(":popover-open")) return;
@@ -1126,7 +1127,7 @@ export default class ListView {
         const bar = this.#coveredHeight;
         const top = button.getBoundingClientRect().top - scroller.getBoundingClientRect().top - scroller.clientTop - bar;
         const height = button.offsetHeight;
-        const room = scroller.clientHeight - bar;
+        const room = scroller.clientHeight - bar - this.#coveredBottom;
 
         if (center) scroller.scrollTop += top - (room - height) / 2;
         else if (top < 0) scroller.scrollTop += top;
@@ -1144,6 +1145,11 @@ export default class ListView {
     /** How much of the top of the scroller the sticky bar covers. */
     get #coveredHeight() {
         return this.#sheet || this.#form.hidden ? 0 : this.#form.offsetHeight;
+    }
+
+    /** How much of the bottom of the scroller the sticky counter covers. In the sheet it sits under the list instead. */
+    get #coveredBottom() {
+        return this.#sheet || this.#counter.hidden ? 0 : this.#counter.offsetHeight;
     }
 
     /** Says whether the popover is shown as the sheet (layout="sheet"), where the list scrolls rather than the popover. */
@@ -1258,7 +1264,7 @@ export default class ListView {
      */
     #jump(from, pages) {
         const index = this.#rows.findIndex(record => record.button === from);
-        const room = this.#scroller.clientHeight - this.#coveredHeight;
+        const room = this.#scroller.clientHeight - this.#coveredHeight - this.#coveredBottom;
         const pageSize = Math.max(1, Math.floor(room / from.offsetHeight) - 1);
         const wanted = Number.isFinite(pages) ? index + pages * pageSize : pages;
 
