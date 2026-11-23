@@ -786,6 +786,10 @@
             flex: 1;
             min-width: 0;
             width: auto;
+            /* A text box scrolls its own text, so the bar's touch-action stops at it. Up and down drag the sheet too
+               (see Sheet); left and right still scroll a long search. Without it the browser takes a drag down as
+               its own pan and cancels the sheet's drag. */
+            touch-action: pan-x;
         }
 
         /* The sheet's rows sit on cards: a group's rows on one, and each run of rows outside groups on another. */

@@ -12,11 +12,11 @@
  * On a short screen, as a phone on its side, there's no half height: the sheet opens at full height, narrower and
  * centred (see platypicker.css).
  *
- * The sheet can be dragged by its bar (the handle and heading), or pulled down by the list once it's scrolled to the
- * top. Let go, it settles at half or full height, whichever is nearer, or closes when it's let go low enough. A flick
- * goes on in its direction: up to full height, down a step. Dragged while the keyboard is up, the sheet goes back to
- * the height it was dragged to once the keyboard is put away. Snapping to the other height or closing gives a light
- * tick on phones that can vibrate (Android).
+ * The sheet can be dragged by its bar (the handle, heading and search box), or pulled down by the list once it's
+ * scrolled to the top. Let go, it settles at half or full height, whichever is nearer, or closes when it's let go low
+ * enough. A flick goes on in its direction: up to full height, down a step. Dragged while the keyboard is up, the
+ * sheet goes back to the height it was dragged to once the keyboard is put away. Snapping to the other height or
+ * closing gives a light tick on phones that can vibrate (Android).
  *
  * Phones put the keyboard over the page rather than shrinking it, so a sheet along the bottom of the layout viewport
  * would sit behind it. The visual viewport says where the keyboard is, and the sheet sits on top of it (see the
@@ -27,6 +27,9 @@
 export default class Sheet {
     // A flick, in pixels per millisecond: let go moving at least this fast, the sheet goes on in that direction.
     static #flickSpeed = .5;
+
+    // How far a touch on the search box moves, in pixels, before it drags the sheet rather than being a tap.
+    static #dragFromSearchAfter = 8;
 
     // Let go lower than this share of half height, the sheet closes.
     static #closeBelow = .65;
@@ -166,22 +169,53 @@ export default class Sheet {
         setTimeout(finish, 400);
     }
 
-    /** The bar drags the sheet, by any pointer, except on its buttons and the search box. */
+    /**
+     * The bar drags the sheet, by any pointer, except on its buttons. On the search box a touch or pen drags it once
+     * it has moved a few pixels, more down or up than across, so a tap still goes to the box and brings up the
+     * keyboard. A mouse there selects text instead.
+     */
     #wireBarDrag(signal) {
         const bar = this.#bar;
+        let press = null; // A touch on the search box that may yet turn into a drag.
 
         bar.addEventListener("pointerdown", e => {
-            if (!this.#active || e.button !== 0 || e.target.closest("button, input")) return;
+            press = null;
+            if (!this.#active || e.button !== 0 || e.target.closest("button")) return;
+
+            if (e.target.closest("input")) {
+                if (e.pointerType !== "mouse") press = { id: e.pointerId, x: e.clientX, y: e.clientY };
+                return;
+            }
+
             bar.setPointerCapture(e.pointerId);
             this.#startDrag(e.clientY);
         }, { signal });
 
         bar.addEventListener("pointermove", e => {
+            if (press?.id === e.pointerId) {
+                const dx = Math.abs(e.clientX - press.x), dy = Math.abs(e.clientY - press.y);
+                if (dy < Sheet.#dragFromSearchAfter || dy < dx) {
+                    if (dx >= Sheet.#dragFromSearchAfter) press = null; // Across: left to the box.
+                    return;
+                }
+                // From where the finger is now, so the sheet doesn't jump the distance it took to tell a drag.
+                bar.setPointerCapture(e.pointerId);
+                this.#startDrag(e.clientY);
+                press = null;
+            }
+
             if (this.#drag && bar.hasPointerCapture(e.pointerId)) this.#moveDrag(e.clientY);
         }, { signal });
 
-        bar.addEventListener("pointerup", () => this.#endDrag(), { signal });
-        bar.addEventListener("pointercancel", () => this.#endDrag({ cancelled: true }), { signal });
+        bar.addEventListener("pointerup", () => {
+            press = null;
+            this.#endDrag();
+        }, { signal });
+
+        bar.addEventListener("pointercancel", () => {
+            press = null;
+            this.#endDrag({ cancelled: true });
+        }, { signal });
     }
 
     /**
