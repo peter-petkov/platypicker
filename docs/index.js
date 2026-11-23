@@ -451,8 +451,9 @@ function printHTML(nodes, depth = 0) {
             } else if (children.every(child => child.nodeType === Node.TEXT_NODE)) {
                 const text = node.textContent.trim();
 
-                // A script of several lines keeps its lines, indented one step inside the tag.
-                if (name === "script" && text.includes("\n")) {
+                // A script written over several lines keeps its lines, indented one step inside the tag, even a single
+                // statement, as a long import.
+                if (name === "script" && node.textContent.includes("\n")) {
                     const body = dedent(node.textContent).split("\n").map(line => line && `${pad}  ${line}`).join("\n");
                     lines.push(`${pad}<${name}${attributes}>`, body, `${pad}</${name}>`);
                 } else {
