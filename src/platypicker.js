@@ -659,6 +659,7 @@ export default class PlatyPicker extends HTMLElement {
             if (e.newState !== "open") return;
 
             this.#catchUp();
+            this.#view.trim();
             this.#view.refresh(); // Picks up selection changes that fire no change event, like select.value = x.
             this.#view.setLabel(this.#label()); // The label may have changed since the last time.
             this.#syncLayout(); // So may the screen, for the sheet.

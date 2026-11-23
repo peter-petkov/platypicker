@@ -430,6 +430,15 @@ export default class ListView {
         this.#showMatches(this.#query());
     }
 
+    /**
+     * Goes back to the first batch of rows when more were rendered, as the popover opens. Rows rendered by scrolling
+     * or End stay, to the end of the list, and the browser lays them all out each time the popover opens, which on a
+     * long list holds up its opening. The selected row is rendered again as focus goes to it (see focusInitial).
+     */
+    trim() {
+        if (this.#isBatched && this.#rows.length > this.#stepSize) this.render();
+    }
+
     /** Shows the entries matching a search, starting again from the first batch. An empty search shows them all. */
     filter(rawValue) {
         // In the open sheet, the rows glide to their new places (see Glide).

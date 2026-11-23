@@ -307,18 +307,20 @@ export default class Sheet {
         for (const element of list.querySelectorAll(".pp-header, .pp-item")) {
             if (element.offsetTop + element.offsetHeight <= list.scrollTop) continue;
             if (element.offsetTop >= bottom) break;
+            element.dataset.rise = "";
             element.style.setProperty("--_pp-rise", Math.min(step++, Sheet.#riseSteps));
             this.#risen.push(element);
         }
 
-        this.#popover.dataset.rising = "";
         this.#riseTimer = setTimeout(() => this.#stopRising(), 400 + Sheet.#riseSteps * 26);
     }
 
     #stopRising() {
         clearTimeout(this.#riseTimer);
-        delete this.#popover.dataset.rising;
-        for (const element of this.#risen) element.style.removeProperty("--_pp-rise");
+        for (const element of this.#risen) {
+            delete element.dataset.rise;
+            element.style.removeProperty("--_pp-rise");
+        }
         this.#risen = [];
     }
 

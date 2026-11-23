@@ -241,8 +241,9 @@
             }
         }
 
-        /* As the sheet opens, the rows in view rise into place one after another (see Sheet). */
-        &:state(sheet) > .pp-menu[data-rising] :is(.pp-header, .pp-item) {
+        /* As the sheet opens, the rows in view rise into place one after another (see Sheet). Only those: a long
+           list may have thousands of rows rendered, and an animation for each would hold up the sheet opening. */
+        &:state(sheet) > .pp-menu :is(.pp-header, .pp-item)[data-rise] {
             animation: platypicker-rise .3s cubic-bezier(.2, .9, .25, 1) backwards;
             animation-delay: calc(70ms + var(--_pp-rise, 0) * 26ms);
 
