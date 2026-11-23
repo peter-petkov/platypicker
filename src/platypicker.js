@@ -92,6 +92,7 @@ export default class PlatyPicker extends HTMLElement {
         "placeholder",
         "loading",
         "layout",
+        "max",
     ];
 
     #internals;
@@ -162,6 +163,7 @@ export default class PlatyPicker extends HTMLElement {
                 close: () => this.#close(),
                 // detail: { search, batchSize }, the search the options are for and a sensible page size.
                 loadMore: detail => this.dispatchEvent(new CustomEvent("loadmore", { bubbles: true, detail })),
+                full: full => this.#internals.states[full ? "add" : "delete"]("full"),
             },
         });
 
@@ -343,6 +345,23 @@ export default class PlatyPicker extends HTMLElement {
         this.setAttribute("layout", value);
     }
 
+    /**
+     * How many options a multiple select takes at most. Once that many are selected, the others can't be picked
+     * until one is unpicked, and the picker has the custom state full. It only stops the user: what markup or script
+     * selects is left as it is, even over the limit. Selected options that are disabled don't count. A missing or
+     * invalid value, or one under 1, means no limit (undefined). Single selects and layout="native" ignore it.
+     */
+    get max() {
+        const value = this.getAttribute("max")?.trim();
+
+        return /^\d+$/.test(value ?? "") && Number(value) >= 1 ? Number(value) : undefined;
+    }
+
+    set max(value) {
+        if (value === undefined || value === null) this.removeAttribute("max");
+        else this.setAttribute("max", value);
+    }
+
     #viewConfig() {
         return {
             search: this.search,
@@ -363,6 +382,7 @@ export default class PlatyPicker extends HTMLElement {
             placeholders: this.placeholders,
             batchSize: this.batchSize,
             loading: this.loading,
+            max: this.#select.multiple ? this.max : undefined,
             locale: this.#locale,
         };
     }
@@ -407,7 +427,13 @@ export default class PlatyPicker extends HTMLElement {
 
     #activate(entry) {
         if (this.#select.multiple) {
-            this.#source.setSelected(entry, !this.#source.isSelected(entry));
+            const selected = this.#source.isSelected(entry);
+
+            // The list marks the other rows once max is reached, but only a frame after the change (see #wireSelect).
+            const max = this.max;
+            if (!selected && max !== undefined && this.#source.selectedCount >= max) return;
+
+            this.#source.setSelected(entry, !selected);
         } else {
             this.#source.selectOnly(entry);
             this.#view.refresh();

@@ -8,7 +8,7 @@ import Languages from "./languages.js";
  * The popover: a search box with select all / none buttons, and the list of entries.
  *
  * It renders what an OptionSource holds, a few rows at a time as the list scrolls, and reports what the user does
- * through the `actions` it is given (activate, selectAll, selectNone, close, loadMore). It never touches the select
+ * through the `actions` it is given (activate, selectAll, selectNone, close, loadMore, full). It never touches the select
  * itself.
  */
 export default class ListView {
@@ -69,7 +69,8 @@ export default class ListView {
     #cancelButton;                      // The sheet's Cancel, beside the search box.
 
     #config = {};
-    #view = null;                       // The FilteredView being shown.
+    #full = false;                      // Whether max options are selected, so the others can't be picked.
+    #view = null;                      // The FilteredView being shown.
     #prepared = [];                     // Matches scanned ahead a batch at a time, waiting to be shown.
     #topUpFrame = 0;                    // The animation frame that tops the list up, while one is scheduled.
     #resizeObserver;                    // Tops the list up when the popover changes size.
@@ -290,7 +291,7 @@ export default class ListView {
         this.#list.addEventListener("click", e => {
             const button = e.target.closest(".pp-item");
             const record = button && this.#recordsByButton.get(button);
-            if (!record || record.entry.disabled) return;
+            if (!record || record.disabled) return;
 
             this.#actions.activate(record.entry);
         }, { signal: this.#signal });
@@ -315,13 +316,15 @@ export default class ListView {
 
     /**
      * Applies the element's settings: { search, controls, counter, searchPlaceholder, selectAllLabel,
-     * selectNoneLabel, counterLabel, placeholders, batchSize, loading }. Safe to call again whenever any of them changes. A new batch size is used
+     * selectNoneLabel, counterLabel, placeholders, batchSize, loading, max }. Safe to call again whenever any of them changes. A new batch size is used
      * from the next batch on, and the rows already rendered stay.
      */
     configure(config) {
         const placeholdersChanged = config.placeholders !== this.#config.placeholders;
         const loadingChanged = Boolean(config.loading) !== Boolean(this.#config.loading);
+        const maxChanged = config.max !== this.#config.max;
         this.#config = config;
+        if (maxChanged) this.refresh();
 
         this.#search.hidden = !config.search;
         this.#search.placeholder = config.searchPlaceholder;
@@ -639,6 +642,7 @@ export default class ListView {
      * are created and rows of entries that went away are removed. As many matches as before stay rendered.
      */
     reconcile() {
+        this.#syncFull(); // Options that went away may have been selected.
         const focusedIndex = this.#rows.findIndex(record => record.button === this.#focused());
         const keep = Math.max(this.#rows.length, this.#stepSize);
         const previous = { records: this.#recordsByEntry, groups: this.#groupItems, dividers: this.#dividerItems };
@@ -883,29 +887,46 @@ export default class ListView {
         if (small.textContent !== entry.subtext) small.textContent = entry.subtext;
         if (button.title !== entry.title) button.title = entry.title;
 
-        // Not the disabled attribute: a disabled option stays focusable, so it can be found, and says it's disabled.
-        if (record.disabled !== entry.disabled) {
-            record.disabled = entry.disabled;
-            toggleClasses(button, "itemDisabled", entry.disabled);
-            if (entry.disabled) button.setAttribute("aria-disabled", "true");
-            else button.removeAttribute("aria-disabled");
-        }
-
-        this.#syncActive(record);
+        this.#syncState(record);
         return record;
     }
 
     /**
      * Marks the row as selected or not, with aria-selected (which also tells screen readers) and the itemSelected
-     * plug. A selected option that is disabled on its own is not marked.
+     * plug. A selected option that is disabled on its own is not marked. Marks it disabled too, with aria-disabled and
+     * the itemDisabled plug: while its option is, and while max options are selected and its option isn't one of them.
      */
-    #syncActive(record) {
-        const active = this.#source.isSelected(record.entry) && !record.entry.ownDisabled;
-        if (record.active === active) return;
+    #syncState(record) {
+        const { entry, button } = record;
+        const selected = this.#source.isSelected(entry);
+        const active = selected && !entry.ownDisabled;
+        if (record.active !== active) {
+            record.active = active;
+            button.setAttribute("aria-selected", active);
+            toggleClasses(button, "itemSelected", active);
+        }
 
-        record.active = active;
-        record.button.setAttribute("aria-selected", active);
-        toggleClasses(record.button, "itemSelected", active);
+        // Not the disabled attribute: a disabled row stays focusable, so it can be found, and says it's disabled.
+        const disabled = entry.disabled || (this.#full && !selected);
+        if (record.disabled !== disabled) {
+            record.disabled = disabled;
+            toggleClasses(button, "itemDisabled", disabled);
+            if (disabled) button.setAttribute("aria-disabled", "true");
+            else button.removeAttribute("aria-disabled");
+        }
+    }
+
+    /**
+     * Works out whether max options are selected (see #full), and tells the picker when that changes. Counts the
+     * selected options only while there is a max, as that takes a moment on a long select.
+     */
+    #syncFull() {
+        const max = this.#config.max;
+        const full = max !== undefined && this.#source.selectedCount >= max;
+        if (full === this.#full) return;
+
+        this.#full = full;
+        this.#actions.full?.(full);
     }
 
     #wrapInListItem(element) {
@@ -971,7 +992,8 @@ export default class ListView {
      * text, attributes, or which options there are) go through reconcile() instead.
      */
     refresh() {
-        for (const record of this.#rows) this.#syncActive(record);
+        this.#syncFull();
+        for (const record of this.#rows) this.#syncState(record);
     }
 
     // -----------------------------------------------------------------

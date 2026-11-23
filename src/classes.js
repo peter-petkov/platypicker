@@ -23,7 +23,7 @@ export const classes = {
     list: "",           // the <ul> of options
     item: "",           // an option's row
     itemSelected: "",   // a row whose option is selected
-    itemDisabled: "",   // a row whose option is disabled
+    itemDisabled: "",   // a row whose option is disabled, or can't be picked as max options are selected
     label: "",          // a row's label
     subtext: "",        // a row's subtext (data-subtext)
     check: "",          // a row's check mark, shown while its option is selected

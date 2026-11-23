@@ -286,6 +286,16 @@ export default class OptionSource {
     }
 
     /**
+     * How many options are selected, leaving out disabled ones, which the form doesn't send and the user can't change.
+     * Takes a moment on a long select.
+     */
+    get selectedCount() {
+        let count = 0;
+        for (const option of this.#select.selectedOptions) if (!option.matches(":disabled")) count++;
+        return count;
+    }
+
+    /**
      * Reads the select's children again. Entries of options that are still there keep their identity.
      * Returns true when the list would look different.
      */
