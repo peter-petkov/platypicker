@@ -1,3 +1,4 @@
+/// <reference path="./modules.d.ts" />
 import type { Classes } from "./classes.js";
 import type { Texts } from "./languages.js";
 
