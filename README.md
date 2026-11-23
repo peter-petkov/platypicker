@@ -495,6 +495,22 @@ PlatyPicker.classes.search = "input input-sm";
 
 Changing the selection from script (`select.value = x`, `option.selected = true`) doesn't fire a `change` event, so the popover can't see it straight away. It catches up whenever it opens, and the badges whenever it opens or closes. Use `setValue()` when the picker should update immediately. A `form.reset()` updates the badges on its own.
 
+### TypeScript
+
+The package comes with its types, so editors complete and explain the attributes, properties and texts, in TypeScript and in JavaScript with type checking alike. `document.querySelector("platy-picker")` is a `PlatyPicker`, a `loadmore` listener's `event.detail` is a `LoadMoreDetail`, and the imports above by path (the skins, the translations and `src/classes.js`) are typed too. The types `Layout`, `LoadMoreDetail`, `Texts`, `Classes` and `PartName` can be imported from `"platypicker"`.
+
+Two parts are opt-in, as not every project wants them. Add the line to any one file of the project:
+
+```ts
+// The PlatyPicker global, for pages that load a script from dist/.
+/// <reference types="platypicker/src/global" />
+
+// <platy-picker> in JSX, for React (needs @types/react).
+import type {} from "platypicker/src/react.js";
+```
+
+React 19 sets the element's properties and listens to `onloadmore`. React 18 sets every prop as an attribute, so leave a boolean out rather than passing `false`: `search={false}` would still turn it on.
+
 ## Upgrading from 1.x
 
 Version 2 drops Bootstrap. If you used 1.x with Bootstrap:

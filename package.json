@@ -38,11 +38,13 @@
   "devDependencies": {
     "esbuild": "^0.28.2",
     "playwright-core": "^1.65.1",
-    "puppeteer-core": "^25.18.1"
+    "puppeteer-core": "^25.18.1",
+    "typescript": "^5.9.3"
   },
   "scripts": {
     "build": "node tools/build.mjs",
     "check:firefox": "node tools/browser-check.mjs firefox",
-    "check:webkit": "node tools/browser-check.mjs webkit"
+    "check:webkit": "node tools/browser-check.mjs webkit",
+    "check:types": "tsc -p types"
   }
 }

@@ -1,0 +1,21 @@
+{
+    // The drift check: npm run check:types compiles check.ts and global.ts against the definitions in src/, and
+    // fails if any of them don't fit together or no longer allow what the README shows.
+    "compilerOptions": {
+        "strict": true,
+        "noEmit": true,
+        "skipLibCheck": false,
+        "noUncheckedSideEffectImports": true,
+        "target": "es2022",
+        "module": "esnext",
+        "moduleResolution": "bundler",
+        "lib": ["es2022", "dom", "dom.iterable"],
+        "types": [],
+        // Import platypicker by name, as a project that installed it does.
+        "paths": {
+            "platypicker": ["../src/platypicker.d.ts"],
+            "platypicker/*": ["../*"]
+        }
+    },
+    "files": ["check.ts", "global.ts"]
+}
