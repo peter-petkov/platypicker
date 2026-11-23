@@ -4,14 +4,19 @@ What's new in each release of Platypicker. Each feature release has its own sect
 
 ## 2.2
 
-Platypicker 2.2 can limit how many options a multiple select takes, shows images and icons beside options, and comes with TypeScript types.
+Platypicker 2.2 can limit how many options a multiple select takes, shows images and icons beside options, comes with TypeScript types, and ships single files to load from a CDN, as a script or as a module.
 
 ### Added
 
 - **A limit for multiple selects.** `max="3"` lets a multiple select take three options at most. Once they're picked, the other rows act like disabled ones until one is unpicked, screen readers hear "Limit of 3 reached", the sheet's heading says "2 of 3 selected", and All is hidden. The picker has `:state(full)` meanwhile. It only holds back the user: markup and script can still select more. Two new texts, `selectedOfMaxLabel` and `limitReachedLabel`, in all 22 languages.
 - **Images and icons.** `data-image="flags/de.svg"` on an option shows a picture before its label, and `data-icon="🧀"` an emoji, in its row and in its badge. Images are a fixed square, `--platypicker-image-size`, and load only as their rows come near the view; one that fails to load is hidden. Both are decorative. Search finds an icon when you type its emoji. New parts `pp-item-image`, `pp-item-icon`, `pp-tag-image` and `pp-tag-icon`, with class plugs of their own.
 - **TypeScript types.** The package types the element, its attributes and properties, the `loadmore` event, the texts and the class plugs, so editors complete and explain them, in TypeScript and in checked JavaScript. `document.querySelector("platy-picker")` comes back as a `PlatyPicker`, and the imports by path (skins, translations) are typed too. The `dist/` global and `<platy-picker>` in React's JSX are opt-in. See TypeScript in the README.
-- **A module in `dist/`.** `platypicker.esm.min.js` is the picker with every translation bundled as one module, for a page that imports it from a CDN without a build step: `import PlatyPicker from ".../dist/platypicker.esm.min.js"`. Each skin has one too, `platypicker.bootstrap.esm.min.js` and `platypicker.tailwind.esm.min.js`. Every file in `dist/`, the scripts and the stylesheet included, now also comes unminified, without `.min`. See Without a build step in the README.
+- **Single files for a CDN.** `dist/` has Platypicker bundled into single files with every translation, for pages without a build step: `platypicker.min.js` as a plain script that sets `window.PlatyPicker` (since 2.1.2), and `platypicker.esm.min.js` as a module whose default export is the element class. Each comes with the Bootstrap or the Tailwind skin applied too (`platypicker.bootstrap.min.js`, `platypicker.bootstrap.esm.min.js`, and so on), and with the stylesheet, `platypicker.min.css`. Every file also comes unminified, without `.min`, and has a source map into `src/`. See Without a build step in the README.
+
+### Fixed
+
+- Searching for an emoji threw an error, whether it was in an icon or a label. Variation selectors are now ignored like accents, so "🎙" and "🎙️" find each other.
+- A picker defined by a plain script in the `<head>` was left a plain select, since it connected before its select was read. While the page is loading, a picker now waits for its select (2.1.2).
 
 ## 2.1
 
