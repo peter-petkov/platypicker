@@ -2,6 +2,13 @@
 
 What's new in each release of Platypicker. Each feature release has its own section; the bugfix releases in between are folded into the version they led up to. The [docs page](https://peter-petkov.github.io/platypicker/) shows every feature live.
 
+## 2.2.1
+
+### Fixed
+
+- On a long list whose rows had all been shown, by End or by scrolling to its end, the sheet was up before its rows began to rise, after a pause. The list now goes back to its first batch of rows each time it opens, so it opens as fast as the first time, and only the rows in view rise. As before, the selected option is shown and scrolled to.
+- The Bootstrap skin's sheet had no handle.
+
 ## 2.2
 
 Platypicker 2.2 can limit how many options a multiple select takes, shows images and icons beside options, comes with TypeScript types, and ships single files to load from a CDN, as a script or as a module.
