@@ -43,6 +43,7 @@
             <a href="#search">Search</a>
             <a href="#multiple">Multiple and badges</a>
             <a href="#controls">Select all / none</a>
+            <a href="#max">Limit</a>
             <a href="#groups">Groups and dividers</a>
             <p>Lists</p>
             <a href="#long-lists">Long lists</a>
@@ -152,6 +153,19 @@
                 <template>
                     <platy-picker search controls placeholder="Pick some clothes">
                         <select name="clothes" multiple size="1" aria-label="Clothes" data-fill="clothes"></select>
+                    </platy-picker>
+                </template>
+            </div>
+        </section>
+
+        <section id="max">
+            <h2>Limit</h2>
+            <p><code>max</code> caps how many options a multiple select takes. Once that many are selected, the other rows act like disabled ones until you unpick one: they stay in the list for search and type-ahead, and screen readers hear "Limit of 3 reached" when the limit is reached, or when you try one of them. The sheet's heading says "2 of 3 selected", and All is hidden. Selected options that are disabled don't count.</p>
+            <p>It only holds back the user. Markup and script can still select more, and the selection is then left as it is. It isn't form validation, so check the count on the server too. While the limit is reached, the picker has <code>:state(full)</code>.</p>
+            <div class="example">
+                <template>
+                    <platy-picker search controls max="3" placeholder="Pick up to three">
+                        <select name="foods" multiple size="1" aria-label="Favourite foods" data-fill="foods"></select>
                     </platy-picker>
                 </template>
             </div>
@@ -533,6 +547,7 @@ PlatyPicker.languages.pl = {
                     <tr><td><code>placeholders</code></td><td><code>placeholders</code></td><td>number, 10</td><td>skeleton rows at the end while more are to come</td></tr>
                     <tr><td><code>loading</code></td><td><code>loading</code></td><td>boolean</td><td>more options are on their way; fires <code>loadmore</code></td></tr>
                     <tr><td><code>layout</code></td><td><code>layout</code></td><td><code>auto</code>, <code>sheet</code>, <code>popover</code>, <code>native</code></td><td>a <a href="#phones">sheet</a> on phones (<code>auto</code>), always, or never; or the browser's own picker</td></tr>
+                    <tr><td><code>max</code></td><td><code>max</code></td><td>number</td><td>the most options a multiple select takes (see <a href="#max">Limit</a>)</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -619,6 +634,7 @@ PlatyPicker.languages.pl = {
                     <tr><td><code>platy-picker:state(open)</code></td><td>a picker while its popover is open</td></tr>
                     <tr><td><code>platy-picker:state(sheet)</code></td><td>a picker that opens as a <a href="#phones">sheet</a></td></tr>
                     <tr><td><code>platy-picker:state(native)</code></td><td>a picker that leaves opening to the browser (<code>layout="native"</code>)</td></tr>
+                    <tr><td><code>platy-picker:state(full)</code></td><td>a picker whose <a href="#max"><code>max</code></a> is reached; its other rows have <code>aria-disabled="true"</code></td></tr>
                     <tr><td><code>.pp-item[aria-selected="true"]</code>, <code>.pp-item[aria-disabled="true"]</code></td><td>a selected row, a disabled row</td></tr>
                     <tr><td><code>.pp-skin</code> on the picker</td><td>turns off the base paint, for a <a href="#skins">skin</a></td></tr>
                     </tbody>
@@ -653,6 +669,7 @@ PlatyPicker.languages.pl = {
                         <label class="check"><input type="checkbox" name="counter">counter</label>
                         <label class="field-row">batch-size <input class="field" type="number" name="batch-size" min="0" placeholder="50"></label>
                         <label class="field-row">placeholders <input class="field" type="number" name="placeholders" min="0" placeholder="off"></label>
+                        <label class="field-row">max <input class="field" type="number" name="max" min="1" placeholder="off"></label>
                         <label class="field-row">layout
                             <platy-picker>
                                 <select name="layout" aria-label="Layout">

@@ -354,13 +354,14 @@ export default class ListView {
 
     /**
      * Shows or hides select all / none. Also depends on the select (multiple, required),
-     * so it is inexpensive to repeat.
+     * so it is inexpensive to repeat. Select all is hidden while there is a max, which it would go past.
      */
     syncControls() {
         const controls = Boolean(this.#config.controls);
 
         this.#selectAllButton.disabled = this.#selectNoneButton.disabled = !controls;
-        this.#selectAllButton.hidden = !controls || !this.#source.multiple || !this.#source.canSelectAll;
+        this.#selectAllButton.hidden = !controls || !this.#source.multiple || !this.#source.canSelectAll ||
+            this.#config.max !== undefined;
         this.#selectNoneButton.hidden = !controls || this.#source.required;
         this.#list.setAttribute("aria-multiselectable", this.#source.multiple);
 

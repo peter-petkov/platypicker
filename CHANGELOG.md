@@ -2,6 +2,14 @@
 
 What's new in each release of Platypicker. Each feature release has its own section; the bugfix releases in between are folded into the version they led up to. The [docs page](https://peter-petkov.github.io/platypicker/) shows every feature live.
 
+## 2.2
+
+Platypicker 2.2 can limit how many options a multiple select takes.
+
+### Added
+
+- **A limit for multiple selects.** `max="3"` lets a multiple select take three options at most. Once they're picked, the other rows act like disabled ones until one is unpicked, screen readers hear "Limit of 3 reached", the sheet's heading says "2 of 3 selected", and All is hidden. The picker has `:state(full)` meanwhile. It only holds back the user: markup and script can still select more. Two new texts, `selectedOfMaxLabel` and `limitReachedLabel`, in all 22 languages.
+
 ## 2.1
 
 Platypicker 2.1 finds options by their initials, and puts the sheet on phones in motion.
