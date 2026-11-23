@@ -92,6 +92,13 @@ const css = `
             padding-inline-start: .3125rem;
         }
 
+        /* Rows in the sheet are as tall as Platypicker's own, a comfortable size for a finger, rather than the
+           dropdown's. */
+        &:state(sheet) .pp-item {
+            min-height: 2.75rem;
+            padding-block: .5rem;
+        }
+
         /* A group's header sticks in the sheet (see platypicker.css): at the very top of the list, past its py-1. */
         &:state(sheet) .pp-header {
             --_pp-header-top: -.25rem;
