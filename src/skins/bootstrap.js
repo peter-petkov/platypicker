@@ -10,7 +10,7 @@
  * a dropdown-header and dropdown-dividers for the popover, form-control for the search box, btn-link buttons, badges
  * with a btn-close for a multiple select, and placeholder bars for the skeleton rows. Platypicker's own paint steps
  * aside for skinned pickers, so these classes decide the look whichever stylesheet loads first. A few small rules
- * cover what Bootstrap has no class for: the check mark, search matches and where the badges sit.
+ * cover what Bootstrap has no class for: the check mark, search matches, where the badges sit and the sheet's handle.
  * Needs Bootstrap 5.3 or later.
  */
 import { classes } from "../classes.js";
@@ -49,8 +49,8 @@ for (const [part, value] of Object.entries(plugs)) {
 // What Bootstrap has no class for. The variables feed the check mark, the select all spinner and search matches.
 // The subtext is secondary gray, and with the check mark takes the row's own color while it's pressed or disabled
 // (text-body-secondary would win over those, with its !important). The rest lines the badges up with form-select's
-// padding and draws its chevron, which Bootstrap leaves off multiple selects. They're one notch above Platypicker's
-// layout rules, which they adjust.
+// padding and draws its chevron, which Bootstrap leaves off multiple selects, and draws the sheet's handle, which
+// Platypicker's own paint would. They're one notch above Platypicker's layout rules, which they adjust.
 const css = `
 @supports (anchor-scope: all) and selector(:popover-open) {
     platy-picker.pp-skin-bootstrap {
@@ -90,6 +90,14 @@ const css = `
 
         .pp-tags-placeholder {
             padding-inline-start: .3125rem;
+        }
+
+        .pp-handle {
+            width: 2.25rem;
+            height: .3125rem;
+            margin-bottom: .125rem;
+            background: color-mix(in srgb, var(--bs-body-color) 25%, transparent);
+            border-radius: var(--bs-border-radius-pill);
         }
     }
 }`;
