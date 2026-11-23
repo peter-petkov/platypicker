@@ -1,6 +1,7 @@
 "use strict";
 
 import { addClasses } from "./classes.js";
+import { hideBrokenImages, syncIcon, syncImage } from "./decorations.js";
 
 /**
  * The badges shown over a closed multiple select: one per selected option, on one line, with a "+N" count for
@@ -20,7 +21,7 @@ export default class TagsView {
     #root;
     #placeholder;
     #count;
-    #tags = [];                         // { element, label, remove }, the first `#shown` in use
+    #tags = [];                         // { element, image, icon, label, remove }, the first `#shown` in use
     #shown = 0;
     #total = 0;
     #config = {};
@@ -51,6 +52,8 @@ export default class TagsView {
             e.preventDefault(); // Inside a <label>, the click would otherwise go on to the select and open it.
             this.#actions.remove(option);
         }, { signal });
+
+        hideBrokenImages(this.#root, ["tagImage"], signal);
 
         this.#resizeObserver = new ResizeObserver(() => this.#fit());
         this.#resizeObserver.observe(select);
@@ -95,6 +98,8 @@ export default class TagsView {
             const text = option.textContent.trim();
 
             if (tag.label.textContent !== text) tag.label.textContent = text;
+            tag.icon = syncIcon(tag.icon, (option.dataset.icon ?? "").trim(), "tagIcon", tag.label);
+            tag.image = syncImage(tag.image, (option.dataset.image ?? "").trim(), "tagImage", tag.icon ?? tag.label);
             tag.remove.hidden = !removable;
             this.#optionsByRemove.set(tag.remove, option);
         });
@@ -121,7 +126,7 @@ export default class TagsView {
 
         element.append(label, remove);
 
-        const tag = { element, label, remove };
+        const tag = { element, image: null, icon: null, label, remove };
         this.#tags.push(tag);
         return tag;
     }

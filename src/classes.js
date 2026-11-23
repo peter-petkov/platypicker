@@ -25,6 +25,7 @@ export const classes = {
     itemSelected: "",   // a row whose option is selected
     itemDisabled: "",   // a row whose option is disabled, or can't be picked as max options are selected
     image: "",          // a row's picture before the label (data-image)
+    icon: "",           // a row's icon before the label (data-icon)
     label: "",          // a row's label
     subtext: "",        // a row's subtext (data-subtext)
     check: "",          // a row's check mark, shown while its option is selected
@@ -38,6 +39,8 @@ export const classes = {
     placeholderBar: "", // the bar inside it
     tags: "",           // the badges over a closed multiple select
     tag: "",            // a badge
+    tagImage: "",       // a badge's picture (data-image)
+    tagIcon: "",        // a badge's icon (data-icon)
     tagLabel: "",       // a badge's label
     tagRemove: "",      // a badge's remove button
     tagCount: "",       // the "+N" count of the badges that don't fit
@@ -58,6 +61,7 @@ const fixed = {
     list: "pp-list",
     item: "pp-item",
     image: "pp-item-image",
+    icon: "pp-item-icon",
     label: "pp-item-label",
     subtext: "pp-item-subtext",
     check: "pp-item-check",
@@ -72,11 +76,16 @@ const fixed = {
     placeholderBar: "pp-placeholder-bar",
     tags: "pp-tags",
     tag: "pp-tag",
+    tagImage: "pp-tag-image",
+    tagIcon: "pp-tag-icon",
     tagLabel: "pp-tag-label",
     tagRemove: "pp-tag-remove",
     tagCount: "pp-tag-count",
     tagsPlaceholder: "pp-tags-placeholder",
 };
+
+/** A part's fixed pp-* class. */
+export const fixedClass = part => fixed[part];
 
 const plug = part => String(classes[part] ?? "").split(/\s+/).filter(Boolean);
 

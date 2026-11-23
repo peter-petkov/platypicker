@@ -50,6 +50,11 @@ export class OptionEntry {
         return (this.option.dataset.image ?? "").trim();
     }
 
+    /** The text shown before the label (data-icon), such as an emoji, or "". */
+    get icon() {
+        return (this.option.dataset.icon ?? "").trim();
+    }
+
     get title() {
         return this.option.title;
     }
@@ -405,7 +410,7 @@ export default class OptionSource {
             subtree: true,
             characterData: true,
             attributes: true,
-            attributeFilter: ["disabled", "hidden", "label", "title", "data-subtext", "data-image"],
+            attributeFilter: ["disabled", "hidden", "label", "title", "data-subtext", "data-image", "data-icon"],
         });
     }
 
