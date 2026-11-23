@@ -45,6 +45,11 @@ export class OptionEntry {
         return (this.option.dataset.subtext ?? "").trim();
     }
 
+    /** The URL of the picture before the label (data-image), or "". */
+    get image() {
+        return (this.option.dataset.image ?? "").trim();
+    }
+
     get title() {
         return this.option.title;
     }
@@ -400,7 +405,7 @@ export default class OptionSource {
             subtree: true,
             characterData: true,
             attributes: true,
-            attributeFilter: ["disabled", "hidden", "label", "title", "data-subtext"],
+            attributeFilter: ["disabled", "hidden", "label", "title", "data-subtext", "data-image"],
         });
     }
 

@@ -35,6 +35,7 @@
  *   --platypicker-menu-radius           the popover
  *   --platypicker-shadow                the popover's shadow
  *   --platypicker-max-height            the popover's height limit
+ *   --platypicker-image-size            the width and height of a row's image (data-image)
  *   --platypicker-sheet-bg              the sheet (layout="sheet"), see-through so the page shows blurred behind it
  *   --platypicker-sheet-card-bg         the sheet's rows, grouped on cards
  *   --platypicker-sheet-blur            how much the page behind the sheet is blurred
@@ -474,7 +475,7 @@
             list-style: none;
         }
 
-        /* A row: the label, its subtext at the end, then a column for the check mark. */
+        /* A row: an image if its option has one, the label, its subtext at the end, then a column for the check mark. */
         .pp-item {
             box-sizing: border-box;
             display: flex;
@@ -483,6 +484,19 @@
             width: 100%;
             text-align: start;
             scroll-margin-block: 3.5rem; /* Keeps a scrolled-to row clear of the sticky bar. */
+        }
+
+        /* A fixed square, so a row doesn't jump as its image arrives. The whole picture shows, letterboxed if it isn't
+           square. One that fails to load is hidden (see ListView). */
+        .pp-item-image {
+            flex: none;
+            width: var(--platypicker-image-size, 1.25em);
+            height: var(--platypicker-image-size, 1.25em);
+            object-fit: contain;
+
+            &.pp-item-image-broken {
+                display: none;
+            }
         }
 
         .pp-item-label {

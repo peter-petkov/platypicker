@@ -24,6 +24,7 @@ export const classes = {
     item: "",           // an option's row
     itemSelected: "",   // a row whose option is selected
     itemDisabled: "",   // a row whose option is disabled, or can't be picked as max options are selected
+    image: "",          // a row's picture before the label (data-image)
     label: "",          // a row's label
     subtext: "",        // a row's subtext (data-subtext)
     check: "",          // a row's check mark, shown while its option is selected
@@ -56,6 +57,7 @@ const fixed = {
     button: "pp-button",
     list: "pp-list",
     item: "pp-item",
+    image: "pp-item-image",
     label: "pp-item-label",
     subtext: "pp-item-subtext",
     check: "pp-item-check",

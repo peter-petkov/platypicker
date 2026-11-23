@@ -301,6 +301,12 @@ export default class ListView {
             this.#actions.activate(record.entry);
         }, { signal: this.#signal });
 
+        // An image that fails to load is hidden, so it leaves no gap before the label. Errors don't bubble, so this
+        // listens on the way down.
+        this.#list.addEventListener("error", e => {
+            if (e.target.matches?.(".pp-item-image")) e.target.classList.add("pp-item-image-broken");
+        }, { capture: true, signal: this.#signal });
+
         // The row that takes focus, however it got it, becomes the one Tab stops at.
         this.#list.addEventListener("focusin", e => {
             if (this.#recordsByButton.has(e.target)) this.#setTabStop(e.target);
@@ -864,6 +870,29 @@ export default class ListView {
         button.tabIndex = -1;
         addClasses(button, "item");
 
+        const record = { entry, button, ...this.#createParts(button), active: undefined, disabled: false };
+        this.#recordsByButton.set(button, record);
+
+        return this.#updateRecord(record);
+    }
+
+    /** Brings a row up to date with its entry, writing only what differs. */
+    #updateRecord(record) {
+        const { entry, button } = record;
+
+        this.#updateParts(record);
+        if (button.title !== entry.title) button.title = entry.title;
+
+        this.#syncState(record);
+        return record;
+    }
+
+    /**
+     * Builds a row's content into its button, in this order: image, label, subtext, check. Returns the parts by name,
+     * which go on the row's record: the label's text node as `text`, the subtext as `small`. The image is made by
+     * #updateParts, and only for an option that has one, so a row without stays as it was.
+     */
+    #createParts(button) {
         const label = document.createElement("span");
         addClasses(label, "label");
         const text = document.createTextNode("");
@@ -878,23 +907,47 @@ export default class ListView {
         addClasses(check, "check");
 
         button.append(label, small, check);
-
-        const record = { entry, button, text, small, active: undefined, disabled: false };
-        this.#recordsByButton.set(button, record);
-
-        return this.#updateRecord(record);
+        return { image: null, label, text, small, check };
     }
 
-    /** Brings a row up to date with its entry, writing only what differs. */
-    #updateRecord(record) {
-        const { entry, button, text, small } = record;
+    /** Brings a row's content up to date with its entry, writing only what differs. */
+    #updateParts(record) {
+        const { entry, text, small } = record;
 
         if (text.data !== entry.label) text.data = entry.label;
         if (small.textContent !== entry.subtext) small.textContent = entry.subtext;
-        if (button.title !== entry.title) button.title = entry.title;
+        this.#updateImage(record);
+    }
 
-        this.#syncState(record);
-        return record;
+    /**
+     * Adds, changes or removes the row's image to match data-image. It's decorative (the label names the option), loads
+     * only once its row is near the view, and a new URL clears the broken mark a failed one left (see #wireList).
+     */
+    #updateImage(record) {
+        const url = record.entry.image;
+        let image = record.image;
+
+        if (!url) {
+            if (image) {
+                image.remove();
+                record.image = null;
+            }
+            return;
+        }
+
+        if (!image) {
+            image = record.image = document.createElement("img");
+            image.alt = "";
+            image.loading = "lazy";
+            image.decoding = "async";
+            addClasses(image, "image");
+            record.label.before(image);
+        }
+
+        if (image.getAttribute("src") !== url) {
+            image.classList.remove("pp-item-image-broken");
+            image.src = url;
+        }
     }
 
     /**
