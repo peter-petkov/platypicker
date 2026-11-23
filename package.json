@@ -1,6 +1,6 @@
 {
   "name": "platypicker",
-  "version": "2.2.1",
+  "version": "2.2.2",
   "description": "A searchable popover for native selects, with badges, long lists, a sheet on phones and 22 languages.",
   "keywords": [
     "select",
