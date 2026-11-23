@@ -750,10 +750,6 @@ ul {
 }
 
 @media (width < 900px) {
-    html {
-        scroll-padding-top: calc(var(--topbar-height) + 4rem);
-    }
-
     .topbar {
         gap: 1rem;
         padding: 0 1rem;
@@ -772,18 +768,42 @@ ul {
         padding-top: 0;
     }
 
+    /* Like a local nav on Apple's site: the header scrolls away, and a slim bar naming the current section stays at
+       the top. The whole bar opens the picker. */
+    html {
+        scroll-padding-top: 3.75rem;
+    }
+
+    .topbar {
+        position: static;
+    }
+
     .phone-nav {
         position: sticky;
-        top: var(--topbar-height);
-        z-index: 5;
+        top: 0;
+        z-index: 10;
         display: block;
-        padding: 0.6rem 0;
-        margin-bottom: 0.5rem;
-        background: var(--page-bg);
+        margin: 0 -1rem 0.5rem;
+        background: color-mix(in srgb, var(--page-bg) 80%, transparent);
+        backdrop-filter: saturate(1.8) blur(16px);
         border-bottom: 1px solid var(--page-border);
 
         select {
             width: 100%;
+            padding-block: 0.625rem;
+            padding-inline: 1rem 2.25rem;
+            border: 0;
+            border-radius: 0;
+            background-color: transparent;
+            background-position: right 1rem center;
+            box-shadow: none;
+            color: var(--page-color);
+            font-size: 1rem;
+            font-weight: 600;
+
+            &:focus-visible {
+                outline-offset: -2px;
+            }
         }
     }
 

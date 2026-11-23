@@ -550,7 +550,10 @@ function setupNavigation() {
     let shown;
 
     const update = () => {
-        const line = document.querySelector(".topbar").offsetHeight + phonePicker.parentElement.offsetHeight + 24;
+        // Under whichever bar is lower: the header, or on phones the section bar, which stays once the header has
+        // scrolled away.
+        const bars = [document.querySelector(".topbar"), phonePicker.parentElement];
+        const line = Math.max(...bars.map(bar => bar.getBoundingClientRect().bottom)) + 24;
         const bottom = innerHeight + scrollY >= document.documentElement.scrollHeight - 2;
         const current = bottom ? sections.at(-1) : sections.findLast(section => section.getBoundingClientRect().top <= line) ?? sections[0];
 
