@@ -32,30 +32,42 @@ You'll also need the stylesheet, `src/platypicker.css` in the package:
 
 ### Without a build step
 
-The package's `dist/` folder has Platypicker minified into single files, for pages that load it with a plain `<script>` tag, from a CDN for example (since 2.1.2):
+The package's `dist/` folder has Platypicker bundled into single files, for pages that load it from a CDN, for example, with a plain `<script>` tag (since 2.1.2) or with an import (since 2.2):
 
 ```html
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/platypicker@2/dist/platypicker.min.css">
 <script src="https://cdn.jsdelivr.net/npm/platypicker@2/dist/platypicker.min.js"></script>
 ```
 
-| File                           | What it is                                                     |
-|--------------------------------|----------------------------------------------------------------|
-| `platypicker.min.js`           | the picker with every translation, 21 kB gzipped               |
-| `platypicker.bootstrap.min.js` | the same with the [Bootstrap skin](#bootstrap) applied first   |
-| `platypicker.tailwind.min.js`  | the same with the [Tailwind skin](#tailwind) applied first     |
-| `platypicker.min.css`          | the stylesheet, 4 kB gzipped                                   |
+```html
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/platypicker@2/dist/platypicker.min.css">
+<script type="module">
+    import PlatyPicker from "https://cdn.jsdelivr.net/npm/platypicker@2/dist/platypicker.esm.min.js";
+</script>
+```
 
-Each has a source map into `src/`. A script defines `<platy-picker>` and sets `window.PlatyPicker`, the element class, for the [JavaScript API](#javascript-api). It needs no module support, but works as a `<script type="module">` too. Take one script: a skin's build already has the picker in it.
+| File                               | What it is                                                     |
+|------------------------------------|----------------------------------------------------------------|
+| `platypicker.min.js`               | the picker with every translation, as a script, 22 kB gzipped  |
+| `platypicker.esm.min.js`           | the same as a module                                           |
+| `platypicker.bootstrap.min.js`     | the script with the [Bootstrap skin](#bootstrap) applied first |
+| `platypicker.bootstrap.esm.min.js` | the module with the Bootstrap skin applied first               |
+| `platypicker.tailwind.min.js`      | the script with the [Tailwind skin](#tailwind) applied first   |
+| `platypicker.tailwind.esm.min.js`  | the module with the Tailwind skin applied first                |
+| `platypicker.min.css`              | the stylesheet, 5 kB gzipped                                   |
 
-The translations are in the script, rather than loaded on demand as from `src/`, so a script needs nothing else. [Class plugs](#class-plugs) of your own go in a script right after it, in the `<head>`, so they're set before the pickers in the page are created:
+Each also comes unminified, without `.min` (`platypicker.esm.js`, `platypicker.css`), and each has a source map into `src/`. Take one file: a skin's build already has the picker in it, and a script and a module side by side would be two pickers, of which the first one loaded defines `<platy-picker>`.
+
+A script defines `<platy-picker>` and sets `window.PlatyPicker`, the element class, for the [JavaScript API](#javascript-api). It needs no module support, but works as a `<script type="module">` too. A module defines `<platy-picker>` as it's imported and exports the class instead of setting a global.
+
+The translations are in the file, rather than loaded on demand as from `src/`, so it needs nothing else. [Class plugs](#class-plugs) of your own go in a script right after a script, in the `<head>`, so they're set before the pickers in the page are created:
 
 ```html
 <script src="https://cdn.jsdelivr.net/npm/platypicker@2/dist/platypicker.min.js"></script>
 <script>PlatyPicker.classes.search = "input input-sm";</script>
 ```
 
-With `defer` or `async`, the pickers can be created first and miss them. A bundler minifies `src/` as well as these files are, so with one, import `platypicker` as above.
+With `defer` or `async`, the pickers can be created first and miss them. So do a module's: module scripts run once the page is parsed, so the pickers in it are created as the import runs, before the plugs can be set. Plugs set after the import reach the pickers created later from script. A bundler minifies `src/` as well as these files are, so with one, import `platypicker` as above.
 
 ## Usage
 
