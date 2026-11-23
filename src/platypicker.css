@@ -602,12 +602,12 @@
         }
 
         /* Search matches. In a disabled row a match is only underlined, so the row doesn't look clickable. */
-        :is(.pp-header, .pp-item-label, .pp-item-subtext)::highlight(platypicker-highlight) {
+        :is(.pp-header, .pp-item-icon, .pp-item-label, .pp-item-subtext)::highlight(platypicker-highlight) {
             color: var(--_pp-highlight-color);
             background-color: var(--_pp-highlight-bg);
         }
 
-        .pp-item:is(:disabled, [aria-disabled="true"]) :is(.pp-item-label, .pp-item-subtext)::highlight(platypicker-highlight) {
+        .pp-item:is(:disabled, [aria-disabled="true"]) :is(.pp-item-icon, .pp-item-label, .pp-item-subtext)::highlight(platypicker-highlight) {
             color: inherit;
             background-color: transparent;
             text-decoration: underline;
@@ -688,7 +688,7 @@
                 }
             }
 
-            :is(.pp-header, .pp-item-label, .pp-item-subtext)::highlight(platypicker-highlight) {
+            :is(.pp-header, .pp-item-icon, .pp-item-label, .pp-item-subtext)::highlight(platypicker-highlight) {
                 color: MarkText;
                 background-color: Mark;
             }

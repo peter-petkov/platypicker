@@ -1053,6 +1053,8 @@ export default class ListView {
         const subtext = entry.subtext.toLowerCase();
         if (subtext && subtext !== entry.label.toLowerCase())
             this.#highlightText(view, button, "subtext", small.firstChild);
+
+        this.#highlightText(view, button, "icon", record.icon?.firstChild ?? null);
     }
 
     #highlightText(view, owner, key, node) {

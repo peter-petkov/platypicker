@@ -85,8 +85,9 @@ export default class Languages {
 
     // Accents that searching ignores: those of Latin, Greek and Cyrillic, and the optional vowel marks of Arabic and
     // Hebrew. Not every combining mark: the vowel signs of Indic scripts and the voicing marks of Japanese kana are
-    // as much a part of the letter as its shape.
-    static #accents = /[̀-ͯ᪰-᫿᷀-᷿⃐-⃿︠-ً︯-ٰٟ֑-ׇ]/g;
+    // as much a part of the letter as its shape. Also variation selectors, so "🎙" finds "🎙️", which asks for the
+    // emoji form.
+    static #accents = /[︀-️̀-ͯ᪰-᫿᷀-᷿⃐-⃿︠-ً︯-ٰٟ֑-ׇ]/g;
 
     // Letters that have no accent to take off, but are searched for as their plain counterparts.
     static #letters = { "ß": "ss", "æ": "ae", "œ": "oe", "ø": "o", "ł": "l", "đ": "d", "ð": "d", "þ": "th", "ς": "σ" };
@@ -219,7 +220,8 @@ export default class Languages {
 
         // Where each letter of the query occurs in the text.
         const at = new Map();
-        for (const unit of new Set(query)) at.set(unit, []);
+        // By UTF-16 unit, as the text and the query are read below: an emoji is two of them.
+        for (const unit of new Set(query.split(""))) at.set(unit, []);
         for (let t = 0; t < length; t++) at.get(folded[t])?.push(t);
 
         // cost[q * length + t]: what the rest of the query costs once its letter q matched at t, a piece inside a

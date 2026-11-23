@@ -73,7 +73,7 @@ export class OptionEntry {
  * The entries matching a search. Matching is lazy: `pull()` scans only as far as it is asked to, so a long list is
  * never searched in one go, and a view that is no longer wanted is simply dropped.
  *
- * An entry matches when the query matches its label or subtext, or its option group's label (which includes the
+ * An entry matches when the query matches its label, subtext or icon, or its option group's label (which includes the
  * whole group), as Languages.match matches: by its letters in order, the first starting a word, or as a whole. Both
  * sides are compared folded (see Languages.fold), so case and accents don't matter.
  *
@@ -103,7 +103,7 @@ export class FilteredView {
     #count;                         // All the matches, once count() has counted them.
     #dividerPending = false;
     #dividers = new Set();          // matches that have a divider before them
-    #tiers = new Map();             // entry -> how its own label or subtext matches
+    #tiers = new Map();             // entry -> how its own label, subtext or icon matches
     #groupTiers = new Map();        // group -> how its label matches
     #blockTiers = new Map();        // group -> the tier the group goes in: that of its best match
 
@@ -190,7 +190,7 @@ export class FilteredView {
         return !this.#query || this.textMatches(entry) || this.groupMatches(entry.group);
     }
 
-    /** Whether the query matches the entry's own label or subtext. */
+    /** Whether the query matches the entry's own label, subtext or icon. */
     textMatches(entry) {
         return Boolean(this.#query) && this.#tierOf(entry) !== FilteredView.#none;
     }
@@ -222,12 +222,13 @@ export class FilteredView {
         return tier;
     }
 
-    // How the query matches an entry's own label or subtext.
+    // How the query matches an entry's own label, subtext or icon (an emoji, found by typing it).
     #tierOf(entry) {
         let tier = this.#tiers.get(entry);
         if (tier === undefined) {
             tier = this.#match(entry.label);
             if (tier !== FilteredView.#strong) tier = Math.max(tier, this.#match(entry.subtext));
+            if (tier !== FilteredView.#strong) tier = Math.max(tier, this.#match(entry.icon));
             this.#tiers.set(entry, tier);
         }
         return tier;
