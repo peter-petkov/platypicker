@@ -387,6 +387,7 @@ export default class Sheet {
         delete popover.dataset.height;
         delete popover.dataset.dragging;
         delete popover.dataset.closing;
+        delete popover.dataset.keyboard;
         for (const name of ["--_pp-keyboard", "--_pp-viewport", "--_pp-drag-height", "--_pp-backdrop-opacity",
             "--_pp-height-duration", "--_pp-height-ease", "--_pp-keyboard-duration"])
             popover.style.removeProperty(name);
@@ -817,11 +818,13 @@ export default class Sheet {
             }, 400);
         };
 
+        // data-keyboard has the sheet reach on under the browser's bars over the keyboard (see platypicker.css).
         const place = (keyboard, height) => {
             for (const [name, value] of [["--_pp-keyboard", keyboard], ["--_pp-viewport", height]]) {
                 if (value) popover.style.setProperty(name, value);
                 else popover.style.removeProperty(name);
             }
+            popover.toggleAttribute("data-keyboard", Boolean(keyboard));
         };
 
         // The search box losing focus puts the keyboard away, so the sheet moves down as it goes, rather than once

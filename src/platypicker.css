@@ -138,18 +138,29 @@
         /* Half the screen, or all of it but a strip at the top (see Sheet in sheet.js). The screen is 100svh, its
            height with the browser's toolbars shown, which stays put as they slide in and out. While the on-screen
            keyboard is up, the script sets what it leaves of the screen, --_pp-viewport, and how far it reaches up
-           the screen, --_pp-keyboard, so the sheet sits on top of the keyboard and fits what's left. */
+           the screen, --_pp-keyboard, so the sheet sits on top of the keyboard and fits what's left.
+           What the browser says is left can end above the keyboard, with the browser's own bars in between, which
+           the page shows through (Safari on iOS: its address bar and the form bar over the keyboard). So while the
+           keyboard is up (data-keyboard), the sheet reaches --_pp-under further down, behind them, its rows scrolling
+           under them as the page's would, and its list ends with as much room, so the last row scrolls clear. What
+           of it is beyond the bars is behind the keyboard. --_pp-screen is the screen it goes by, with that. */
         &:state(sheet) > .pp-menu[popover] {
+            --_pp-screen: calc(var(--_pp-viewport, 100svh) + var(--_pp-under, 0px));
             position-try-fallbacks: none;
             inset: auto 0 0;
-            bottom: var(--_pp-keyboard, 0px);
+            bottom: calc(var(--_pp-keyboard, 0px) - var(--_pp-under, 0px));
             width: auto;
             min-width: 0;
             max-width: none;
-            height: calc(var(--_pp-viewport, 100svh) * .56);
+            height: calc(var(--_pp-screen) * .56);
             /* Full height leaves a strip at the top, which the spring between heights may overshoot into. */
-            max-height: var(--_pp-viewport, 100svh);
+            max-height: var(--_pp-screen);
             overflow: hidden;
+
+            /* About the height of Safari's two bars over the keyboard, and some. */
+            &[data-keyboard] {
+                --_pp-under: 7.5rem;
+            }
 
             /* It slides up from below the screen as it opens, and back down as it closes. Closing, display and
                overlay keep it on screen, in the top layer, until it's gone. Where overlay can't be transitioned
@@ -182,7 +193,7 @@
             }
 
             &[data-height="full"] {
-                height: calc(var(--_pp-viewport, 100svh) - 2.5rem);
+                height: calc(var(--_pp-screen) - 2.5rem);
             }
 
             /* A short screen, as a phone on its side, has no room for half height: the sheet opens at full height
@@ -190,7 +201,7 @@
             @media (max-height: 500px) {
                 width: min(100%, 37.5rem);
                 margin-inline: auto;
-                height: calc(var(--_pp-viewport, 100svh) - 2.5rem);
+                height: calc(var(--_pp-screen) - 2.5rem);
             }
 
             /* While dragged, the sheet follows the pointer, at the height the script sets. It keeps that height as
@@ -238,6 +249,28 @@
                 align-content: start;
                 overflow: auto;
                 overscroll-behavior: contain;
+            }
+
+            /* With the keyboard up, the list runs on under the browser's bars, and ends with room enough for its
+               last row to scroll clear of them (see --_pp-under above). The sheet's bottom inset (the home indicator)
+               is behind the keyboard then. With a counter, which mustn't go under them, the sheet keeps the room
+               below the counter instead, and the rows stop above it as always. */
+            &[data-keyboard] {
+                padding-bottom: 0;
+
+                > .pp-list::after {
+                    content: "";
+                    display: block;
+                    height: var(--_pp-under);
+                }
+
+                &:has(> .pp-counter:not([hidden])) {
+                    padding-bottom: var(--_pp-under);
+
+                    > .pp-list::after {
+                        display: none;
+                    }
+                }
             }
         }
 
