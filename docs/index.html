@@ -392,7 +392,7 @@
 
         <section id="class-plugs">
             <h2>Class plugs</h2>
-            <p>Every element Platypicker creates has a fixed <code>pp-*</code> class you can style. Each part also has a plug: extra classes added next to the fixed one, empty by default, for dressing the picker in a framework's own classes. Two state plugs, <code>itemSelected</code> and <code>itemDisabled</code>, are on a row while its option is selected or disabled.</p>
+            <p>Every element Platypicker creates has a fixed <code>pp-*</code> class you can style. Each part also has a plug: extra classes added next to the fixed one, empty by default, for dressing the picker in a framework's own classes. Two state plugs, <code>itemSelected</code> and <code>itemDisabled</code>, are on a row while its option is selected or disabled, and a third, <code>headerFolded</code>, on a group's header while it's folded in the sheet.</p>
             <p>Plugs are global, and elements read them when they are created. The pickers already in the page are created the moment <code>platypicker</code> is imported, so fill the plugs in a module of their own that imports <code>classes.js</code>, and import it first. The picker below runs in a frame of its own, so its plugs don't reach the rest of this page.</p>
             <div class="example">
                 <iframe class="stage-extra frame" src="./plugs-demo.html" title="A picker with class plugs"></iframe>
@@ -430,6 +430,8 @@
                     <tr><td><code>group</code></td><td><code>pp-group</code></td><td>an option group: its label and the list of its rows</td></tr>
                     <tr><td><code>groupList</code></td><td><code>pp-group-list</code></td><td>the list of a group's rows</td></tr>
                     <tr><td><code>header</code></td><td><code>pp-header</code></td><td>an option group's label</td></tr>
+                    <tr><td><code>headerFolded</code></td><td></td><td>a group's header while it's folded, in the sheet</td></tr>
+                    <tr><td><code>headerCount</code></td><td><code>pp-header-count</code></td><td>how many of a folded group's options are selected</td></tr>
                     <tr><td><code>divider</code></td><td><code>pp-divider</code></td><td>an <code>&lt;hr&gt;</code> between options</td></tr>
                     <tr><td><code>empty</code></td><td><code>pp-empty</code></td><td>"No matches", when a search finds nothing</td></tr>
                     <tr><td><code>placeholder</code></td><td><code>pp-placeholder</code></td><td>a skeleton row's content</td></tr>
@@ -461,18 +463,18 @@
             <p>On a phone the picker opens as a sheet along the bottom of the screen, with the same search, controls and list, laid out for touch. This one is a sheet everywhere, so you can try it here: <code>layout="sheet"</code>.</p>
             <div class="example">
                 <template>
-                    <platy-picker layout="sheet" search controls placeholder="Pick some food">
-                        <select name="food" multiple size="1" aria-label="Food" data-fill="foods"></select>
+                    <platy-picker layout="sheet" search controls placeholder="Pick something">
+                        <select name="menu" multiple size="1" aria-label="Food and drinks" data-fill="foods,drinks"></select>
                     </platy-picker>
                 </template>
             </div>
             <ul>
                 <li>It opens at a little over half the screen. Drag its handle, heading or search box up or down, or pull the list down from the top; let go, it springs to half or full height, carrying on from the speed of the drag, or closes if it's low enough, with a light tick on Android. On a phone on its side it opens at full height, narrower and centred.</li>
                 <li>The select's label names it, with how many options are selected underneath. None and All sit either side.</li>
-                <li>A group's header sticks to the top of the list while its rows scroll by, until the next one pushes it away.</li>
+                <li>A tap on a group's header folds its options away, and another unfolds them. A folded header shows how many of its options are selected, and None and All still reach them. A search shows every group with matches unfolded, and folds stay while the page does.</li>
                 <li>Opening leaves the search box alone, so the keyboard stays down. Tap the search box and the sheet grows to full height above the keyboard, with Cancel beside it. Picking keeps the keyboard up; scrolling the list or Cancel puts it away, and the sheet goes back to its height.</li>
                 <li>A tap on the dimmed page only closes the sheet, so nothing under it reacts, and a swipe there doesn't scroll the page. On Android, Back closes it too.</li>
-                <li>It moves: the rows rise into place as it opens, a picked row dips as its check mark wipes in, the selected count rolls to its new number, and a search glides the rows that stay to their new places. With <code>prefers-reduced-motion</code>, none of it plays.</li>
+                <li>It moves: the rows rise into place as it opens, a picked row dips as its check mark wipes in, the selected count rolls to its new number, and a search or a fold glides the rows that stay to their new places. With <code>prefers-reduced-motion</code>, none of it plays.</li>
             </ul>
             <p><code>layout="auto"</code>, the default, opens a sheet where <code>PlatyPicker.sheetMedia</code> matches, a touch screen the size of a phone either way up, checked each time a picker opens. <code>layout="popover"</code> never opens one. The sheet's look has <a href="#theming">variables of its own</a>.</p>
             <script type="text/plain" data-code="JS">

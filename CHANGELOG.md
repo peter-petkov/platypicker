@@ -2,6 +2,12 @@
 
 What's new in each release of Platypicker. Each feature release has its own section; the bugfix releases in between are folded into the version they led up to. The [docs page](https://peter-petkov.github.io/platypicker/) shows every feature live.
 
+## 2.3
+
+### Added
+
+- **Folding groups in the sheet.** A tap on a group's header folds its options away, and another unfolds them. A folded header shows how many of its options are selected, so None and All, which still act on them, show what they did. Every group starts unfolded, and folds last across opens. A search shows every group with matches unfolded, type-ahead unfolds the group of the option it finds, and the rows fade and glide as a group folds, as they do for a search. Screen readers always get every group unfolded. The popover never folds. New class plugs: `headerCount` (`pp-header-count`) and the state plug `headerFolded`.
+
 ## 2.2.2
 
 ### Changed

@@ -452,14 +452,10 @@ export default class ListView {
     /** Shows the entries matching a search, starting again from the first batch. An empty search shows them all. */
     filter(rawValue) {
         // In the open sheet, the rows glide to their new places (see Glide).
-        const glide = this.#sheet && this.#popover.matches(":popover-open") &&
-            !matchMedia("(prefers-reduced-motion: reduce)").matches;
-        this.#glide ??= new Glide(this.#popover);
-        const taken = glide && this.#glide.take(this.#scroller, this.#glideRows(), this.#groupItems);
-
+        const taken = this.#takeForGlide();
         this.#showMatches(Languages.fold(rawValue.trim(), this.#config.locale));
         this.#scroller.scrollTop = 0;
-        if (taken) this.#glide.play(taken, this.#scroller, this.#glideRows(), this.#groupItems);
+        this.#playGlide(taken);
 
         // Once typing pauses, so that screen readers don't read out a count for every key.
         clearTimeout(this.#announceTimer);
@@ -471,6 +467,22 @@ export default class ListView {
             const view = this.#view;
             this.#counterTimer = setTimeout(() => this.#view === view && this.#syncCounter(view.count()), 150);
         }
+    }
+
+    /**
+     * Notes where the rows are before the list is rendered anew, so #playGlide can move them to their new places:
+     * in the open sheet, unless the user prefers less motion. Returns null otherwise.
+     */
+    #takeForGlide() {
+        if (!this.#sheet || !this.#popover.matches(":popover-open") ||
+            matchMedia("(prefers-reduced-motion: reduce)").matches) return null;
+
+        this.#glide ??= new Glide(this.#popover);
+        return this.#glide.take(this.#scroller, this.#glideRows(), this.#groupItems);
+    }
+
+    #playGlide(taken) {
+        if (taken) this.#glide.play(taken, this.#scroller, this.#glideRows(), this.#groupItems);
     }
 
     /** The rendered rows, in order, as Glide takes them: keyed by their option, with their group. */
@@ -637,11 +649,13 @@ export default class ListView {
 
     /**
      * Folds or unfolds a group, keeping its header where it was on screen, so what's above it stays put and its rows
-     * come and go below it. Browsers that anchor scrolling mostly do this on their own, but not all of them do.
+     * come and go below it. Browsers that anchor scrolling mostly do this on their own, but not all of them do. In
+     * the open sheet the rows fade, and its card and the groups below glide, as they do for a search (see Glide).
      */
     #setFolded(group, folded) {
         const header = this.#groupItems.get(group)?.firstElementChild;
         const top = header?.getBoundingClientRect().top;
+        const taken = this.#takeForGlide();
 
         if (folded) this.#folded.add(group);
         else this.#folded.delete(group);
@@ -649,6 +663,7 @@ export default class ListView {
 
         if (header?.isConnected && this.#popover.matches(":popover-open"))
             this.#scroller.scrollTop += header.getBoundingClientRect().top - top;
+        this.#playGlide(taken);
     }
 
     /**

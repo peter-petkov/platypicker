@@ -1,14 +1,14 @@
 "use strict";
 
 /**
- * How the sheet's rows move as a search changes which of them show: the rows that stay glide from where they were to
- * their new place, the rows that go fade out where they were, and the rows that come fade in. A group's card resizes
- * along with its rows.
+ * How the sheet's rows move as a search, or folding a group, changes which of them show: the rows that stay glide
+ * from where they were to their new place, the rows that go fade out where they were, and the rows that come fade in.
+ * A group's card resizes along with its rows.
  *
- * Each search renders the list anew, so rows are matched up by their option, and groups by their group, rather than
- * by element: take() notes where the rows in view are before a search, and play() animates the new ones from there
- * after it. The rows that go are gone from the list by then, so copies of their text fade out on a layer over the
- * list, hidden from screen readers and out of reach of the pointer and the keyboard.
+ * Each search or fold renders the list anew, so rows are matched up by their option, and groups by their group,
+ * rather than by element: take() notes where the rows in view are before the list changes, and play() animates the
+ * new ones from there after it. The rows that go are gone from the list by then, so copies of their text fade out on
+ * a layer over the list, hidden from screen readers and out of reach of the pointer and the keyboard.
  *
  * Only what's in view is measured and animated. A search typed while the last one is still gliding starts from
  * wherever its rows have got to.
@@ -92,8 +92,16 @@ export default class Glide {
 
             Glide.#glide(header, old.headerRect.top - headerRect.top);
             const offset = old.cardRect.top - cardRect.top;
-            if (Math.abs(offset) < .5 && Math.abs(old.cardRect.height - cardRect.height) < .5) continue;
-            card.animate([
+            const growth = cardRect.height - old.cardRect.height;
+            if (Math.abs(offset) < .5 && Math.abs(growth) < .5) continue;
+
+            // A card that grows has its full height from the start and is uncovered from the bottom, so the list is
+            // never shorter than it ends up: near its end, a shorter list would pull the scroll position back.
+            const radius = getComputedStyle(card).borderRadius;
+            card.animate(growth > 0 ? [
+                { translate: `0 ${offset}px`, clipPath: `inset(0 0 ${growth}px 0 round ${radius})` },
+                { translate: "0 0", clipPath: `inset(0 round ${radius})` },
+            ] : [
                 { translate: `0 ${offset}px`, height: `${old.cardRect.height}px` },
                 { translate: "0 0", height: `${cardRect.height}px` },
             ], { duration: Glide.#duration, easing: Glide.#easing });

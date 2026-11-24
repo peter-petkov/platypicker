@@ -95,11 +95,22 @@ function demoOption(item, withSubtext = true) {
 
 // Fills the selects under root (the document, or an example's template). The data-* attributes are removed afterwards,
 // so the code shown for an example is plain markup, and nothing is filled twice.
+// Several lists, as in data-fill="foods,drinks", each go in an option group named after it.
 function fillSelects(root) {
     for (const select of root.querySelectorAll("select[data-fill], select[data-cars]")) {
-        const [key, withSubtext] = (select.dataset.fill ?? "").split(":");
+        const [keys, withSubtext] = (select.dataset.fill ?? "").split(":");
+        const options = key => (DATA[key] ?? []).map(item => demoOption(item, Boolean(withSubtext)));
 
-        if (DATA[key]) select.append(...DATA[key].map(item => demoOption(item, Boolean(withSubtext))));
+        if (keys.includes(",")) {
+            for (const key of keys.split(",")) {
+                const group = document.createElement("optgroup");
+                group.label = key[0].toUpperCase() + key.slice(1);
+                group.append(...options(key));
+                select.append(group);
+            }
+        } else {
+            select.append(...options(keys));
+        }
 
         // data-cars asks for that many generated car options, for lists that are long enough to need batches.
         if (select.dataset.cars) select.insertAdjacentHTML("beforeend", carOptions(Number(select.dataset.cars), false));
