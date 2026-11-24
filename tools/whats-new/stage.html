@@ -221,10 +221,11 @@ window on a gradient, picked by ?scene=, in ?theme=light or dark. The skins and 
 </head>
 <body>
 <script type="module">
+    // The parameters only ever pick from what's below, and anything else falls back to the default, as a parameter
+    // that went into the markup as it is could put any HTML in the page.
     const params = new URLSearchParams(location.search);
-    const scene = params.get("scene") ?? "look";
-    const theme = params.get("theme") ?? "light";
-    const skin = params.get("skin");
+    const known = (value, keys, fallback) => keys.includes(value) ? value : fallback;
+    const theme = known(params.get("theme"), ["light", "dark"], "light");
 
     const FOODS = ["🧀 Cheese", "🍞 Bread", "🍕 Pizza", "🍣 Sushi", "🌮 Taco", "🍔 Burger", "🍜 Ramen", "🥗 Salad",
         "🥐 Croissant", "🥞 Pancakes", "🥟 Dumplings", "🍛 Curry"];
@@ -238,12 +239,14 @@ window on a gradient, picked by ?scene=, in ?theme=light or dark. The skins and 
         ar: ["🍎 تفاح", "🍌 موز", "🍒 كرز", "🍓 فراولة", "🍊 برتقال", "🍐 كمثرى", "🍇 عنب", "🍑 خوخ"],
     };
     const LANGUAGE_NAMES = { de: "Deutsch", ja: "日本語", ar: "العربية" };
+    const lang = known(document.documentElement.lang, Object.keys(FRUITS), "de");
     const FRUIT_LABELS = { de: "Obst", ja: "果物", ar: "فاكهة" };
     const SKINS = {
         base: ["Base", "../../platylogo.png"],
         bootstrap: ["Bootstrap", "data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%237952b3'%3e%3cpath d='M6.375 7.125V4.658h1.78c.973 0 1.542.457 1.542 1.237 0 .802-.604 1.23-1.764 1.23zm0 3.762h1.898c1.184 0 1.81-.48 1.81-1.377 0-.885-.65-1.348-1.886-1.348H6.375z'/%3e%3cpath d='M4.002 0a4 4 0 0 0-4 4v8a4 4 0 0 0 4 4h8a4 4 0 0 0 4-4V4a4 4 0 0 0-4-4zm1.06 12V3.545h3.399c1.587 0 2.543.809 2.543 2.11 0 .884-.65 1.675-1.483 1.816v.1c1.143.117 1.904.931 1.904 2.033 0 1.488-1.084 2.396-2.888 2.396z'/%3e%3c/svg%3e"],
         tailwind: ["Tailwind", "data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2338bdf8'%3e%3cpath d='M12 4.8c-3.2 0-5.2 1.6-6 4.8 1.2-1.6 2.6-2.2 4.2-1.8.913.228 1.565.89 2.288 1.624C13.666 10.618 15.027 12 18 12c3.2 0 5.2-1.6 6-4.8-1.2 1.6-2.6 2.2-4.2 1.8-.913-.228-1.565-.89-2.288-1.624C16.337 6.182 14.976 4.8 12 4.8zM6 12c-3.2 0-5.2 1.6-6 4.8 1.2-1.6 2.6-2.2 4.2-1.8.913.228 1.565.89 2.288 1.624 1.177 1.194 2.538 2.576 5.512 2.576 3.2 0 5.2-1.6 6-4.8-1.2 1.6-2.6 2.2-4.2 1.8-.913-.228-1.565-.89-2.288-1.624C10.337 13.382 8.976 12 6 12z'/%3e%3c/svg%3e"],
     };
+    const skin = known(params.get("skin"), Object.keys(SKINS), "base");
 
     const options = (items, picked = []) => items.map((item, index) => {
         const [label, subtext] = Array.isArray(item) ? item : [item];
@@ -293,11 +296,12 @@ window on a gradient, picked by ?scene=, in ?theme=light or dark. The skins and 
             <div class="line" style="width: 80%"></div><div class="line" style="width: 60%"></div><div class="line" style="width: 70%"></div>
             <div class="button">Continue</div>`,
 
-        languages: () => windowOf(`<div class="narrow"><label for="s">${FRUIT_LABELS[document.documentElement.lang]}</label>
+        languages: () => windowOf(`<div class="narrow"><label for="s">${FRUIT_LABELS[lang]}</label>
             <platy-picker search controls counter><select id="s" multiple size="1">${
-            options(FRUITS[document.documentElement.lang], [0, 3])}</select></platy-picker></div>`, LANGUAGE_NAMES[document.documentElement.lang]),
+            options(FRUITS[lang], [0, 3])}</select></platy-picker></div>`, LANGUAGE_NAMES[lang]),
     };
 
+    const scene = known(params.get("scene"), Object.keys(scenes), "look");
     document.body.innerHTML = scenes[scene]();
 
     // A skin is imported before platypicker, as in a project.
