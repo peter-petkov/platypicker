@@ -4,28 +4,28 @@ What's new in each release of Platypicker. Each feature release has its own sect
 
 ## 2.3
 
+Platypicker 2.3 folds option groups in the sheet, works in Safari 27 on the Mac and on iPhone, and keeps the sheet on the on-screen keyboard as it comes and goes.
+
 ### Added
 
 - **Folding groups in the sheet.** A tap on a group's header folds its options away, and another unfolds them. A folded header shows how many of its options are selected, so None and All, which still act on them, show what they did. Every group starts unfolded, and folds last across opens. A search shows every group with matches unfolded, type-ahead unfolds the group of the option it finds, and the rows fade and glide as a group folds, as they do for a search. Screen readers always get every group unfolded. The popover never folds. New class plugs: `headerCount` (`pp-header-count`) and the state plug `headerFolded`.
-
-## 2.2.2
+- **Safari and iPhone.** Safari 27 on the Mac and on iOS 27 are supported, and every browser on iOS with them, as they use Safari's engine. On the Mac a closed multiple select is a list box underneath, as in Firefox. iOS 17 has no anchor positioning and keeps the plain select; Safari 26 hasn't been tested. See Safari in the README.
 
 ### Changed
 
-- In the sheet, a group's header sticks to the top of the list while its rows scroll, until the next group's header pushes it away. The header has no background: the rows are cut off at its bottom, so the sheet shows behind it as everywhere else.
-- The sheet can be dragged from its search box too, by a touch that moves up or down. A tap still brings up the keyboard.
-- The Bootstrap skin's rows in the sheet are as tall as Platypicker's own, a comfortable size for a finger.
+- The sheet can be dragged from its search box too, by a touch that moves up or down. A tap still brings up the keyboard (2.2.2).
+- A group's header in the sheet scrolls away with its rows, as in a phone's own grouped lists. 2.2.2 stuck it to the top of the list, but no way of cutting off the rows under it looked right.
+- On an iPhone, the sheet's rows run on under Safari's bars over the keyboard, as the page's would, and the last one still scrolls clear of them. Before, the sheet ended above the bars, and the page showed through them.
+- The Bootstrap skin's rows in the sheet are as tall as Platypicker's own, a comfortable size for a finger (2.2.2).
 
 ### Fixed
 
-- Page Down and End could leave the row they moved to under the counter.
-
-## 2.2.1
-
-### Fixed
-
-- On a long list whose rows had all been shown, by End or by scrolling to its end, the sheet was up before its rows began to rise, after a pause. The list now goes back to its first batch of rows each time it opens, so it opens as fast as the first time, and only the rows in view rise. As before, the selected option is shown and scrolled to.
-- The Bootstrap skin's sheet had no handle.
+- In Safari 27 a closed multiple select showed its own rows under the badges, and a click on the field picked its first row, replacing the selection.
+- The sheet lost its place on the keyboard on iOS: its top could go off the screen as the keyboard came up, it grew to full height and then jumped onto the keyboard, and it shrank and grew again as the keyboard went. It now waits for the keyboard on iOS and moves in one glide, and goes back down as soon as the search box loses focus.
+- A tap on the dimmed page under the sheet reached the page on iOS, so tapping another picker opened iOS's own picker, and a swipe there scrolled the page on iOS and Android. A touch outside the sheet now only closes it.
+- On a long list whose rows had all been shown, by End or by scrolling to its end, the sheet was up before its rows began to rise, after a pause. The list now goes back to its first batch of rows each time it opens, so only the rows in view rise (2.2.1).
+- Page Down and End could leave the row they moved to under the counter (2.2.2).
+- The Bootstrap skin's sheet had no handle (2.2.1).
 
 ## 2.2
 
