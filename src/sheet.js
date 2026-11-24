@@ -20,7 +20,9 @@
  *
  * Phones put the keyboard over the page rather than shrinking it, so a sheet along the bottom of the layout viewport
  * would sit behind it. The visual viewport says where the keyboard is, and the sheet sits on top of it (see the
- * --_pp-keyboard and --_pp-viewport properties in platypicker.css).
+ * --_pp-keyboard and --_pp-viewport properties in platypicker.css), moving onto it and off it in one glide with its
+ * change of height. Browsers tell the keyboard's comings and goings in their own ways and order (see #watchViewport);
+ * iOS also scrolls the page around a focused box, which the sheet works around where it can.
  *
  * Android's Back button closes the sheet, through a CloseWatcher where there is one, which adds no history entry.
  */
@@ -34,9 +36,14 @@ export default class Sheet {
     // Let go lower than this share of half height, the sheet closes.
     static #closeBelow = .65;
 
-    // How far up the screen something must reach to count as the on-screen keyboard, in pixels. Less is taken for
+    // How much of the screen something must take to count as the on-screen keyboard, in pixels. Less is taken for
     // a browser's own toolbar, which can sit over the bottom of the page too.
     static #keyboardAtLeast = 120;
+
+    // Whether the browser scrolls the page to keep a focused box clear of the keyboard as the box takes focus, as
+    // Safari on iOS does (and so every browser on iOS), told by a property only it has. Others do so, if at all,
+    // only once the keyboard is in (see #searchFocused).
+    static #scrollsAsFocused = CSS.supports("-webkit-touch-callout", "none");
 
     // A screen too short for half height, as a phone on its side. The same as in platypicker.css.
     static #shortScreen = "(max-height: 500px)";
@@ -65,6 +72,10 @@ export default class Sheet {
     #full = false;          // Full height, rather than half.
     #restore = null;        // While the search box has focus: whether the sheet was full height before it took it.
     #viewport = null;       // Stops listening to the visual viewport, while it's listened to.
+    #keyboardUp = false;    // Whether the on-screen keyboard is up, as the visual viewport tells.
+    #awaitingKeyboard = false; // The search box has focus, and the sheet waits for the keyboard to grow (see #searchFocused).
+    #growTimer = 0;         // Grows it anyway, if no keyboard comes.
+    #keyboardGone = null;   // While the visual viewport is listened to: moves the sheet down as the keyboard goes.
     #drag = null;           // While the sheet is dragged: where it started, where it is, and how fast it moves.
     #pull = null;           // While a touch on the list may turn into pulling the sheet down: where it started.
     #closeWatcher = null;   // Closes the sheet on Back, while it's open.
@@ -248,6 +259,27 @@ export default class Sheet {
             press = null;
             this.#endDrag({ cancelled: true });
         }, { signal });
+
+        // A tap on the search box focuses it without scrolling. Left to the browser, iOS scrolls the page as the
+        // box takes focus, though the box is in view, and the sheet, fixed as it is, visibly lags behind that
+        // scroll and catches up. A tap in the box while it has focus is left be, to place the caret.
+        const search = this.#search;
+        let tap = null;
+        search.addEventListener("touchstart", e => {
+            tap = this.#active && !this.#searching && e.touches.length === 1
+                ? { x: e.touches[0].clientX, y: e.touches[0].clientY } : null;
+        }, { passive: true, signal });
+
+        search.addEventListener("touchend", e => {
+            const start = tap;
+            tap = null;
+            if (!start || !this.#active || !e.cancelable) return;
+
+            const end = e.changedTouches[0];
+            if (Math.hypot(end.clientX - start.x, end.clientY - start.y) >= Sheet.#dragFromSearchAfter) return;
+            e.preventDefault();
+            search.focus({ preventScroll: true });
+        }, { signal });
     }
 
     /**
@@ -315,6 +347,9 @@ export default class Sheet {
         this.#active = false;
         this.#viewport?.abort();
         this.#viewport = null;
+        this.#awaitingKeyboard = false;
+        clearTimeout(this.#growTimer);
+        this.#keyboardGone = null;
         this.#closeWatcher?.destroy();
         this.#closeWatcher = null;
         this.#hiding?.abort(); // Closed some other way while sliding down to hide.
@@ -440,19 +475,61 @@ export default class Sheet {
         this.#cancel.hidden = !(this.#active && (this.#searching || this.#search.value));
     }
 
+    /**
+     * The search box taking focus grows the sheet to full height, at once, so that the box is near the top by the
+     * time the keyboard is in: a browser that scrolls a box the keyboard covers into view once it's in (Firefox for
+     * Android) would otherwise throw the half-height sheet up the screen.
+     *
+     * iOS decides that as the box takes focus, while the box is still low on a half-height sheet, so there the sheet
+     * waits for the keyboard instead, and grows once it's there, to its full height above it, moving and growing in
+     * one: grown at once, it would first reach for the top of the whole screen, then jump to its place above the
+     * keyboard, a long way, as iOS scrolls the page meanwhile. Without a keyboard after a moment (a keyboard of its
+     * own on a tablet), it grows anyway.
+     */
     #searchFocused() {
         if (!this.#active) return;
 
         this.#restore ??= this.#full;
+        this.#syncCancel();
+        if (this.#full) return;
+
+        if (Sheet.#scrollsAsFocused && this.#viewport && !this.#keyboardUp &&
+            matchMedia("(pointer: coarse)").matches) {
+            this.#awaitingKeyboard = true;
+            clearTimeout(this.#growTimer);
+            this.#growTimer = setTimeout(() => this.#growForKeyboard(), 600);
+            return;
+        }
+
         this.#full = true;
         this.#apply();
-        this.#syncCancel();
     }
 
-    #searchBlurred() {
-        this.#syncCancel();
-        if (!this.#active || this.#restore === null) return;
+    /** Grows the sheet to full height for the search, once the keyboard is up or hasn't come. */
+    #growForKeyboard() {
+        clearTimeout(this.#growTimer);
+        if (!this.#awaitingKeyboard) return;
 
+        this.#awaitingKeyboard = false;
+        if (!this.#searching) return;
+        this.#full = true;
+        this.#apply();
+    }
+
+    /**
+     * The search box losing focus takes the sheet back to the height it had before. With the keyboard up, as after
+     * Cancel, the keyboard goes with it, so the sheet moves down off it and changes height in one, as the keyboard
+     * slides away: its height alone would first shrink to half of what the keyboard leaves, then grow again once the
+     * keyboard has gone.
+     */
+    #searchBlurred() {
+        this.#awaitingKeyboard = false;
+        clearTimeout(this.#growTimer);
+        this.#syncCancel();
+        if (!this.#active) return;
+
+        this.#keyboardGone?.();
+        if (this.#restore === null) return;
         this.#full = this.#restore;
         this.#restore = null;
         this.#apply();
@@ -539,6 +616,7 @@ export default class Sheet {
 
         this.#full = to === "full";
         if (this.#restore !== null) this.#restore = this.#full; // Where it goes back to once the keyboard is away.
+        this.#awaitingKeyboard = false; // Dragged to a height of the user's own, which the keyboard keeps.
         this.#apply();
 
         // A finger that had stopped before letting go gives the sheet no speed of its own.
@@ -649,49 +727,112 @@ export default class Sheet {
         const watching = this.#viewport = new AbortController();
         const popover = this.#popover;
 
-        // The keyboard has finished moving by the time the browser says where it is (Firefox for Android says so
-        // once, after its slide), so the sheet takes its new place at once rather than sliding there after it.
+        // While the keyboard stays up, the sheet follows what the visual viewport says at once. As the keyboard comes
+        // or goes, it moves and changes height in one glide (see moveTogether).
         // A keyboard put away by its own button (Android's, in place of Back) leaves focus in the search box, so
         // the sheet wouldn't know. Its going counts as putting it away: focus leaves the search box, and the sheet
         // goes back to its height.
-        let keyboardUp = false;
+        this.#keyboardUp = false;
         let keyboardTimer = 0;
+        let movedAt = -Infinity; // When the sheet last moved with the keyboard (see moveTogether).
+        let panWaitUntil = 0;    // Until when it waits for iOS to scroll the search box into view (see measure).
+
+        // The screen's height without the keyboard, as the sheet opens: the visual viewport at its tallest since.
+        // Not the window's height later, which iOS may shrink while the keyboard is up.
+        let tallest = Math.max(window.innerHeight, viewport.height * viewport.scale);
 
         const measure = () => {
-            const inset = Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop);
-            const up = inset > Sheet.#keyboardAtLeast;
-            const wentAway = keyboardUp && !up;
+            // Whether the keyboard is up is told by how much the visual viewport shrank from its tallest, at its
+            // scale, so zooming in doesn't count.
+            // Only while the search box has focus: the keyboard is the search box's, and once it has lost focus
+            // the keyboard is going, whatever the visual viewport still says (see #keyboardGone).
+            tallest = Math.max(tallest, viewport.height * viewport.scale);
+            const up = this.#searching && tallest - viewport.height * viewport.scale > Sheet.#keyboardAtLeast;
+
+            // Where the sheet's bottom goes: the visual viewport's bottom, measured up from the layout viewport's,
+            // which the sheet is fixed to. iOS may scroll the visual viewport down as the keyboard comes up, to keep
+            // the search box out from under it, and even shrink the layout viewport, so its bottom can be below the
+            // layout viewport's, and the sheet's bottom with it.
+            const inset = window.innerHeight - viewport.height - viewport.offsetTop;
+            const wentAway = this.#keyboardUp && !up;
+            const grows = up && this.#awaitingKeyboard;
+
+            // A search box the keyboard has come up over is about to be scrolled into view by iOS, which takes the
+            // visual viewport down and shrinks the layout viewport, and that can come later than the keyboard's
+            // steps are waited out for. Placed before it, the sheet would grow towards a place far too high, and
+            // come back down once it came. So it waits for that scroll, for a moment at most.
+            if (!grows) panWaitUntil = 0;
+            else if (this.#search.getBoundingClientRect().bottom > viewport.offsetTop + viewport.height) {
+                const now = performance.now();
+                panWaitUntil ||= now + 300;
+                if (now < panWaitUntil) {
+                    clearTimeout(timer);
+                    timer = setTimeout(() => watching.signal.aborted || measure(), panWaitUntil - now);
+                    return;
+                }
+            }
+
             if (wentAway && this.#searching) this.#search.blur();
-            keyboardUp = up;
+            const wasUp = this.#keyboardUp;
+            this.#keyboardUp = up;
 
             // Only the keyboard moves and sizes the sheet. Without it, the stylesheet's steady height applies, so a
             // browser's toolbar sliding in or out as the page scrolls (which changes the visual viewport too)
             // doesn't make the sheet jump.
             const keyboard = up ? `${Math.round(inset)}px` : "";
             const height = up ? `${Math.round(viewport.height)}px` : "";
-            if (popover.style.getPropertyValue("--_pp-keyboard") === keyboard &&
+            if (!grows && popover.style.getPropertyValue("--_pp-keyboard") === keyboard &&
                 popover.style.getPropertyValue("--_pp-viewport") === height) return;
 
-            // Once the keyboard has gone, the sheet moves down to where it was and back to its height, animated as
-            // after Cancel: its place above the keyboard and its height change together, so it doesn't drop first
-            // and grow back after.
-            // The height doesn't spring here, as the place can't.
-            if (wentAway) {
-                clearTimeout(keyboardTimer);
-                const together = [["--_pp-keyboard-duration", ".3s"], ["--_pp-height-duration", ".3s"],
-                    ["--_pp-height-ease", "cubic-bezier(.2, .9, .25, 1)"]];
-                for (const [name, value] of together) popover.style.setProperty(name, value);
-                keyboardTimer = setTimeout(() => {
-                    for (const [name] of together) popover.style.removeProperty(name);
-                }, 400);
-            } else {
+            // The sheet glides (see moveTogether):
+            // - once the keyboard has gone, down to where it was and back to its height;
+            // - as it grows onto the keyboard it waited for (see #searchFocused);
+            // - on iOS, as the keyboard comes up under it at full height. Its top may move too there: its height
+            //   without the keyboard is of the small viewport (svh), shorter than the window while Safari's toolbar
+            //   is out of the way. Elsewhere its top stays put and only its bottom moves, behind the keyboard, so it's
+            //   placed at once: a glide would only show as its top dipping (Firefox);
+            // - for a correction right after a glide: the keyboard's steps can come further apart than they're
+            //   waited out for (see settle), and the sheet then glides on to its place rather than jumping.
+            // Otherwise it's placed at once.
+            const cameUp = up && !wasUp && Sheet.#scrollsAsFocused;
+            if (wentAway || grows || cameUp || performance.now() - movedAt < 400) moveTogether();
+            else {
                 popover.style.setProperty("--_pp-height-duration", "0s");
                 requestAnimationFrame(() => requestAnimationFrame(() => popover.style.removeProperty("--_pp-height-duration")));
             }
+            place(keyboard, height);
+            if (grows) this.#growForKeyboard();
+        };
+
+        // The sheet's place above the keyboard and its height change together, animated as one, so it doesn't drop
+        // first and grow back after. The height doesn't spring here, as the place can't.
+        const moveTogether = () => {
+            movedAt = performance.now();
+            clearTimeout(keyboardTimer);
+            const together = [["--_pp-keyboard-duration", ".3s"], ["--_pp-height-duration", ".3s"],
+                ["--_pp-height-ease", "cubic-bezier(.2, .9, .25, 1)"]];
+            for (const [name, value] of together) popover.style.setProperty(name, value);
+            keyboardTimer = setTimeout(() => {
+                for (const [name] of together) popover.style.removeProperty(name);
+            }, 400);
+        };
+
+        const place = (keyboard, height) => {
             for (const [name, value] of [["--_pp-keyboard", keyboard], ["--_pp-viewport", height]]) {
                 if (value) popover.style.setProperty(name, value);
                 else popover.style.removeProperty(name);
             }
+        };
+
+        // The search box losing focus puts the keyboard away, so the sheet moves down as it goes, rather than once
+        // the visual viewport says it has gone: iOS says so only once the keyboard is down, and till then still
+        // gives the viewport as it was with the keyboard up, so the sheet would stay up there over the page for a
+        // moment. The caller changes the sheet's height in the same go.
+        this.#keyboardGone = () => {
+            if (!this.#keyboardUp) return;
+            this.#keyboardUp = false;
+            moveTogether();
+            place("", "");
         };
 
         // A keyboard coming up can be told in a few steps: the visual viewport shrinks, then scrolls to keep the
