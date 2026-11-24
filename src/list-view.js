@@ -632,10 +632,23 @@ export default class ListView {
         if (!this.#sheet || this.#view?.query) return;
 
         const group = [...this.#groupItems].find(([, li]) => li.firstElementChild === header)?.[0];
-        if (!group) return;
+        if (group) this.#setFolded(group, !this.#folded.has(group));
+    }
 
-        if (!this.#folded.delete(group)) this.#folded.add(group);
+    /**
+     * Folds or unfolds a group, keeping its header where it was on screen, so what's above it stays put and its rows
+     * come and go below it. Browsers that anchor scrolling mostly do this on their own, but not all of them do.
+     */
+    #setFolded(group, folded) {
+        const header = this.#groupItems.get(group)?.firstElementChild;
+        const top = header?.getBoundingClientRect().top;
+
+        if (folded) this.#folded.add(group);
+        else this.#folded.delete(group);
         this.reconcile();
+
+        if (header?.isConnected && this.#popover.matches(":popover-open"))
+            this.#scroller.scrollTop += header.getBoundingClientRect().top - top;
     }
 
     /**
@@ -717,11 +730,15 @@ export default class ListView {
 
     /**
      * Makes sure the entry has a row, rendering up to it if need be. Returns false when the entry doesn't
-     * match the current search.
+     * match the current search, or is in a folded group, unless `unfold` says to unfold that group.
      */
-    ensureRendered(entry) {
+    ensureRendered(entry, { unfold = false } = {}) {
         const view = this.#view;
-        if (!view?.includes(entry) || this.#isFolded(entry.group, view)) return false;
+        if (!view?.includes(entry)) return false;
+        if (this.#isFolded(entry.group, view)) {
+            if (!unfold) return false;
+            this.#setFolded(entry.group, false);
+        }
 
         while (!this.#recordsByEntry.has(entry) && this.#hasMore) this.#renderMore(this.#stepSize, Infinity);
 
@@ -1193,13 +1210,19 @@ export default class ListView {
      * goes to the search box when there is one, otherwise to the selected item, otherwise to the first item. With
      * `search` false (in the sheet, where focusing the search box would bring up the on-screen keyboard), the
      * search box is passed over.
+     *
+     * A selected item in a folded group stays folded, or opening would unfold every group with a selection each
+     * time; its group's header is brought into view instead, with its count of selected options.
      */
     focusInitial({ search = true } = {}) {
         this.#scheduleTopUp(); // The popover has its size now, so the list can fill it.
 
         const selected = this.#source.firstSelected;
         const selectedButton = selected && this.ensureRendered(selected) ? this.#recordsByEntry.get(selected).button : null;
-        if (selectedButton) this.#reveal(selectedButton, true);
+        const header = !selectedButton && selected && this.#isFolded(selected.group)
+            ? this.#renderHeader(selected.group)
+            : null;
+        if (selectedButton ?? header) this.#reveal(selectedButton ?? header, true);
 
         if (search && !this.#search.hidden) {
             this.#search.focus({ preventScroll: true });
@@ -1209,7 +1232,13 @@ export default class ListView {
         const target = selectedButton && !selected.disabled
             ? selectedButton
             : this.#popover.querySelector(".pp-item:not(:disabled, [aria-disabled='true'])");
-        target?.focus({ preventScroll: target === selectedButton });
+        target?.focus({ preventScroll: target === selectedButton || Boolean(header) });
+    }
+
+    /** Renders the list as far as a group's header, and returns it. */
+    #renderHeader(group) {
+        while (!this.#groupItems.has(group) && this.#hasMore) this.#renderMore(this.#stepSize, Infinity);
+        return this.#groupItems.get(group)?.firstElementChild ?? null;
     }
 
     #firstFocusable() {
@@ -1295,7 +1324,7 @@ export default class ListView {
             this.#typeAheadBuffer += Languages.fold(e.key, this.#config.locale);
             const match = this.#findTypeAheadMatch(this.#typeAheadBuffer);
 
-            if (match && this.ensureRendered(match)) {
+            if (match && this.ensureRendered(match, { unfold: true })) {
                 this.#recordsByEntry.get(match).button.focus();
 
                 requestAnimationFrame(() => this.scrollIntoView(match));
