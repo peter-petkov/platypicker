@@ -279,21 +279,32 @@
         > select.pp-select[multiple]:is(:not([size]), [size="1"]) {
             color: transparent !important;
 
-            /* Without base-select (in Firefox) a multiple select is a one-row list box, not a button. None of the
-               list shows, not its scrollbar nor its highlighted options, so the select looks like a field under the
-               badges. The script stops its presses, and does the keys Chrome's closed multiple select acts on. */
-            @supports not (appearance: base-select) {
-                overflow: hidden;
-                scrollbar-width: none;
+            /* In Firefox and Safari a multiple select is a one-row list box, not a button. None of the list shows,
+               not its scrollbar nor its highlighted options, so the select looks like a field under the badges. The
+               script stops its presses, and does the keys Chrome's closed multiple select acts on. Chrome draws a
+               button, whose list is its picker, hidden anyway, so this changes nothing there, and it applies in
+               every browser, from the moment the select is enhanced. */
+            overflow: hidden;
+            scrollbar-width: none;
 
-                /* Nothing in it is laid out: not its options, nor the group labels and dividers it would draw too.
-                   A long list box is slow to build, focus and change in Firefox, about a tenth of a second per 25,000
-                   options each time, while it lays them all out; it's ten times faster without. It also hides the
-                   selected ones, which a focused list box colors with !important. */
-                :is(option, optgroup, hr) {
-                    display: none !important;
-                }
+            /* Nothing in it is laid out: not its options, nor the group labels and dividers it would draw too.
+               A long list box is slow to build, focus and change in Firefox, about a tenth of a second per 25,000
+               options each time, while it lays them all out; it's ten times faster without. It also hides the
+               selected ones, which a focused list box colors with !important. Safari lays them out anyway, so they're
+               made invisible too. */
+            :is(option, optgroup, hr) {
+                display: none !important;
+                visibility: hidden !important;
             }
+        }
+
+        /* Safari draws a list box's scrollbar itself, ignoring scrollbar-width, and flashes it as the selection
+           changes; an empty ::-webkit-scrollbar leaves it out. Not with layout="native", where the list box is the
+           browser's own, as a ::-webkit-scrollbar rule can't be reverted to the native scrollbar. */
+        &:not(:state(native)) > select.pp-select[multiple]:is(:not([size]), [size="1"])::-webkit-scrollbar {
+            display: none;
+            width: 0;
+            height: 0;
         }
 
         > .pp-tags {
@@ -324,6 +335,7 @@
 
             :is(option, optgroup, hr) {
                 display: revert !important;
+                visibility: revert !important;
             }
         }
 

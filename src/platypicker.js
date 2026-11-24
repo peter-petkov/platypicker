@@ -84,6 +84,7 @@ export default class PlatyPicker extends HTMLElement {
     // is used where there is one (see #wireSelect).
     static #isSupported = CSS.supports("anchor-scope", "all") && CSS.supports("selector(:popover-open)");
     static #hasBaseSelect = CSS.supports("appearance", "base-select");
+    static #multipleIsListBox;
 
 
     static observedAttributes = [
@@ -114,6 +115,7 @@ export default class PlatyPicker extends HTMLElement {
     #stale = false;             // Whether the options changed since the list last caught up with them.
     #staleSince = null;         // When the first of those changes came in.
     #reconcileTimer;
+    #listBoxAnchored = false;   // Whether Safari's list box has an option to stay at (see #repaintListBox).
 
     constructor() {
         super();
@@ -196,7 +198,7 @@ export default class PlatyPicker extends HTMLElement {
         }
 
         this.#wireSelect();
-        this.#syncNative();
+        this.#syncNative(true);
         this.#source.observe(() => this.#optionsChanged());
 
         PlatyPicker.#registry.set(this.#select, this);
@@ -568,6 +570,89 @@ export default class PlatyPicker extends HTMLElement {
     // Select interaction (open/close, outside click, focus)
     // -----------------------------------------------------------------
 
+    /**
+     * Whether the browser draws a closed multiple select (size 1) as a one-row list box, as Firefox and Safari do,
+     * rather than as a button whose list is its picker, as Chrome does. Having base-select doesn't tell: Safari 27
+     * has it and still draws a list box. So it's measured, once, on a hidden select: a list box lays its options out,
+     * where a button lays out none until its picker opens. The option's display is set, so the page's CSS can't
+     * hide it.
+     *
+     * Then whether the list box lays its options out even when they're display: none, as Safari does, where Firefox
+     * leaves them out. Safari also paints them with the style they had when it last worked it out, which it doesn't
+     * do again when platypicker.css hides them (see #repaintListBox).
+     */
+    static get #listBox() {
+        if (!PlatyPicker.#multipleIsListBox) {
+            const probe = document.createElement("select");
+            const option = new Option("a");
+            probe.multiple = true;
+            probe.size = 1;
+            probe.append(option);
+            probe.style.cssText = "position: fixed !important; visibility: hidden !important; pointer-events: none";
+            option.style.cssText = "display: block !important";
+            document.documentElement.append(probe);
+
+            const drawn = option.getBoundingClientRect().height > 0;
+            option.style.cssText = "display: none !important";
+
+            PlatyPicker.#multipleIsListBox = {
+                drawn,
+                keepsHidden: drawn && option.getBoundingClientRect().height > 0,
+            };
+            probe.remove();
+        }
+
+        return PlatyPicker.#multipleIsListBox;
+    }
+
+    static get #isListBox() {
+        return PlatyPicker.#listBox.drawn;
+    }
+
+    /**
+     * Has Safari paint a closed multiple select's rows again, from their current style, by building the select's
+     * box anew. It paints them from the style they had when last worked out, and hiding or showing them by
+     * platypicker.css doesn't make it work that out again, so without this they stay painted, or hidden, until the
+     * user scrolls or picks something.
+     *
+     * Meanwhile the first option is picked and unpicked, which leaves the selection as it was. Safari scrolls a list
+     * box to the first option a script changes, and to that one each time after, and on a Mac a scroll shows the
+     * list box's scrollbar for a moment, which nothing hides. The first option is in view, so the list box doesn't
+     * scroll then, nor for the picks that follow. (After a group label, it's a row down, so the first pick still
+     * scrolls once.)
+     */
+    #repaintListBox() {
+        const select = this.#select;
+        if (!select.multiple || select.size > 1 || !PlatyPicker.#listBox.keepsHidden) return;
+
+        const focused = select.getRootNode().activeElement === select;
+        const display = select.style.getPropertyValue("display");
+        const priority = select.style.getPropertyPriority("display");
+
+        select.style.setProperty("display", "none", "important");
+        void select.offsetHeight; // The box is dropped here, and built anew below.
+
+        const first = select.options[0];
+        if (first) {
+            first.selected = !first.selected;
+            first.selected = !first.selected;
+            this.#listBoxAnchored = true;
+        }
+
+        select.style.setProperty("display", display, priority);
+
+        if (focused) select.focus({ preventScroll: true });
+    }
+
+    /**
+     * Whether the select's own presses and keys would act on it in place, or open a picker of its own, rather than
+     * leave the opening to Platypicker: a multiple select drawn as a list box, or a single select without
+     * base-select, an ordinary dropdown. Then the script takes them over.
+     */
+    get #selectActsOnItsOwn() {
+        return this.#select.multiple ? PlatyPicker.#isListBox : !PlatyPicker.#hasBaseSelect;
+    }
+
     #wireSelect() {
         const { signal } = this.#abort;
         const popover = this.#view.popover;
@@ -580,22 +665,23 @@ export default class PlatyPicker extends HTMLElement {
         this.#select.addEventListener("keydown", e => {
             if (native()) return;
 
-            // Without base-select a multiple select is a list box whose own keys can't act (see #selectByKey).
-            if (!PlatyPicker.#hasBaseSelect && this.#select.multiple && this.#selectByKey(e)) {
+            // A multiple select drawn as a list box would act on its own keys where they can't be seen (see
+            // #selectByKey).
+            if (this.#select.multiple && PlatyPicker.#isListBox && this.#selectByKey(e)) {
                 e.preventDefault();
                 return;
             }
 
             if (!["Enter", "Space", "ArrowDown", "ArrowUp", "F4"].includes(e.code)) return;
 
-            // Without base-select these would open the select's own dropdown, or change its value in place.
-            if (!PlatyPicker.#hasBaseSelect) e.preventDefault();
+            // These would open the select's own dropdown, or change its value in place.
+            if (this.#selectActsOnItsOwn) e.preventDefault();
             this.#togglePopover(true);
         }, { capture: true, signal });
 
-        // Without base-select a press opens the select's own dropdown, so it's stopped, and the select focused by
-        // hand, as stopping the press keeps focus from moving. The click that follows opens the popover.
-        if (!PlatyPicker.#hasBaseSelect) {
+        // A press would open the select's own dropdown, or pick a list box's row, so it's stopped, and the select
+        // focused by hand, as stopping the press keeps focus from moving. The click that follows opens the popover.
+        if (this.#selectActsOnItsOwn) {
             this.#select.addEventListener("mousedown", e => {
                 if (e.button !== 0 || native()) return;
                 e.preventDefault();
@@ -690,6 +776,9 @@ export default class PlatyPicker extends HTMLElement {
      * is open, a burst of changes is applied once it pauses, and at least every #reconcileMaxWait milliseconds.
      */
     #optionsChanged() {
+        // A select that had no options yet gets its first one for the list box to stay at (see #repaintListBox).
+        if (!this.#listBoxAnchored && this.#select.options.length) this.#repaintListBox();
+
         this.#stale = true;
         this.#scheduleTagsRefresh();
         if (!this.#view.popover.matches(":popover-open")) return;
@@ -769,9 +858,13 @@ export default class PlatyPicker extends HTMLElement {
      * browser's picker show by. It's decided ahead of any press, since the browser opens its picker on the press
      * itself. The select only says it opens the popover while it does.
      */
-    #syncNative() {
+    #syncNative(connecting = false) {
         const native = this.#isNative;
+        const changed = native !== this.#internals.states.has("native");
         this.#internals.states[native ? "add" : "delete"]("native");
+
+        // The select's rows were just hidden by platypicker.css, as it was enhanced, or shown or hidden again.
+        if (connecting || changed) this.#repaintListBox();
 
         if (native) {
             this.#hidePopover();
