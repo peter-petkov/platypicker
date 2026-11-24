@@ -84,8 +84,6 @@ export default class Sheet {
     #risen = [];            // While the rows rise as the sheet opens (see rise): the rows, each with its turn.
     #riseTimer = 0;
     #spring = 0;            // While a let-go sheet springs to its height (see #springTo): the next frame's request.
-    #cutCard = null;        // The group's card cut off under its stuck header (see #cutUnderHeader).
-    #cutFrame = 0;
 
     constructor({ popover, bar, search, cancel, list, clearSearch, close, signal }) {
         this.#popover = popover;
@@ -121,10 +119,6 @@ export default class Sheet {
                 matchMedia("(prefers-reduced-motion: reduce)").matches) return;
             row.animate([{ scale: 1 }, { scale: .975, offset: .4 }, { scale: 1 }], { duration: 240, easing: "ease-out" });
         }, { signal });
-
-        list.addEventListener("scroll", () => {
-            if (this.#active && !this.#cutFrame) this.#cutFrame = requestAnimationFrame(() => this.#cutUnderHeader());
-        }, { passive: true, signal });
 
         cancel.addEventListener("click", () => this.#cancelSearch(), { signal });
         signal.addEventListener("abort", () => this.close());
@@ -392,40 +386,6 @@ export default class Sheet {
             "--_pp-height-duration", "--_pp-height-ease", "--_pp-keyboard-duration"])
             popover.style.removeProperty(name);
         this.#stopRising();
-        cancelAnimationFrame(this.#cutFrame);
-        this.#cutFrame = 0;
-        this.#cut(null);
-    }
-
-    /**
-     * A group's header sticks to the top of the list (see platypicker.css) with nothing behind it, so the sheet shows
-     * through it as it does everywhere else. Its rows don't pass under it: the group's card is cut off at the header's
-     * bottom, so they vanish there. Only the group at the top of the list can be under its header, so the groups are
-     * looked at from the top down until one starts below it.
-     */
-    #cutUnderHeader() {
-        this.#cutFrame = 0;
-        const top = this.#list.getBoundingClientRect().top;
-
-        for (const group of this.#list.children) {
-            if (!group.matches(".pp-group")) continue;
-            const box = group.getBoundingClientRect();
-            if (box.top > top) break;
-            if (box.bottom <= top) continue;
-
-            const header = group.firstElementChild;
-            const card = group.lastElementChild;
-            const under = header.getBoundingClientRect().bottom - card.getBoundingClientRect().top;
-            this.#cut(under > 0 ? card : null, under);
-            return;
-        }
-        this.#cut(null);
-    }
-
-    #cut(card, by = 0) {
-        if (this.#cutCard && this.#cutCard !== card) this.#cutCard.style.removeProperty("mask-image");
-        this.#cutCard = card;
-        card?.style.setProperty("mask-image", `linear-gradient(transparent ${by}px, #000 ${by}px)`);
     }
 
     /**

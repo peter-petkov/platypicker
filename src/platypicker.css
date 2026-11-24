@@ -855,20 +855,6 @@
         &:state(sheet) .pp-item {
             position: relative; /* For the line between rows. */
         }
-
-        /* In the sheet a group is a box of its own, so its header sticks to the top of the list while the group's
-           rows scroll up to it, until the next group's header pushes it away. It sticks inside the list's padding,
-           so the paint moves it up past that (--_pp-header-top, negative). It has no background: the rows are cut
-           off at its bottom instead (see Sheet). */
-        &:state(sheet) .pp-group {
-            display: block;
-        }
-
-        &:state(sheet) .pp-header {
-            position: sticky;
-            top: var(--_pp-header-top, 0);
-            z-index: 1;
-        }
     }
 
     /* Paint: colors, borders, spacing and type. A skin (which adds the pp-skin class to platy-picker) leaves these to
@@ -1265,17 +1251,8 @@
                 height: 1.125rem;
             }
 
-            /* The space above a group is mostly its own margin rather than the header's padding, so a stuck header
-               keeps only a little of it. */
-            .pp-group {
-                margin-top: .5rem;
-            }
-
-            /* Stuck at the very top of the list, past its top padding. It has no background: the rows don't pass
-               under it, they're cut off at its bottom (see Sheet), so the sheet shows through as everywhere else. */
             .pp-header {
-                --_pp-header-top: -.25rem;
-                padding: .375rem 1rem;
+                padding: .875rem 1rem .375rem;
                 font-size: .8125em;
             }
 

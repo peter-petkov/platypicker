@@ -99,11 +99,6 @@ const css = `
             padding-block: .5rem;
         }
 
-        /* A group's header sticks in the sheet (see platypicker.css): at the very top of the list, past its py-1. */
-        &:state(sheet) .pp-header {
-            --_pp-header-top: -.25rem;
-        }
-
         .pp-handle {
             width: 2.25rem;
             height: .3125rem;
