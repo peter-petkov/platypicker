@@ -6,7 +6,7 @@
  * Every part gets a fixed pp-* class, which the script and platypicker.css rely on, plus the classes in its plug
  * below. The plugs are the hook for framework presets: a preset fills them with its framework's classes, and is
  * imported before any picker is created. Elements read their plug when they are created, the state plugs
- * (itemSelected, itemDisabled) whenever their state changes.
+ * (itemSelected, itemDisabled, headerFolded) whenever their state changes.
  */
 export const classes = {
     host: "",           // <platy-picker>
@@ -32,6 +32,8 @@ export const classes = {
     group: "",          // an option group: its header and the list of its rows
     groupList: "",      // the list of a group's rows
     header: "",         // an option group's label
+    headerFolded: "",   // a group header that is folded, in the sheet (tap the header to fold)
+    headerCount: "",    // how many of a folded group's options are selected, in its header
     divider: "",        // an <hr> between options
     empty: "",          // "No matches", under the list when a search finds nothing
     counter: "",        // how many options there are, or match the search, at the bottom (the counter attribute)
@@ -68,6 +70,7 @@ const fixed = {
     group: "pp-group",
     groupList: "pp-group-list",
     header: "pp-header",
+    headerCount: "pp-header-count",
     divider: "pp-divider",
     empty: "pp-empty",
     counter: "pp-counter",

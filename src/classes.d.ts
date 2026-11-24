@@ -3,8 +3,8 @@
  *
  * Every part gets a fixed pp-* class, which the script and platypicker.css rely on, plus the classes in its plug.
  * The plugs are the hook for skins: a skin fills them with its framework's classes, and is imported before any
- * picker is created. Elements read their plug when they are created, the state plugs (itemSelected, itemDisabled)
- * whenever their state changes.
+ * picker is created. Elements read their plug when they are created, the state plugs (itemSelected, itemDisabled,
+ * headerFolded) whenever their state changes.
  */
 
 /** The parts of a picker that have a class plug. */
@@ -55,6 +55,10 @@ export interface Classes {
     groupList: string;
     /** An option group's label (`pp-header`). */
     header: string;
+    /** State plug: a group header that is folded, in the sheet. */
+    headerFolded: string;
+    /** How many of a folded group's options are selected, in its header (`pp-header-count`). */
+    headerCount: string;
     /** An `<hr>` between options (`pp-divider`). */
     divider: string;
     /** "No matches", under the list when a search finds nothing (`pp-empty`). */

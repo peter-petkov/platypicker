@@ -56,7 +56,7 @@ const plugs: Classes = PlatyPicker.classes;
 const observed: string[] = PlatyPicker.observedAttributes;
 
 // Class plugs.
-Object.assign(classes, { item: "rounded-md px-3 py-1.5", itemSelected: "font-semibold" });
+Object.assign(classes, { item: "rounded-md px-3 py-1.5", itemSelected: "font-semibold", headerFolded: "opacity-75" });
 const part: PartName = "tagsPlaceholder";
 // @ts-expect-error not a part
 classes.nope = "x";

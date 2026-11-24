@@ -84,6 +84,10 @@ export default class ListView {
     #groupItems = new Map();            // option group -> its <li role="group">, as rendered right now
     #dividerItems = new Map();          // entry -> the <li> of the divider rendered right before it
     #setSize = null;                    // The aria-setsize the rows carry.
+    #folded = new Set();                // The option groups folded in the sheet, kept while the picker lives.
+    #consumed = 0;                      // How many matches were pulled from the view, folded ones too.
+    #positions = new WeakMap();         // entry -> its place among the matches, for aria-posinset
+    #pulledGroup = null;                // The option group of the last match pulled.
     #tabStop = null;                    // The one row Tab stops at; the arrow keys move between rows.
     #recordsByButton = new WeakMap();
     #tail = [];                         // The <li>s after the last row, present while more rows are to come.
@@ -291,6 +295,12 @@ export default class ListView {
     #wireList() {
         // One listener for the whole list, instead of one per item.
         this.#list.addEventListener("click", e => {
+            const header = e.target.closest(".pp-header");
+            if (header) {
+                this.#toggleGroup(header);
+                return;
+            }
+
             const button = e.target.closest(".pp-item");
             const record = button && this.#recordsByButton.get(button);
             if (!record) return;
@@ -480,7 +490,7 @@ export default class ListView {
         if (counter.hidden || !this.#view || matches < 0) return;
 
         const text = this.#config.counterLabel({
-            shown: this.#rows.length,
+            shown: this.#shownCount,
             matches,
             total: this.#source.entries.length,
             search: Boolean(this.#view.query),
@@ -524,6 +534,7 @@ export default class ListView {
         this.#highlighter.clear();
         this.#lastGroup = null;
         this.#setSize = null;
+        this.#resetPull();
         this.#rows = [];
         this.#recordsByEntry = new WeakMap();
         this.#groupItems = new Map();
@@ -563,7 +574,7 @@ export default class ListView {
      */
     #renderMore(count, budget = ListView.#scanBudget) {
         if (this.#prepared.length < count && this.#view.hasMore) {
-            const pulled = this.#view.pull(Math.max(count - this.#prepared.length, this.#stepSize), budget);
+            const pulled = this.#pull(this.#view, Math.max(count - this.#prepared.length, this.#stepSize), budget);
             this.#prepared = this.#prepared.concat(pulled);
         }
 
@@ -571,6 +582,85 @@ export default class ListView {
         this.#syncTail();
         this.#syncEmpty();
         this.#syncCounter();
+    }
+
+    /**
+     * Pulls the next `count` matches from the view to render, or fewer if `budget` milliseconds run out or the view
+     * does. Of a folded group only the first match is kept, which brings its header; the rest are passed over, and
+     * so don't count. Each kept match is given its place among all the matches, for aria-posinset.
+     */
+    #pull(view, count, budget) {
+        const found = [];
+        const deadline = performance.now() + budget;
+
+        do {
+            for (const entry of view.pull(count - found.length, deadline - performance.now())) {
+                this.#consumed++;
+                if (entry.group && entry.group === this.#pulledGroup && this.#isFolded(entry.group, view)) continue;
+
+                this.#pulledGroup = entry.group;
+                this.#positions.set(entry, this.#consumed);
+                found.push(entry);
+            }
+        } while (found.length < count && view.hasMore && performance.now() < deadline);
+
+        return found;
+    }
+
+    /** Starts #pull over, for a new view. */
+    #resetPull() {
+        this.#consumed = 0;
+        this.#positions = new WeakMap();
+        this.#pulledGroup = null;
+    }
+
+    /** How many matches the list has shown, as rows or inside folded groups. */
+    get #shownCount() {
+        return this.#consumed - this.#prepared.length;
+    }
+
+    /**
+     * Whether a group's rows are folded away: in the sheet, where its header was tapped, while there's no search
+     * (which shows every group that has matches unfolded).
+     */
+    #isFolded(group, view = this.#view) {
+        return Boolean(group) && this.#sheet && !view?.query && this.#folded.has(group);
+    }
+
+    /** Folds or unfolds the group of a tapped header, in the sheet while there's no search. */
+    #toggleGroup(header) {
+        if (!this.#sheet || this.#view?.query) return;
+
+        const group = [...this.#groupItems].find(([, li]) => li.firstElementChild === header)?.[0];
+        if (!group) return;
+
+        if (!this.#folded.delete(group)) this.#folded.add(group);
+        this.reconcile();
+    }
+
+    /**
+     * Brings a group's header up to date: its label, whether it's folded (data-folded and the headerFolded plug),
+     * and, while it is, how many of its options are selected, so a folded group doesn't hide them.
+     */
+    #syncHeader(li, group, view = this.#view) {
+        const header = li.firstElementChild;
+        const [text, count] = header.childNodes;
+        if (text.data !== group.label) text.data = group.label;
+
+        const folded = this.#isFolded(group, view);
+        if (folded !== header.hasAttribute("data-folded")) {
+            header.toggleAttribute("data-folded", folded);
+            toggleClasses(header, "headerFolded", folded);
+        }
+
+        let selected = 0;
+        if (folded)
+            for (const option of group.element.children)
+                if (option.selected && !option.hidden && !option.matches(":disabled")) selected++;
+
+        const shown = selected ? String(selected) : "";
+        if (count.textContent !== shown) count.textContent = shown;
+        count.hidden = !selected;
     }
 
     #scheduleTopUp() {
@@ -614,7 +704,7 @@ export default class ListView {
             return;
         }
 
-        const unshown = this.#view.count() - this.#rows.length;
+        const unshown = this.#view.count() - this.#shownCount;
         const atEnd = nearEnd && unshown <= 0;
 
         if ((unshown < this.#stepSize && !this.#askedForMore) || (atEnd && !this.#wasAtEnd)) {
@@ -631,7 +721,7 @@ export default class ListView {
      */
     ensureRendered(entry) {
         const view = this.#view;
-        if (!view?.includes(entry)) return false;
+        if (!view?.includes(entry) || this.#isFolded(entry.group, view)) return false;
 
         while (!this.#recordsByEntry.has(entry) && this.#hasMore) this.#renderMore(this.#stepSize, Infinity);
 
@@ -672,12 +762,13 @@ export default class ListView {
         this.#highlighter.clear();
         this.#lastGroup = null;
         this.#setSize = null;
+        this.#resetPull();
         this.#rows = [];
         this.#recordsByEntry = new WeakMap();
         this.#groupItems = new Map();
         this.#dividerItems = new Map();
 
-        const entries = view.pull(keep, Infinity);
+        const entries = this.#pull(view, keep, Infinity);
         const { items, groups } = this.#buildItems(view, entries, previous);
         this.#place(this.#list, items);
         for (const [group, rows] of groups) this.#place(group.lastElementChild, rows);
@@ -745,8 +836,7 @@ export default class ListView {
                 // A group shows up once per render, so it can be keyed by the group.
                 if (entry.group && !this.#groupItems.has(entry.group)) {
                     const li = reuse?.groups.get(entry.group) ?? this.#createGroup();
-                    const header = li.firstElementChild;
-                    if (header.textContent !== entry.group.label) header.textContent = entry.group.label;
+                    this.#syncHeader(li, entry.group, view);
 
                     // The sheet rounds off the rows outside a group where a group follows them, which CSS can't
                     // see without :has() (see #styleBar for why that's avoided).
@@ -759,11 +849,17 @@ export default class ListView {
                 }
             }
 
+            // A folded group brings only its header, and an empty list, which takes away rows rendered before.
+            if (this.#isFolded(entry.group, view)) {
+                itemsOf(entry.group);
+                continue;
+            }
+
             const old = reuse?.records.get(entry);
             const record = old ? this.#updateRecord(old) : this.#createRecord(entry);
             this.#recordsByEntry.set(entry, record);
             this.#rows.push(record);
-            record.button.setAttribute("aria-posinset", this.#rows.length);
+            record.button.setAttribute("aria-posinset", this.#positions.get(entry) ?? this.#rows.length);
             if (this.#setSize !== null) record.button.setAttribute("aria-setsize", this.#setSize);
 
             const li = old ? record.button.parentElement : this.#wrapInListItem(record.button);
@@ -781,13 +877,23 @@ export default class ListView {
 
     /**
      * A group's <li>: its header, hidden from screen readers since it names the group instead, and the list its
-     * rows go in. Both lists are display: contents, so the rows line up as one.
+     * rows go in. Both lists are display: contents, so the rows line up as one. The header holds the group's label,
+     * as a text node, and the count of its selected options shown while it's folded (see #syncHeader).
+     *
+     * In the sheet a tap on the header folds the group. Screen readers can't reach the header, and nothing starts
+     * folded, so they always get every group unfolded: a listbox may hold only options and groups, which leaves no
+     * valid place for a button that folds.
      */
     #createGroup() {
         const header = document.createElement("h6");
         addClasses(header, "header");
         header.id = `${this.#popover.id}-${++ListView.#lastId}`;
         header.setAttribute("aria-hidden", "true");
+
+        const count = document.createElement("span");
+        addClasses(count, "headerCount");
+        count.hidden = true;
+        header.append(document.createTextNode(""), count);
 
         const list = document.createElement("ul");
         addClasses(list, "groupList");
@@ -1045,6 +1151,7 @@ export default class ListView {
     refresh() {
         this.#syncFull();
         for (const record of this.#rows) this.#syncState(record);
+        for (const [group, li] of this.#groupItems) this.#syncHeader(li, group);
     }
 
     // -----------------------------------------------------------------
@@ -1154,7 +1261,9 @@ export default class ListView {
 
     /** Says whether the popover is shown as the sheet (layout="sheet"), where the list scrolls rather than the popover. */
     setSheet(sheet) {
+        if (this.#sheet === sheet) return;
         this.#sheet = sheet;
+        if (this.#folded.size && this.#view) this.reconcile(); // Folds show only in the sheet.
     }
 
     /** The parts the sheet's behaviour works with (see Sheet). */
