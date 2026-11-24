@@ -128,6 +128,11 @@ export default class Sheet {
      * reacts, not another picker nor this one's own select. A popover's backdrop doesn't catch taps (they go through
      * to the page), so they're caught on their way there, before anything on the page sees them. The press is
      * stopped too, so it doesn't move focus or open a native select.
+     *
+     * iOS acts on the touch itself, before any click: it moves focus and opens a native select's own picker as the
+     * touch ends, and stopping the press doesn't prevent that. So a touch outside is taken over: its end is stopped,
+     * which stops all of that and the click, and a tap closes the sheet there. Its moves are stopped too, so the
+     * dimmed page doesn't scroll under the sheet.
      */
     #wireOutsideTaps(signal) {
         const outside = e => this.#active && !e.composedPath().includes(this.#popover);
@@ -135,6 +140,27 @@ export default class Sheet {
         document.addEventListener("pointerdown", e => {
             if (outside(e)) e.preventDefault();
         }, { capture: true, signal });
+
+        let touch = null;
+        document.addEventListener("touchstart", e => {
+            touch = outside(e) && e.touches.length === 1 ? { x: e.touches[0].clientX, y: e.touches[0].clientY } : null;
+        }, { capture: true, passive: true, signal });
+
+        document.addEventListener("touchmove", e => {
+            if (touch && e.cancelable) e.preventDefault();
+        }, { capture: true, passive: false, signal });
+
+        document.addEventListener("touchcancel", () => touch = null, { capture: true, signal });
+
+        document.addEventListener("touchend", e => {
+            const start = touch;
+            touch = null;
+            if (!start || !this.#active || !e.cancelable) return;
+
+            e.preventDefault();
+            const end = e.changedTouches[0];
+            if (Math.hypot(end.clientX - start.x, end.clientY - start.y) <= 10) this.hide();
+        }, { capture: true, passive: false, signal });
 
         document.addEventListener("click", e => {
             if (!outside(e)) return;

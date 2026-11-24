@@ -471,7 +471,7 @@
                 <li>The select's label names it, with how many options are selected underneath. None and All sit either side.</li>
                 <li>A group's header sticks to the top of the list while its rows scroll by, until the next one pushes it away.</li>
                 <li>Opening leaves the search box alone, so the keyboard stays down. Tap the search box and the sheet grows to full height above the keyboard, with Cancel beside it. Picking keeps the keyboard up; scrolling the list or Cancel puts it away, and the sheet goes back to its height.</li>
-                <li>A tap on the dimmed page only closes the sheet, so nothing under it reacts. On Android, Back closes it too.</li>
+                <li>A tap on the dimmed page only closes the sheet, so nothing under it reacts, and a swipe there doesn't scroll the page. On Android, Back closes it too.</li>
                 <li>It moves: the rows rise into place as it opens, a picked row dips as its check mark wipes in, the selected count rolls to its new number, and a search glides the rows that stay to their new places. With <code>prefers-reduced-motion</code>, none of it plays.</li>
             </ul>
             <p><code>layout="auto"</code>, the default, opens a sheet where <code>PlatyPicker.sheetMedia</code> matches, a touch screen the size of a phone either way up, checked each time a picker opens. <code>layout="popover"</code> never opens one. The sheet's look has <a href="#theming">variables of its own</a>.</p>
