@@ -242,8 +242,8 @@
 
         <section id="long-lists">
             <h2>Long lists</h2>
-            <p>Long lists start with a batch of rows, and more are shown a few at a time as you scroll, so the scrollbar shrinks smoothly instead of jumping. Searching still covers every option, and the arrow keys, End and type-ahead go past the rows shown so far. <code>batch-size</code> sets how many rows the list works with at a time (50 by default): the rows shown first, and how far ahead it searches. <code>batch-size="0"</code> renders everything at once.</p>
-            <p><code>counter</code> adds a line at the bottom of the popover with how many rows are shown out of all the options. It counts up as you scroll, so it shows how far the end is. With a search, it says how many options match: try "honda" here.</p>
+            <p>Any list longer than a batch, 50 options by default, starts with a batch of rows, whether its options are all there or still loading, and more are shown a few at a time as you scroll, so the scrollbar shrinks smoothly instead of jumping. Searching still covers every option, and the arrow keys, End and type-ahead go past the rows shown so far. <code>batch-size</code> sets how many rows the list works with at a time (50 by default): the rows shown first, and how far ahead it searches. <code>batch-size="0"</code> renders everything at once.</p>
+            <p><code>counter</code> adds a line at the bottom of the popover with how many rows are shown out of all the options. It counts up as you scroll, so it shows how far the end is: a list of 1,700 says "50 of 1,700 shown" when it opens. With a search, it says how many options match: try "honda" here.</p>
             <div class="example">
                 <template>
                     <platy-picker search counter batch-size="20">
@@ -254,7 +254,7 @@
             <h3>Loading as you scroll</h3>
             <p>When the options come from a server, add them as they arrive. <code>loading</code> says more are on their way: the end of the list stays marked, and the picker fires <code>loadmore</code> to ask for more before the list runs out, as soon as fewer than a batch are left to show. Fetch about <code>event.detail.batchSize</code> options then, and remove <code>loading</code> once there's nothing left.</p>
             <p>The event also fires whenever the end of the list comes into view, which can be while a fetch is still running, so ignore it then. While loading, search, select all, End and type-ahead only know the options loaded so far, and matches stay in list order rather than putting the strong ones first. The <a href="https://github.com/peter-petkov/platypicker#loading-as-you-scroll">README</a> has the details, including searching on the server.</p>
-            <p><code>placeholders</code> shows skeleton rows at the end while you wait (10, or as many as you give it), and <code>counter</code> says how many options have loaded so far. This one waits most of a second per page.</p>
+            <p><code>placeholders</code> shows skeleton rows at the end while you wait (10, or as many as you give it), and <code>counter</code> says how many options have loaded so far. This one waits most of a second per page. Skeleton rows also mark the end of a batched list that isn't loading, but rarely show there: the list searches ahead, so rows are ready before you scroll to the end.</p>
             <div class="example" data-loading>
                 <template>
                     <platy-picker search counter placeholders="3" loading>
@@ -467,8 +467,9 @@
                 </template>
             </div>
             <ul>
-                <li>It opens at a little over half the screen. Drag its handle or heading up or down, or pull the list down from the top; let go, it springs to half or full height, carrying on from the speed of the drag, or closes if it's low enough, with a light tick on Android. On a phone on its side it opens at full height, narrower and centred.</li>
+                <li>It opens at a little over half the screen. Drag its handle, heading or search box up or down, or pull the list down from the top; let go, it springs to half or full height, carrying on from the speed of the drag, or closes if it's low enough, with a light tick on Android. On a phone on its side it opens at full height, narrower and centred.</li>
                 <li>The select's label names it, with how many options are selected underneath. None and All sit either side.</li>
+                <li>A group's header sticks to the top of the list while its rows scroll by, until the next one pushes it away.</li>
                 <li>Opening leaves the search box alone, so the keyboard stays down. Tap the search box and the sheet grows to full height above the keyboard, with Cancel beside it. Picking keeps the keyboard up; scrolling the list or Cancel puts it away, and the sheet goes back to its height.</li>
                 <li>A tap on the dimmed page only closes the sheet, so nothing under it reacts. On Android, Back closes it too.</li>
                 <li>It moves: the rows rise into place as it opens, a picked row dips as its check mark wipes in, the selected count rolls to its new number, and a search glides the rows that stay to their new places. With <code>prefers-reduced-motion</code>, none of it plays.</li>
@@ -562,7 +563,6 @@ PlatyPicker.languages.pl = {
             <ul>
                 <li>Chrome and Edge 135 and later.</li>
                 <li>Firefox, current releases (tested in 160), with no flags.</li>
-                <li>Safari hasn't been tested yet.</li>
             </ul>
             <p class="support-check" data-support></p>
             <p>Without support, <code>&lt;platy-picker&gt;</code> does nothing: the select inside it looks and works exactly as a plain one would, so forms keep working everywhere.</p>
@@ -627,6 +627,7 @@ PlatyPicker.languages.pl = {
                     </thead>
                     <tbody>
                     <tr><td><code>change</code></td><td>the select</td><td>the user picks, uses All or None, or removes a badge</td></tr>
+                    <tr><td><code>input</code></td><td>the select</td><td>also, with <code>change</code>, when a key on a closed multiple select in Firefox changes the selection</td></tr>
                     <tr><td><code>loadmore</code></td><td>the picker</td><td>more options are wanted while <code>loading</code>; <code>detail</code> has <code>search</code> and <code>batchSize</code></td></tr>
                     </tbody>
                 </table>
