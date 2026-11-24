@@ -10,7 +10,7 @@ A drop-in enhancement for the native `<select>` element: search-to-filter, selec
 
 **[Docs and live examples](https://peter-petkov.github.io/platypicker/)**, with a playground to try every attribute.
 
-It works in Chrome, Edge and Firefox without flags. In browsers it doesn't support yet (see [Browser support](#browser-support)), Platypicker falls back to the default `<select>` behaviour.
+It works in Chrome, Edge, Firefox and Safari, on desktops and on phones, without flags. In browsers it doesn't support yet (see [Browser support](#browser-support)), Platypicker falls back to the default `<select>` behaviour.
 
 ## Install
 
@@ -210,7 +210,7 @@ On a phone the picker opens as a sheet along the bottom of the screen rather tha
 - **Groups.** Option groups sit on cards of their own, and a group's header sticks to the top of the list while its rows scroll by, until the next group's header pushes it away.
 - **On its side.** A phone in landscape is too short for half height, so the sheet opens at full height there, no wider than `37.5rem` and centred along the bottom edge.
 - **A heading.** The select's label names the sheet, with how many options are selected under it in a multiple select, and of how many with a `max`. None and All sit either side of it.
-- **The keyboard.** Opening doesn't focus the search box, so the keyboard stays down until you tap it. Then the sheet grows to full height and sits on top of the keyboard, with Cancel beside the search box. Picking options keeps the keyboard up; scrolling the list, Cancel (which also clears the search) or tapping elsewhere puts it away, and the sheet goes back to the height it had.
+- **The keyboard.** Opening doesn't focus the search box, so the keyboard stays down until you tap it. Then the sheet grows to full height and sits on top of the keyboard, with Cancel beside the search box. Picking options keeps the keyboard up; scrolling the list, Cancel (which also clears the search) or tapping elsewhere puts it away, and the sheet goes back to the height it had. On an iPhone, the rows run on under Safari's bars over the keyboard, as the page's would, and the last one still scrolls clear of them.
 - **Closing.** Tap the dimmed page, drag the sheet down, or, on Android, press Back. A tap on the dimmed page only closes the sheet: nothing under it reacts, and a swipe there doesn't scroll the page.
 - **Motion.** The sheet slides up as it opens and back down as it closes, and the rows in view rise into place one after another once it's open. Moving between half and full height springs, going a little past and settling back. A picked row dips slightly as its check mark wipes in from the start edge, and wipes out as it's unpicked. The digits of "N selected" that change roll to the new count like an odometer, up for more and down for fewer. As a search filters the list, the rows that stay glide to their new places and a group's card resizes with them, while the rows that go fade out and the new ones fade in. With `prefers-reduced-motion`, none of it plays.
 
@@ -233,7 +233,7 @@ The sheet is frosted glass by default: see-through and blurred over the page. It
 Things to know:
 
 - **Back** closes the sheet through a `CloseWatcher`, which Chrome and Edge have. It adds no entry to the history. Without one, as in Firefox so far, Back leaves the sheet open.
-- **Closing in Firefox.** Firefox can't keep a closing popover on screen to slide away yet, so the sheet slides down while it's still open, and closes once it's down.
+- **Closing in Firefox and Safari.** They can't keep a closing popover on screen to slide away yet, so the sheet slides down while it's still open, and closes once it's down.
 - **A page wider than the screen** widens the layout viewport in some browsers, and the sheet, which fills the width of it, with it. Keep the page within the screen's width on phones.
 - **Testing in a desktop browser's phone emulation** works, with one quirk in Firefox's: a mouse double-click there arrives as two clicks on the same tap, so double-tapping a select opens and closes it again. Real phones send one.
 
@@ -543,6 +543,7 @@ Platypicker needs anchor positioning, with `anchor-scope`, and the popover attri
 
 - Chrome and Edge 135 and later.
 - Firefox, current releases (tested in 160), with no flags. See below.
+- Safari 27 and later, on the Mac and on iPhone (tested in 27.0 and on iOS 27). Every browser on iOS uses Safari's engine, so Chrome and Firefox there work alike. Safari 26 hasn't been tested; iOS 17 (tested in 17.5) has no anchor positioning and keeps the plain select. See below.
 
 In any browser without support, `<platy-picker>` does nothing: the `<select>` inside it renders and behaves exactly as a plain native `<select>` would.
 
@@ -555,6 +556,13 @@ Without `appearance: base-select`, the select is an ordinary one styled with `ap
 - **Screen readers call a multiple select a list box** rather than a combo box, and with its options not laid out, the closed field doesn't list them. The popover lists them, marked as selected or not, as in Chrome.
 - **Firefox for Android** opens the sheet. A tap on the select would open Firefox's own picker as well, so the picker takes taps over there, and a touch that moves is left to scroll the page. Firefox only says where the keyboard is once it has finished sliding in, so the sheet takes its place above it at once rather than sliding there after it.
 - **The sheet's closing slide** works differently: Firefox can't transition `overlay` yet, so the sheet slides down while it's still open, and closes once it's down (see [On phones](#on-phones)). Back doesn't close the sheet, as Firefox has no `CloseWatcher`.
+
+### Safari
+
+Safari 27 has `appearance: base-select`, but on the Mac it still draws `<select multiple size="1">` as a one-row list box, as Firefox does (on iPhone it's a button, as in Chrome). Platypicker tells which a browser draws by measuring it, so there a closed multiple select works as in Firefox above: only the field shows under the badges, a press opens the popover without touching the selection, and keys act as in Chrome. A single select uses `base-select`, as in Chrome.
+
+- **The sheet on iPhone.** iOS scrolls the page around a focused box and tells where the keyboard is in its own order, so the sheet waits for the keyboard before growing onto it. As the keyboard comes up from full height, the sheet can dip for a moment while iOS scrolls the page under it.
+- **The sheet's closing slide** works as in Firefox: Safari can't transition `overlay` yet, so the sheet slides down while it's still open.
 
 ## Notes
 

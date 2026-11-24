@@ -563,6 +563,7 @@ PlatyPicker.languages.pl = {
             <ul>
                 <li>Chrome and Edge 135 and later.</li>
                 <li>Firefox, current releases (tested in 160), with no flags.</li>
+                <li>Safari 27 and later, on the Mac and on iPhone (tested in 27.0 and on iOS 27). Every browser on iOS uses Safari's engine, so Chrome and Firefox there work alike. iOS 17 has no anchor positioning and keeps the plain select.</li>
             </ul>
             <p class="support-check" data-support></p>
             <p>Without support, <code>&lt;platy-picker&gt;</code> does nothing: the select inside it looks and works exactly as a plain one would, so forms keep working everywhere.</p>
@@ -571,8 +572,9 @@ PlatyPicker.languages.pl = {
                 <li>Only a direct child select is enhanced: <code>&lt;platy-picker&gt;&lt;select&gt;</code>.</li>
                 <li><code>&lt;platy-picker&gt;</code> is <code>display: contents</code>, so size and place the select as you would without it. A multiple select gets a minimum width of <code>14rem</code> for its badges.</li>
                 <li>Avoid <code>:has()</code> selectors of your own that depend on the options, such as <code>select:has(option:checked)</code>. Browsers re-check them for every option that changes, which turns Select all on a long list into seconds of work, in Firefox especially.</li>
-                <li>Android's Back closes the <a href="#phones">sheet</a> where there's a <code>CloseWatcher</code>, in Chrome and Edge. Firefox can't keep a closing popover on screen to slide away yet, so the sheet slides down first and then closes.</li>
-                <li>In Firefox, which has no <code>appearance: base-select</code>, a multiple select is a list box underneath: its options aren't laid out, which keeps a long list fast, so screen readers hear them only in the popover. A letter, Home, End or a page key on it selects one option in place, as in Chrome. The <a href="https://github.com/peter-petkov/platypicker#without-base-select-firefox">README</a> has the details.</li>
+                <li>Android's Back closes the <a href="#phones">sheet</a> where there's a <code>CloseWatcher</code>, in Chrome and Edge. Firefox and Safari can't keep a closing popover on screen to slide away yet, so the sheet slides down first and then closes.</li>
+                <li>In Firefox, and in Safari on the Mac, a closed multiple select is a list box underneath, not a button: its options are hidden (in Firefox not even laid out, which keeps a long list fast), so screen readers hear them only in the popover. A letter, Home, End or a page key on it selects one option in place, as in Chrome. The <a href="https://github.com/peter-petkov/platypicker#without-base-select-firefox">README</a> has the details.</li>
+                <li>On an iPhone, the sheet's rows run on under Safari's bars over the keyboard, and the last one still scrolls clear of them.</li>
             </ul>
         </section>
 
