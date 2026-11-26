@@ -46,6 +46,7 @@ jobs:
           cp -r src _site/src
           mkdir -p _site/node_modules/burrowkit
           cp -r node_modules/burrowkit/src _site/node_modules/burrowkit/src
+          cp -r node_modules/burrowkit/docs _site/node_modules/burrowkit/docs
           cp platylogo.png platylogo.ico _site/
           printf '{ "version": "%s" }\n' "${VERSION}" > _site/package.json
           sed -i 's#\.\./#./#g' _site/*.html _site/*.js

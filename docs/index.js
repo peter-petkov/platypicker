@@ -1,23 +1,10 @@
-"use strict";
-
-// ---------------------------------------------------------------------------
-// Theme. Runs immediately because this file is loaded in <head>, so the page never flashes the wrong theme.
-// ---------------------------------------------------------------------------
-
-let themePreference = "auto"; // auto | light | dark
-
-try {
-    themePreference = localStorage.getItem("pp-theme") || "auto";
-} catch {
-}
-
-// Auto leaves the attribute off, so the page's "color-scheme: light dark" follows the system.
-function applyTheme() {
-    if (themePreference === "auto") delete document.documentElement.dataset.theme;
-    else document.documentElement.dataset.theme = themePreference;
-}
-
-applyTheme();
+// The page's own script. What the family's docs pages share (theme switch, examples and code panels, navigation,
+// version, support notice, event logs, theming controls) comes from Burrowkit's docs/page.js; theme.js applied the
+// saved theme in <head>.
+import {
+    codePanel, currentTheme, eventLog, onThemeChange, printHTML, setupCodeBlocks, setupExamples,
+    setupNavigation, setupSupportNotice, setupTheme, setupTheming, setupVersion
+} from "burrowkit/docs/page.js";
 
 // ---------------------------------------------------------------------------
 // Skin. With one other than Base, each example runs in a shadow root of its own that has the framework's stylesheet
@@ -37,36 +24,6 @@ if (!Object.hasOwn(PLATY_SKINS, skinName)) skinName = "base";
 
 const skin = PLATY_SKINS[skinName];
 const skinned = skinName !== "base";
-
-// ---------------------------------------------------------------------------
-// Page setup. The "interactive" ready state comes after parsing but BEFORE deferred module scripts run, so the
-// demo selects are filled before the platypicker module defines <platy-picker> and reads their options.
-// ---------------------------------------------------------------------------
-
-document.addEventListener("readystatechange", () => {
-    if (document.readyState === "interactive") init();
-});
-
-function init() {
-    fillSelects(document);
-    setupExamples();
-    setupSkins();
-    setupCodeBlocks();
-    setupSkinSwitch();
-    setupPagePickers();
-    setupTheme();
-    setupSkinTheme();
-    setupVersion();
-    setupPhoneNavigation();
-    setupNavigation();
-    setupSupportNotice();
-    setupLiveDemo();
-    setupTheming();
-    setupPlayground();
-    setupLoadingDemo();
-    setupBenchmark();
-    setupWhatsNew();
-}
 
 // ---------------------------------------------------------------------------
 // Demo data. An item is a label, or [label, subtext]. Subtext is only used when the select asks for it,
@@ -125,51 +82,19 @@ function fillSelects(root) {
 }
 
 // ---------------------------------------------------------------------------
-// Examples. An .example holds a <template> with the live markup, and optionally <script type="text/plain"
-// data-code="CSS"> blocks for more tabs. The template is copied onto a stage and printed as the HTML tab, so the
-// example and its code can't drift apart. A <template data-code> or <script type="text/plain" data-code> outside an
-// example is just a code block.
+// Examples in a skin: each runs in a shadow root on its stage (see skinStage), and its stageReady resolves to the root
+// in there. The page controls under it stay on the stage.
 // ---------------------------------------------------------------------------
 
-function setupExamples() {
-    for (const example of document.querySelectorAll(".example")) {
-        const template = example.querySelector(":scope > template:not([data-code])");
-        const stage = document.createElement("div");
-        const extras = [...example.querySelectorAll(":scope > .stage-extra")];
-        const tabs = [];
+function mountSkinned(stage, content) {
+    const host = document.createElement("div");
 
-        stage.className = "stage";
-
-        if (template) {
-            fillSelects(template.content);
-            tabs.push({ label: "HTML", text: printHTML(template.content.childNodes), html: true });
-        }
-
-        // stageReady resolves to the element that holds the example's pickers: the stage, or in a skin, the root in
-        // its shadow root. Page controls for the example (marked .stage-extra) go on the stage under the pickers, and
-        // aren't printed.
-        if (template && skinned) {
-            const host = document.createElement("div");
-
-            host.className = "skin-stage";
-            stage.append(host, ...extras);
-            example.stageReady = skinStage(host).then(root => {
-                root.append(document.importNode(template.content, true));
-                return root;
-            });
-        } else {
-            if (template) stage.append(template.content.cloneNode(true));
-            stage.append(...extras);
-            example.stageReady = Promise.resolve(stage);
-        }
-
-        const blocks = [...example.querySelectorAll(":scope > [data-code]")];
-        tabs.push(...blocks.map(codeTab));
-
-        const panel = codePanel(tabs);
-        example.replaceChildren(stage, panel);
-        blocks.forEach(block => loadCode(block, panel));
-    }
+    host.className = "skin-stage";
+    stage.append(host);
+    return skinStage(host).then(root => {
+        root.append(document.importNode(content, true));
+        return root;
+    });
 }
 
 // Gives the host a shadow root dressed in the current skin, and resolves with the element to put an example in, once
@@ -220,14 +145,11 @@ async function loadSkinSheets() {
 
 // The stages follow the page's theme switch, through the framework's own dark mode switch.
 function syncSkinTheme() {
-    const theme = document.documentElement.dataset.theme ?? (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
-    for (const root of skinRoots) skin.setTheme?.(root, theme === "dark");
+    for (const root of skinRoots) skin.setTheme?.(root, currentTheme() === "dark");
 }
 
 function setupSkinTheme() {
-    if (!skinned) return;
-    new MutationObserver(syncSkinTheme).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
-    matchMedia("(prefers-color-scheme: dark)").addEventListener("change", syncSkinTheme);
+    if (skinned) onThemeChange(syncSkinTheme);
 }
 
 // The page's own pickers (the skin switch, the playground's and the benchmark's) keep the base look in a skin. The
@@ -339,275 +261,6 @@ function note(before, text) {
     document.querySelector(before).before(element);
 }
 
-function setupCodeBlocks() {
-    for (const block of document.querySelectorAll("template[data-code], script[type='text/plain'][data-code]")) {
-        const panel = codePanel([codeTab(block)]);
-        block.replaceWith(panel);
-        loadCode(block, panel);
-    }
-}
-
-// A block with data-src shows that file, so the code shown is the code that runs.
-function loadCode(block, panel) {
-    if (!block.dataset.src) return;
-
-    fetch(block.dataset.src)
-        .then(response => response.text())
-        .then(text => panel.setCode(block.dataset.code, text.replace(/\r\n/g, "\n").trim()))
-        .catch(() => {
-        });
-}
-
-function codeTab(block) {
-    return block.localName === "template"
-        ? { label: block.dataset.code, text: printHTML(block.content.childNodes), html: true }
-        : { label: block.dataset.code, text: dedent(block.textContent), html: false };
-}
-
-// A code box with tabs (or a single label), a Copy button, and the highlighted code.
-function codePanel(tabs) {
-    const panel = document.createElement("div");
-    const bar = document.createElement("div");
-    const pre = document.createElement("pre");
-    const code = document.createElement("code");
-    const copy = document.createElement("button");
-    let current = tabs[0];
-
-    // Changes a tab's code, as for the CSS that the theming controls write.
-    panel.setCode = (label, text) => {
-        const tab = tabs.find(tab => tab.label === label);
-        tab.text = text;
-        if (tab === current) show(tab);
-    };
-
-    const show = tab => {
-        current = tab;
-        code.innerHTML = tab.html ? highlightHTML(tab.text) : highlightCode(tab.text);
-        for (const button of bar.querySelectorAll("[role=tab]")) {
-            button.setAttribute("aria-selected", button.textContent === tab.label);
-        }
-    };
-
-    panel.className = "code";
-    bar.className = "code-bar";
-
-    if (tabs.length > 1) {
-        bar.setAttribute("role", "tablist");
-        for (const tab of tabs) {
-            const button = document.createElement("button");
-            button.type = "button";
-            button.setAttribute("role", "tab");
-            button.textContent = tab.label;
-            button.addEventListener("click", () => show(tab));
-            bar.append(button);
-        }
-    } else {
-        const label = document.createElement("span");
-        label.className = "code-label";
-        label.textContent = tabs[0].label;
-        bar.append(label);
-    }
-
-    copy.type = "button";
-    copy.className = "button copy";
-    copy.textContent = "Copy";
-    copy.addEventListener("click", async () => {
-        try {
-            await navigator.clipboard.writeText(current.text);
-            copy.textContent = "Copied";
-        } catch {
-            copy.textContent = "Can't copy";
-        }
-        setTimeout(() => copy.textContent = "Copy", 1500);
-    });
-    bar.append(copy);
-
-    pre.append(code);
-    panel.append(bar, pre);
-    show(current);
-    return panel;
-}
-
-// Removes the blank lines around a block and the indentation its lines share.
-function dedent(text) {
-    const lines = text.replace(/^\s*\n|\n\s*$/g, "").split("\n");
-    const indent = Math.min(...lines.filter(line => line.trim()).map(line => line.match(/^\s*/)[0].length));
-    return lines.map(line => line.slice(indent)).join("\n");
-}
-
-// Prints nodes as indented HTML, one element per line. Lists of more than LONG_LIST options are cut short after
-// SHORT_LIST of them, with a comment saying how many more there are.
-const VOID_ELEMENTS = new Set(["br", "hr", "img", "input", "link", "meta"]);
-const LONG_LIST = 7;
-const SHORT_LIST = 5;
-const escapeHTML = text => text.replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;" })[c]);
-
-function printHTML(nodes, depth = 0) {
-    const pad = "  ".repeat(depth);
-    const lines = [];
-
-    for (const node of nodes) {
-        if (node.nodeType === Node.TEXT_NODE) {
-            if (node.data.trim()) lines.push(pad + escapeHTML(node.data.trim()));
-        } else if (node.nodeType === Node.COMMENT_NODE) {
-            lines.push(`${pad}<!--${node.data}-->`);
-        } else if (node.nodeType === Node.ELEMENT_NODE) {
-            const name = node.localName;
-            const attributes = [...node.attributes]
-                .map(({ name, value }) => value === "" ? ` ${name}` : ` ${name}="${escapeHTML(value)}"`).join("");
-            const children = [...node.childNodes];
-
-            if (VOID_ELEMENTS.has(name)) {
-                lines.push(`${pad}<${name}${attributes}>`);
-            } else if (children.every(child => child.nodeType === Node.TEXT_NODE)) {
-                const text = node.textContent.trim();
-
-                // A script written over several lines keeps its lines, indented one step inside the tag, even a single
-                // statement, as a long import.
-                if (name === "script" && node.textContent.includes("\n")) {
-                    const body = dedent(node.textContent).split("\n").map(line => line && `${pad}  ${line}`).join("\n");
-                    lines.push(`${pad}<${name}${attributes}>`, body, `${pad}</${name}>`);
-                } else {
-                    lines.push(`${pad}<${name}${attributes}>${name === "script" ? text : escapeHTML(text)}</${name}>`);
-                }
-            } else {
-                const options = children.filter(child => child.localName === "option");
-                let shown = children;
-
-                if (options.length > LONG_LIST) {
-                    shown = children.filter(child => child.localName !== "option" || options.indexOf(child) < SHORT_LIST);
-                    shown.splice(shown.indexOf(options[SHORT_LIST - 1]) + 1, 0,
-                        document.createComment(` ${options.length - SHORT_LIST} more options `));
-                }
-
-                lines.push(`${pad}<${name}${attributes}>`, printHTML(shown, depth + 1), `${pad}</${name}>`);
-            }
-        }
-    }
-
-    return lines.filter(Boolean).join("\n");
-}
-
-const token = (kind, text) => `<span class="tok-${kind}">${escapeHTML(text)}</span>`;
-
-function highlightHTML(text) {
-    return text.replace(/(<!--[\s\S]*?-->)|(<\/?[\w-]+)([^>]*?)(\/?>)|[^<]+|</g, (match, comment, open, attributes, close) => {
-        if (comment) return token("comment", comment);
-        if (!open) return escapeHTML(match);
-
-        const highlighted = attributes.replace(/([^\s=]+)(?:=("[^"]*"))?/g, (_, name, value) =>
-            token("attr", name) + (value ? "=" + token("value", value) : ""));
-        return token("tag", open) + highlighted + token("tag", close);
-    });
-}
-
-// Comments and strings, which is enough for the short JS, CSS and shell snippets on this page.
-function highlightCode(text) {
-    return text.replace(/(\/\*[\s\S]*?\*\/|\/\/[^\n]*)|("[^"\n]*"|'[^'\n]*')|[^/"']+|[\s\S]/g, (match, comment, string) =>
-        comment ? token("comment", comment) : string ? token("value", string) : escapeHTML(match));
-}
-
-// The version badge in the header comes from package.json.
-function setupVersion() {
-    const badge = document.getElementById("version");
-
-    fetch("../package.json")
-        .then(response => response.json())
-        .then(({ version }) => {
-            badge.textContent = version;
-            badge.hidden = false;
-        })
-        .catch(() => {
-        });
-}
-
-// ---------------------------------------------------------------------------
-// On narrow screens the side navigation becomes a picker at the top of the page, built from the same links.
-// ---------------------------------------------------------------------------
-
-function setupPhoneNavigation() {
-    const wrapper = document.createElement("div");
-    const select = document.createElement("select");
-    let group;
-
-    for (const child of document.querySelector(".sidenav nav").children) {
-        if (child.localName === "p") {
-            group = document.createElement("optgroup");
-            group.label = child.textContent;
-            select.append(group);
-        } else {
-            group.append(new Option(child.textContent, child.hash.slice(1)));
-        }
-    }
-
-    select.setAttribute("aria-label", "Go to section");
-    select.addEventListener("change", () => document.getElementById(select.value).scrollIntoView());
-
-    wrapper.className = "phone-nav";
-    wrapper.append(document.createElement("platy-picker"));
-    wrapper.firstChild.append(select);
-    document.querySelector("main").prepend(wrapper);
-}
-
-// ---------------------------------------------------------------------------
-// Side navigation. The current section is the last one whose top has scrolled past the line just under the header,
-// or the last one on the page once it's scrolled to the bottom.
-// ---------------------------------------------------------------------------
-
-function setupNavigation() {
-    const links = [...document.querySelectorAll(".sidenav a")];
-    const sections = links.map(link => document.getElementById(link.hash.slice(1)));
-    const phonePicker = document.querySelector(".phone-nav platy-picker");
-    let shown;
-
-    const update = () => {
-        // Under whichever bar is lower: the header, or on phones the section bar, which stays once the header has
-        // scrolled away.
-        const bars = [document.querySelector(".topbar"), phonePicker.parentElement];
-        const line = Math.max(...bars.map(bar => bar.getBoundingClientRect().bottom)) + 24;
-        const bottom = innerHeight + scrollY >= document.documentElement.scrollHeight - 2;
-        const current = bottom ? sections.at(-1) : sections.findLast(section => section.getBoundingClientRect().top <= line) ?? sections[0];
-
-        if (current === shown) return;
-        shown = current;
-
-        links.forEach((link, index) => {
-            if (sections[index] === current) link.setAttribute("aria-current", "location");
-            else link.removeAttribute("aria-current");
-        });
-
-        // setValue() doesn't fire change, so this doesn't scroll back. Before the element is defined, the plain
-        // select's value is enough.
-        if (phonePicker.setValue) phonePicker.setValue(current.id);
-        else phonePicker.querySelector("select").value = current.id;
-    };
-
-    addEventListener("scroll", update, { passive: true });
-    addEventListener("resize", update);
-    update();
-}
-
-// ---------------------------------------------------------------------------
-// Theme toggle, version and browser support notice
-// ---------------------------------------------------------------------------
-
-function setupTheme() {
-    document.querySelector(`input[name=theme][value=${themePreference}]`).checked = true;
-
-    for (const radio of document.querySelectorAll("input[name=theme]")) {
-        radio.addEventListener("change", () => {
-            themePreference = radio.value;
-
-            try {
-                localStorage.setItem("pp-theme", themePreference);
-            } catch {
-            }
-
-            applyTheme();
-        });
-    }
-}
-
 // ---------------------------------------------------------------------------
 // What's new. Each clip comes in light and dark, and only the one for the page's theme shows. It plays while it's on
 // screen, and is paused otherwise. With reduced motion, clips wait on their first frame, with controls to play them.
@@ -644,14 +297,15 @@ function setupWhatsNew() {
 }
 
 // The same test the stylesheet uses before it styles anything.
-function setupSupportNotice() {
+function setupPlatypickerSupport() {
     const supported = CSS.supports("anchor-scope", "all") && CSS.supports("selector(:popover-open)");
 
-    document.getElementById("no-support").hidden = supported;
     document.getElementById("benchmark-run").disabled = !supported;
-    document.querySelector("[data-support]").textContent = supported
-        ? "✓ This browser supports it, so the pickers on this page are enhanced."
-        : "✗ This browser doesn't support it, so the pickers on this page are plain selects.";
+    setupSupportNotice({
+        supported,
+        yes: "✓ This browser supports it, so the pickers on this page are enhanced.",
+        no: "✗ This browser doesn't support it, so the pickers on this page are plain selects.",
+    });
 }
 
 // ---------------------------------------------------------------------------
@@ -662,16 +316,9 @@ async function setupLiveDemo() {
     const example = document.querySelector("[data-live]");
     const picker = (await example.stageReady).querySelector("platy-picker");
     const select = picker.querySelector("select");
-    const log = example.querySelector(".log");
+    const write = eventLog(example.querySelector(".log"));
     const extraOptions = ["🍰 Cake", "🥧 Pie", "🍪 Cookie", "🍫 Chocolate", "🍇 Grapes"];
     let added = 0;
-
-    // The newest entry goes first, and only the last five are kept.
-    const write = text => {
-        log.insertAdjacentHTML("afterbegin", "<li></li>");
-        log.firstElementChild.textContent = text;
-        log.children[5]?.remove();
-    };
 
     select.addEventListener("change", () => {
         const chosen = [...select.selectedOptions].map(option => option.text).join(", ");
@@ -707,54 +354,6 @@ async function setupLiveDemo() {
         checkbox.checked = picker.hasAttribute(checkbox.dataset.attr);
         checkbox.addEventListener("change", () => picker.toggleAttribute(checkbox.dataset.attr, checkbox.checked));
     }
-}
-
-// ---------------------------------------------------------------------------
-// Theming: the controls set variables on the example's stage, and the CSS tab shows the ones that changed
-// ---------------------------------------------------------------------------
-
-async function setupTheming() {
-    const example = document.querySelector("[data-theming]");
-    const stage = await example.stageReady;
-    const panel = example.querySelector(".code");
-    const inputs = [...example.querySelectorAll("[data-var]")];
-    const changed = new Set();
-    const cssValue = input => input.value + (input.dataset.unit ?? "");
-
-    // The controls nobody has moved show the default for the current theme (data-dark holds the dark one).
-    const showDefaults = () => {
-        const dark = (document.documentElement.dataset.theme ?? (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")) === "dark";
-        for (const input of inputs) {
-            if (!changed.has(input)) input.value = dark && input.dataset.dark ? input.dataset.dark : input.defaultValue;
-        }
-    };
-
-    const update = () => {
-        for (const input of inputs) {
-            if (changed.has(input)) stage.style.setProperty(input.dataset.var, cssValue(input));
-            else stage.style.removeProperty(input.dataset.var);
-        }
-
-        panel.setCode("CSS", changed.size
-            ? `platy-picker {\n${[...changed].map(input => `  ${input.dataset.var}: ${cssValue(input)};`).join("\n")}\n}`
-            : "/* Move a control to see the CSS. */");
-    };
-
-    for (const input of inputs) input.addEventListener("input", () => {
-        changed.add(input);
-        update();
-    });
-
-    example.querySelector("[data-reset]").addEventListener("click", () => {
-        changed.clear();
-        showDefaults();
-        update();
-    });
-
-    new MutationObserver(showDefaults).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
-    matchMedia("(prefers-color-scheme: dark)").addEventListener("change", showDefaults);
-    showDefaults();
-    update();
 }
 
 // ---------------------------------------------------------------------------
@@ -852,17 +451,11 @@ async function setupPlayground() {
     const root = document.querySelector("[data-playground]");
     const form = root.querySelector("form");
     const host = root.querySelector("[data-playground-host]");
-    const log = root.querySelector(".log");
+    const write = eventLog(root.querySelector(".log"));
     const panel = codePanel([{ label: "HTML", text: "", html: true }]);
     let timer;
 
     root.append(panel);
-
-    const write = text => {
-        log.insertAdjacentHTML("afterbegin", "<li></li>");
-        log.firstElementChild.textContent = text;
-        log.children[5]?.remove();
-    };
 
     const setAttributes = (element, names) => {
         for (const name of names) {
@@ -1068,3 +661,30 @@ function setupBenchmark() {
         runButton.disabled = false;
     });
 }
+
+// ---------------------------------------------------------------------------
+// Page setup. A module runs once the page is parsed, so the demo selects are filled here, and only then is the skin
+// imported and platypicker after it, which defines <platy-picker> and reads their options. The skin goes first, so
+// that the pickers in the examples are created with its classes.
+// ---------------------------------------------------------------------------
+
+fillSelects(document);
+setupExamples({ prepare: fillSelects, mount: skinned ? mountSkinned : undefined });
+setupSkins();
+setupCodeBlocks();
+setupSkinSwitch();
+setupPagePickers();
+setupTheme("pp-theme");
+setupSkinTheme();
+setupVersion();
+setupNavigation({ wrap: "platy-picker", sync: (picker, id) => picker.setValue?.(id) });
+setupPlatypickerSupport();
+setupLiveDemo();
+setupTheming(document.querySelector("[data-theming]"), "platy-picker");
+setupPlayground();
+setupLoadingDemo();
+setupBenchmark();
+setupWhatsNew();
+
+if (skin.module) await import(skin.module);
+await import("../src/platypicker.js");

@@ -4,13 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Platypicker</title>
-    <script type="importmap">{ "imports": { "burrowkit/": "../node_modules/burrowkit/src/" } }</script>
+    <script type="importmap">{ "imports": { "burrowkit/docs/": "../node_modules/burrowkit/docs/", "burrowkit/": "../node_modules/burrowkit/src/" } }</script>
     <link rel="icon" type="image/x-icon" href="../platylogo.ico">
     <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
+    <link rel="stylesheet" href="../node_modules/burrowkit/docs/page.css">
     <link rel="stylesheet" href="./index.css">
     <link rel="stylesheet" href="../src/platypicker.css">
+    <script src="../node_modules/burrowkit/docs/theme.js" data-key="pp-theme"></script>
     <script src="./skins.js"></script>
-    <script src="./index.js"></script>
+    <script type="module" src="./index.js"></script>
 </head>
 <body>
 <header class="topbar">
@@ -967,11 +969,5 @@ PlatyPicker.languages.pl = {
         </section>
     </main>
 </div>
-
-<script type="module">
-    // A skin goes first, so that the pickers in the examples are created with its classes.
-    if (skin.module) await import(skin.module);
-    await import("../src/platypicker.js");
-</script>
 </body>
 </html>
