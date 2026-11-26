@@ -925,15 +925,17 @@ export default class ListView {
             const step = { ArrowDown: 1, ArrowUp: -1 }[e.code];
             if (!step) return;
 
-            let focusable = focusableElements();
+            const focusable = focusableElements();
             if (!focusable.length) return;
 
             e.preventDefault();
 
-            // On the last rendered item the next batch comes first, so the key never stalls at the end of a longer list.
-            if (step > 0 && e.target === focusable.at(-1) && this.#rowList.hasMore) {
-                this.#rowList.renderMore(this.#rowList.stepSize, Infinity);
-                focusable = focusableElements();
+            // Down from the last rendered row goes on to the next one, rendered first (see RowList.move), so the key
+            // never stalls at the end of a longer list.
+            const record = step > 0 && e.target === focusable.at(-1) && this.#rowList.recordOfElement(e.target);
+            if (record && this.#rowList.hasMore) {
+                this.#rowList.move(record, 1)?.element.focus();
+                return;
             }
 
             const index = focusable.indexOf(e.target);
@@ -943,22 +945,13 @@ export default class ListView {
 
     /**
      * Moves focus from a row by pages (-1 or 1, as many rows as fit in the popover) or to an end (-Infinity or
-     * Infinity). Rows that aren't rendered yet are rendered first, so End reaches the last match of a long list.
+     * Infinity), rendering ahead as far as need be (see RowList.jump).
      */
     #jump(from, pages) {
-        const rows = this.#rowList;
-        const index = rows.rows.findIndex(record => record.element === from);
-        const room = this.#scroller.clientHeight - this.#coveredHeight - this.#coveredBottom;
-        const pageSize = Math.max(1, Math.floor(room / from.offsetHeight) - 1);
-        const wanted = Number.isFinite(pages) ? index + pages * pageSize : pages;
-
-        while (wanted >= rows.rows.length && rows.hasMore)
-            rows.renderMore(wanted === Infinity ? Infinity : rows.stepSize, Infinity);
-
-        const target = rows.rows[Math.min(Math.max(wanted, 0), rows.rows.length - 1)]?.element;
+        const target = this.#rowList.jump(this.#rowList.recordOfElement(from), pages)?.element;
         if (!target) return;
 
         target.focus({ preventScroll: true });
-        rows.reveal(target, false);
+        this.#rowList.reveal(target, false);
     }
 }
