@@ -1,5 +1,7 @@
 "use strict";
 
+import createClasses from "burrowkit/classes.js";
+
 /**
  * The classes Platypicker puts on the elements it creates.
  *
@@ -87,22 +89,5 @@ const fixed = {
     tagsPlaceholder: "pp-tags-placeholder",
 };
 
-/** A part's fixed pp-* class. */
-export const fixedClass = part => fixed[part];
-
-const plug = part => String(classes[part] ?? "").split(/\s+/).filter(Boolean);
-
-/** Adds a part's fixed class and the classes in its plug. */
-export function addClasses(element, part) {
-    element.classList.add(...[fixed[part], ...plug(part)].filter(Boolean));
-}
-
-/** Removes a part's fixed class and the classes in its plug. */
-export function removeClasses(element, part) {
-    element.classList.remove(...[fixed[part], ...plug(part)].filter(Boolean));
-}
-
-/** Adds or removes the classes in a state plug. */
-export function toggleClasses(element, part, force) {
-    for (const name of plug(part)) element.classList.toggle(name, force);
-}
+/** The helpers that put a part's fixed pp-* class and its plug on an element (see Burrowkit's classes.js). */
+export const { fixedClass, addClasses, removeClasses, toggleClasses } = createClasses(fixed, classes);
