@@ -6,13 +6,13 @@
 // With no scenes it takes them all: look, skins, badges, long, phone and languages. Stills are WebP. Clips are MP4
 // with a WebP poster (their first frame): skins and languages crossfade between stills, the others are filmed as they
 // play. Set CHROME to Chrome's path if it isn't where Windows installs it, and HEADED=1 to watch.
-import { createServer } from "node:http";
 import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { extname, join, normalize } from "node:path";
+import { join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { createStaticServer } from "burrowkit/tools/serve.mjs";
 import puppeteer from "puppeteer-core";
 
 const VERSION = "2.0";
@@ -27,24 +27,7 @@ const executablePath = [process.env.CHROME, "C:\\Program Files\\Google\\Chrome\\
     .find(path => path && existsSync(path));
 if (!executablePath) throw new Error("No Chrome found. Set CHROME to its path.");
 
-const types = {
-    ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".png": "image/png", ".ico": "image/x-icon",
-};
-const server = createServer(async (request, response) => {
-    const path = normalize(decodeURIComponent(new URL(request.url, "http://localhost").pathname));
-    try {
-        // In the npm workspace, a dependency sits in the workspace's node_modules one folder up, where Node finds it.
-        const body = await readFile(join(root, path)).catch(error => {
-            if (!path.replaceAll("\\", "/").startsWith("/node_modules/")) throw error;
-            return readFile(join(root, "..", path));
-        });
-        response.writeHead(200, { "content-type": types[extname(path)] ?? "application/octet-stream" });
-        response.end(body);
-    } catch {
-        response.writeHead(404);
-        response.end();
-    }
-});
+const server = createStaticServer(root);
 await new Promise(resolve => server.listen(0, resolve));
 
 const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
