@@ -1,7 +1,7 @@
 "use strict";
 
 import { addClasses, classes, removeClasses } from "./classes.js";
-import Highlighter from "./highlighter.js";
+import Highlighter from "burrowkit/highlighter.js";
 import Languages, { languages } from "./languages.js";
 import ListView from "./list-view.js";
 import OptionSource from "./option-source.js";
@@ -155,7 +155,7 @@ export default class PlatyPicker extends HTMLElement {
         addClasses(this.#select, "select");
 
         this.#source = new OptionSource(this.#select);
-        this.#highlighter = new Highlighter();
+        this.#highlighter = new Highlighter("platypicker-highlight");
         this.#view = new ListView({
             select: this.#select,
             source: this.#source,

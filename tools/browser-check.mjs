@@ -48,7 +48,11 @@ const types = {
 const server = createServer(async (request, response) => {
     const path = normalize(decodeURIComponent(new URL(request.url, "http://localhost").pathname));
     try {
-        const body = await readFile(join(root, path));
+        // In the npm workspace, a dependency sits in the workspace's node_modules one folder up, where Node finds it.
+        const body = await readFile(join(root, path)).catch(error => {
+            if (!path.replaceAll("\\", "/").startsWith("/node_modules/")) throw error;
+            return readFile(join(root, "..", path));
+        });
         response.writeHead(200, { "content-type": types[extname(path)] ?? "application/octet-stream" });
         response.end(body);
     } catch {

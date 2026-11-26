@@ -31,6 +31,10 @@ jobs:
         with:
           fetch-depth: 0
 
+      # src/ imports Burrowkit, which the page finds in node_modules through its import map.
+      - name: Install dependencies
+        run: npm ci
+
       # The page lives in docs/ and refers to the repository root as ../. On the site, docs/ becomes the root and
       # the files it uses sit beside it. The version comes from the latest tag, as publish.yml sets it.
       - name: Assemble the site
@@ -40,6 +44,8 @@ jobs:
           mkdir _site
           cp -r docs/. _site/
           cp -r src _site/src
+          mkdir -p _site/node_modules/burrowkit
+          cp -r node_modules/burrowkit/src _site/node_modules/burrowkit/src
           cp platylogo.png platylogo.ico _site/
           printf '{ "version": "%s" }\n' "${VERSION}" > _site/package.json
           sed -i 's#\.\./#./#g' _site/*.html _site/*.js
