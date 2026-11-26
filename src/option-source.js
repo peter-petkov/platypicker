@@ -1,6 +1,6 @@
 "use strict";
 
-import Search from "burrowkit/search.js";
+import FilteredView, { SearchCache } from "burrowkit/filtered-view.js";
 
 /**
  * An <optgroup> as the list sees it.
@@ -70,193 +70,6 @@ export class OptionEntry {
 }
 
 /**
- * The entries matching a search. Matching is lazy: `pull()` scans only as far as it is asked to, so a long list is
- * never searched in one go, and a view that is no longer wanted is simply dropped.
- *
- * An entry matches when the query matches its label, subtext or icon, or its option group's label (which includes the
- * whole group), as Search.match matches: by its letters in order, the first starting a word, or as a whole. Both
- * sides are compared folded (see Search.fold), so case and accents don't matter.
- *
- * Tiered, strong matches come first, those where every matched piece starts a word, then the weak ones, each in
- * list order: the list is scanned twice, the second time for the weak matches. An option group moves as a whole,
- * with the tier of its best match, so its matches stay together under one header. A divider is kept only between
- * two matches of the same tier, so one that sits between entries that were filtered out is carried forward to the
- * next match, and there is never one before the first match of a tier. A list longer than #tierLimit keeps list
- * order.
- */
-export class FilteredView {
-    static #none = 1;
-    static #weak = 2;
-    static #strong = 3;
-
-    // The longest list put in tiers. The first weak match waits for the strong scan to cover the whole list, which
-    // takes about 170ms at this size; longer lists keep list order, so their first matches show right away.
-    static #tierLimit = 50000;
-
-    #entries;
-    #query;
-    #tiered;
-    #index = 0;
-    #tier = FilteredView.#strong;   // the tier being scanned for
-    #matchCount = 0;
-    #tierCount = 0;                 // matches pulled in the tier being scanned for
-    #count;                         // All the matches, once count() has counted them.
-    #dividerPending = false;
-    #dividers = new Set();          // matches that have a divider before them
-    #tiers = new Map();             // entry -> how its own label, subtext or icon matches
-    #groupTiers = new Map();        // group -> how its label matches
-    #blockTiers = new Map();        // group -> the tier the group goes in: that of its best match
-
-    #fold;
-    #prepare;
-
-    /**
-     * `query` is folded already; `fold` folds a text the same way, and `prepare` makes it ready for Search.match.
-     * Without `tiered`, the matches come in list order.
-     */
-    constructor(entries, query, fold, prepare, tiered = true) {
-        this.#entries = entries;
-        this.#query = query;
-        this.#fold = fold;
-        this.#prepare = prepare;
-        this.#tiered = tiered && Boolean(query) && entries.length <= FilteredView.#tierLimit;
-        if (!this.#tiered) this.#tier = FilteredView.#weak;
-    }
-
-    get query() {
-        return this.#query;
-    }
-
-    /**
-     * How many entries match: all of them without a search, otherwise -1 until the scan is done or count() has
-     * counted them.
-     */
-    get size() {
-        if (!this.#query) return this.#entries.length;
-        return this.#count ?? (this.hasMore ? -1 : this.#matchCount);
-    }
-
-    /** Counts the matches in one go, without scanning on. */
-    count() {
-        if (!this.#query) return this.#entries.length;
-        if (!this.hasMore) return this.#matchCount;
-
-        this.#count ??= this.#entries.reduce((count, entry) => count + this.includes(entry), 0);
-        return this.#count;
-    }
-
-    /** Whether part of the list has not been scanned yet. */
-    get hasMore() {
-        return this.#index < this.#entries.length || this.#tier === FilteredView.#strong;
-    }
-
-    /**
-     * Scans on and returns the next matches: at most `count` of them, stopping early once `budget` milliseconds
-     * are spent. Check `hasMore` to see whether the scan has finished.
-     */
-    pull(count = Infinity, budget = Infinity) {
-        const found = [];
-        const deadline = performance.now() + budget;
-
-        for (let scanned = 1; this.hasMore && found.length < count; scanned++) {
-            // Done with the strong matches: the weak ones, from the top.
-            if (this.#index === this.#entries.length) {
-                this.#tier = FilteredView.#weak;
-                this.#index = this.#tierCount = 0;
-                this.#dividerPending = false;
-                continue;
-            }
-
-            const entry = this.#entries[this.#index++];
-            if (entry.dividerBefore) this.#dividerPending = true;
-
-            if (this.includes(entry) && this.#placeOf(entry) === this.#tier) {
-                if (this.#dividerPending && this.#tierCount) this.#dividers.add(entry);
-                this.#dividerPending = false;
-                this.#matchCount++;
-                this.#tierCount++;
-                found.push(entry);
-            }
-
-            // The clock is only read now and then, since reading it is not free.
-            if (scanned % 256 === 0 && performance.now() > deadline) break;
-        }
-
-        return found;
-    }
-
-    /** Whether the entry matches. Does not depend on how far the scan has got. */
-    includes(entry) {
-        return !this.#query || this.textMatches(entry) || this.groupMatches(entry.group);
-    }
-
-    /** Whether the query matches the entry's own label, subtext or icon. */
-    textMatches(entry) {
-        return Boolean(this.#query) && this.#tierOf(entry) !== FilteredView.#none;
-    }
-
-    /** Where the query matches a text, as { start, end } pieces of it (see Search.match), or null. */
-    locate(text) {
-        return Search.match(this.#prepare(text), this.#query)?.parts ?? null;
-    }
-
-    /** Whether the query matches the label of the entry's option group. */
-    groupMatches(group) {
-        return Boolean(group && this.#query) && this.#groupTierOf(group) !== FilteredView.#none;
-    }
-
-    // The tier a match goes in: that of the group it's in, or its own. Untiered, all go in the weak one.
-    #placeOf(entry) {
-        if (!this.#tiered) return FilteredView.#weak;
-        if (!entry.group) return this.#tierOf(entry);
-
-        let tier = this.#blockTiers.get(entry.group);
-        if (tier === undefined) {
-            // A group's options sit together in the list, and the strong scan meets the first of them first.
-            tier = FilteredView.#none;
-            for (let i = this.#index - 1; i < this.#entries.length && this.#entries[i].group === entry.group; i++)
-                tier = Math.max(tier, this.#tierOf(this.#entries[i]));
-
-            this.#blockTiers.set(entry.group, tier = Math.max(tier, this.#groupTierOf(entry.group)));
-        }
-        return tier;
-    }
-
-    // How the query matches an entry's own label, subtext or icon (an emoji, found by typing it).
-    #tierOf(entry) {
-        let tier = this.#tiers.get(entry);
-        if (tier === undefined) {
-            tier = this.#match(entry.label);
-            if (tier !== FilteredView.#strong) tier = Math.max(tier, this.#match(entry.subtext));
-            if (tier !== FilteredView.#strong) tier = Math.max(tier, this.#match(entry.icon));
-            this.#tiers.set(entry, tier);
-        }
-        return tier;
-    }
-
-    #groupTierOf(group) {
-        if (!group) return FilteredView.#none;
-
-        let tier = this.#groupTiers.get(group);
-        if (tier === undefined) this.#groupTiers.set(group, tier = this.#match(group.label.trim()));
-        return tier;
-    }
-
-    // The cheap test on the folded text first, since most texts fail it and preparing a text costs more.
-    #match(text) {
-        if (!text || !Search.mayMatch(this.#fold(text), this.#query)) return FilteredView.#none;
-
-        const match = Search.match(this.#prepare(text), this.#query);
-        return !match ? FilteredView.#none : match.strong ? FilteredView.#strong : FilteredView.#weak;
-    }
-
-    /** Whether a divider is shown right before this match. Only known for matches already pulled. */
-    hasDividerBefore(entry) {
-        return this.#dividers.has(entry);
-    }
-}
-
-/**
  * The entries of a picker, read from the children of a native <select>, plus the selection API.
  */
 export default class OptionSource {
@@ -265,9 +78,12 @@ export default class OptionSource {
     #entriesByOption = new WeakMap();
     #groupsByElement = new WeakMap();
     #observer;
-    #folded = new Map();    // text -> its folded form, for #foldedLocale
-    #prepared = new Map();  // text -> its form for Search.match, for #foldedLocale
-    #foldedLocale = null;
+    // Folded and prepared texts, kept to a few times the number of entries.
+    #cache = new SearchCache(() => 4 * this.#entries.length + 100);
+
+    // What search matches an entry by, the strongest first: its label, its subtext and its icon (an emoji, found by
+    // typing it). Its option group's label is matched too, by the view.
+    static #texts = entry => [entry.label, entry.subtext, entry.icon];
 
     constructor(select) {
         this.#select = select;
@@ -366,35 +182,22 @@ export default class OptionSource {
      * FilteredView).
      */
     filter(query, locale = "", tiered = true) {
-        return new FilteredView(this.#entries, query, text => this.fold(text, locale),
-            text => this.prepare(text, locale), tiered);
+        return new FilteredView(this.#entries, query, {
+            fold: text => this.fold(text, locale),
+            prepare: text => this.prepare(text, locale),
+            texts: OptionSource.#texts,
+            tiered,
+        });
     }
 
-    /**
-     * Folds a text (see Search.fold), remembering it, so a search or type-ahead doesn't fold every label again on
-     * every key. The memory is by text, so a changed option simply misses it, and it starts over when the language
-     * changes or it grows past the number of texts the list can have.
-     */
+    /** Folds a text (see Search.fold), remembering it, so a search or type-ahead doesn't fold every label again. */
     fold(text, locale = "") {
-        return this.#remember(this.#folded, text, locale, Search.fold);
+        return this.#cache.fold(text, locale);
     }
 
     /** Makes a text ready for Search.match (see Search.prepare), remembering it as fold() does. */
     prepare(text, locale = "") {
-        return this.#remember(this.#prepared, text, locale, Search.prepare);
-    }
-
-    #remember(memory, text, locale, make) {
-        if (locale !== this.#foldedLocale) {
-            this.#folded.clear();
-            this.#prepared.clear();
-            this.#foldedLocale = locale;
-        }
-        if (memory.size > 4 * this.#entries.length + 100) memory.clear();
-
-        let made = memory.get(text);
-        if (made === undefined) memory.set(text, made = make(text, locale));
-        return made;
+        return this.#cache.prepare(text, locale);
     }
 
     /**
