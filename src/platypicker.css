@@ -534,8 +534,8 @@
         }
 
         /* A fixed square, so a row doesn't jump as its image arrives. The whole picture shows, letterboxed if it isn't
-           square. One that fails to load is hidden (see decorations.js). An icon is as wide, so labels after either
-           line up. In a badge both follow the badge's own text size. */
+           square. One that fails to load is hidden (see Burrowkit's decorations.js). An icon is as wide, so labels
+           after either line up. In a badge both follow the badge's own text size. */
         :is(.pp-item-image, .pp-item-icon, .pp-tag-image, .pp-tag-icon) {
             flex: none;
         }

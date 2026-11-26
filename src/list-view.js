@@ -1,10 +1,13 @@
 "use strict";
 
+import createDecorations from "burrowkit/decorations.js";
 import RowList from "burrowkit/list.js";
 import Search from "burrowkit/search.js";
 import { addClasses, fixedClass, toggleClasses } from "./classes.js";
-import { hideBrokenImages, syncIcon, syncImage } from "./decorations.js";
 import Glide from "./glide.js";
+
+// The images (data-image) and icons (data-icon) of the rows, with the picker's classes.
+const { hideBrokenImages, syncIcon, syncImage } = createDecorations({ addClasses, fixedClass });
 
 /**
  * The popover: a search box with select all / none buttons, and the list of entries.

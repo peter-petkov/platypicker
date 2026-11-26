@@ -1,7 +1,10 @@
 "use strict";
 
-import { addClasses } from "./classes.js";
-import { hideBrokenImages, syncIcon, syncImage } from "./decorations.js";
+import createDecorations from "burrowkit/decorations.js";
+import { addClasses, fixedClass } from "./classes.js";
+
+// The images (data-image) and icons (data-icon) of the badges, with the picker's classes.
+const { hideBrokenImages, syncIcon, syncImage } = createDecorations({ addClasses, fixedClass });
 
 /**
  * The badges shown over a closed multiple select: one per selected option, on one line, with a "+N" count for
