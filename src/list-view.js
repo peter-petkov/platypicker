@@ -1,32 +1,22 @@
 "use strict";
 
+import RowList from "burrowkit/list.js";
 import Search from "burrowkit/search.js";
-import { addClasses, toggleClasses } from "./classes.js";
+import { addClasses, fixedClass, toggleClasses } from "./classes.js";
 import { hideBrokenImages, syncIcon, syncImage } from "./decorations.js";
 import Glide from "./glide.js";
 
 /**
  * The popover: a search box with select all / none buttons, and the list of entries.
  *
- * It renders what an OptionSource holds, a few rows at a time as the list scrolls, and reports what the user does
- * through the `actions` it is given (activate, selectAll, selectNone, close, loadMore, full). It never touches the select
- * itself.
+ * It renders what an OptionSource holds, through Burrowkit's RowList (batches of rows as the list scrolls, groups,
+ * dividers, reconciling), and reports what the user does through the `actions` it is given (activate, selectAll,
+ * selectNone, close, loadMore, full). It never touches the select itself.
  */
 export default class ListView {
-    // The list starts with a batch of rows and searches ahead a batch at a time, of the configured size; a batch size
-    // of 0 turns batching off, and the list streams in steps of #streamChunkSize rows instead. A scan step takes at most
-    // #scanBudget milliseconds.
-    static #defaultBatchSize = 50;
-    static #streamChunkSize = 100;
-    static #scanBudget = 8;
-
-    // How much of the list stays rendered below its visible part, in popover heights. Rows are shown a few at a
-    // time as the list scrolls, keeping this much ahead, so the scrollbar shrinks smoothly instead of in steps.
-    static #cushion = 1;
-
     // Emoji, plus the characters that glue them together: skin tones, flags, joiners, variation selectors, keycaps,
     // tags.
-    static #emoji = /[\p{Extended_Pictographic}\p{Emoji_Modifier}\p{Regional_Indicator}\u200d\ufe0f\u20e3\u{e0020}-\u{e007f}]/gu;
+    static #emoji = /[\p{Extended_Pictographic}\p{Emoji_Modifier}\p{Regional_Indicator}‍️⃣\u{e0020}-\u{e007f}]/gu;
 
     /**
      * The text type-ahead matches against: folded like a search (see Search.fold), with emoji removed so
@@ -38,13 +28,7 @@ export default class ListView {
 
     static #lastId = 0;
 
-    /** Lets the browser handle input and paint before the next step. */
-    static #yieldToMain() {
-        return globalThis.scheduler?.yield?.() ?? new Promise(resolve => setTimeout(resolve));
-    }
-
     #source;
-    #highlighter;
     #actions;
     #signal;
 
@@ -54,7 +38,8 @@ export default class ListView {
     #selectAllButton;
     #selectNoneButton;
     #busy = false;                      // Whether select all or select none is running.
-    #list;
+    #rowList;                           // The rows (see Burrowkit's RowList).
+    #list;                              // Its <ul role="listbox">.
     #empty;                             // "No matches", shown under the list when a search finds nothing.
     #status;                            // Tells screen readers how many options match the search, or that max is reached.
     #announceTimer;
@@ -72,35 +57,17 @@ export default class ListView {
 
     #config = {};
     #full = false;                      // Whether max options are selected, so the others can't be picked.
-    #view = null;                      // The FilteredView being shown.
-    #prepared = [];                     // Matches scanned ahead a batch at a time, waiting to be shown.
-    #topUpFrame = 0;                    // The animation frame that tops the list up, while one is scheduled.
-    #resizeObserver;                    // Tops the list up when the popover changes size.
-    #askedForMore = false;              // Whether the page was asked for more options since it last added some.
-    #wasAtEnd = false;                  // Whether every match was shown and the end in view, as of the last top-up.
-    #lastGroup = null;                  // The option group of the last row rendered.
-    #rows = [];                         // The rendered records, in list order.
-    #recordsByEntry = new WeakMap();    // Only the entries rendered right now.
-    #groupItems = new Map();            // option group -> its <li role="group">, as rendered right now
-    #dividerItems = new Map();          // entry -> the <li> of the divider rendered right before it
-    #setSize = null;                    // The aria-setsize the rows carry.
     #folded = new Set();                // The option groups folded in the sheet, kept while the picker lives.
-    #consumed = 0;                      // How many matches were pulled from the view, folded ones too.
-    #positions = new WeakMap();         // entry -> its place among the matches, for aria-posinset
-    #pulledGroup = null;                // The option group of the last match pulled.
     #tabStop = null;                    // The one row Tab stops at; the arrow keys move between rows.
-    #recordsByButton = new WeakMap();
-    #tail = [];                         // The <li>s after the last row, present while more rows are to come.
     #typeAheadBuffer = "";
     #typeAheadTimer;
 
     constructor({ select, source, highlighter, actions, signal }) {
         this.#source = source;
-        this.#highlighter = highlighter;
         this.#actions = actions;
         this.#signal = signal;
 
-        this.#buildPopover(select);
+        this.#buildPopover(select, highlighter);
         this.#buildControls();
         this.#wireList();
         this.#wireKeyboardTypeAhead();
@@ -115,19 +82,15 @@ export default class ListView {
         clearTimeout(this.#typeAheadTimer);
         clearTimeout(this.#announceTimer);
         clearTimeout(this.#counterTimer);
-        cancelAnimationFrame(this.#topUpFrame);
-        this.#resizeObserver.disconnect();
+        this.#rowList.destroy();
         this.#popover.remove();
-        this.#view = null;
-        this.#rows = [];
-        this.#tail = [];
     }
 
     // -----------------------------------------------------------------
     // Construction
     // -----------------------------------------------------------------
 
-    #buildPopover(select) {
+    #buildPopover(select, highlighter) {
         this.#popover = document.createElement("div");
         addClasses(this.#popover, "menu");
         this.#popover.popover = "manual";
@@ -135,9 +98,25 @@ export default class ListView {
         this.#popover.setAttribute("role", "dialog");
         select.insertAdjacentElement("afterend", this.#popover);
 
-        this.#list = document.createElement("ul");
-        addClasses(this.#list, "list");
-        this.#list.setAttribute("role", "listbox");
+        this.#rowList = new RowList({
+            container: this.#popover,
+            classes: { addClasses, fixedClass },
+            highlighter,
+            signal: this.#signal,
+            hooks: {
+                createRow: entry => this.#createRow(entry),
+                updateRow: record => this.#updateRow(record),
+                highlightRow: (record, view) => this.#highlightRow(record, view),
+                isFolded: (group, view) => this.#isFolded(group, view),
+                createGroup: (li, header) => this.#createGroup(header),
+                syncGroup: (li, group, view) => this.#syncHeader(li, group, view),
+                scroller: () => this.#scroller,
+                covered: () => ({ top: this.#coveredHeight, bottom: this.#coveredBottom }),
+                rendered: () => this.#rendered(),
+                loadMore: ({ batchSize }) => this.#actions.loadMore({ search: this.#search.value.trim(), batchSize }),
+            },
+        });
+        this.#list = this.#rowList.element;
         this.#list.id = `${this.#popover.id}-list`;
 
         // Outside the list, which may only hold options.
@@ -302,7 +281,7 @@ export default class ListView {
             }
 
             const button = e.target.closest(".pp-item");
-            const record = button && this.#recordsByButton.get(button);
+            const record = button && this.#rowList.recordOfElement(button);
             if (!record) return;
             if (record.disabled) {
                 if (!record.entry.disabled) this.#sayLimitReached(); // Disabled by the limit: says why it does nothing.
@@ -316,16 +295,8 @@ export default class ListView {
 
         // The row that takes focus, however it got it, becomes the one Tab stops at.
         this.#list.addEventListener("focusin", e => {
-            if (this.#recordsByButton.has(e.target)) this.#setTabStop(e.target);
+            if (this.#rowList.recordOfElement(e.target)) this.#setTabStop(e.target);
         }, { signal: this.#signal });
-
-        // More rows as the list scrolls, or as the popover grows (say, with the window), at most once a frame. The
-        // popover scrolls, or in the sheet the list does.
-        for (const scroller of [this.#popover, this.#list])
-            scroller.addEventListener("scroll", () => this.#scheduleTopUp(), { passive: true, signal: this.#signal });
-        this.#resizeObserver = new ResizeObserver(() => this.#scheduleTopUp());
-        this.#resizeObserver.observe(this.#popover);
-        this.#resizeObserver.observe(this.#list);
     }
 
     // -----------------------------------------------------------------
@@ -334,12 +305,11 @@ export default class ListView {
 
     /**
      * Applies the element's settings: { search, controls, counter, searchPlaceholder, selectAllLabel,
-     * selectNoneLabel, counterLabel, limitReachedLabel, placeholders, batchSize, loading, max }. Safe to call again whenever any of them changes. A new batch size is used
-     * from the next batch on, and the rows already rendered stay.
+     * selectNoneLabel, counterLabel, limitReachedLabel, placeholders, batchSize, loading, max }. Safe to call again
+     * whenever any of them changes. A new batch size is used from the next batch on, and the rows already rendered
+     * stay.
      */
     configure(config) {
-        const placeholdersChanged = config.placeholders !== this.#config.placeholders;
-        const loadingChanged = Boolean(config.loading) !== Boolean(this.#config.loading);
         const maxChanged = config.max !== this.#config.max;
         this.#config = config;
         if (maxChanged) this.refresh();
@@ -353,15 +323,8 @@ export default class ListView {
         this.#cancelButton.textContent = config.cancelLabel;
         this.syncControls();
 
-        if (placeholdersChanged || loadingChanged) {
-            this.#askedForMore = false;
-            this.#syncTail(placeholdersChanged);
-            this.#scheduleTopUp();
-        }
-        if (loadingChanged) {
-            this.#list.setAttribute("aria-busy", Boolean(config.loading));
-            this.#syncEmpty();
-        }
+        this.#rowList.configure({ batchSize: config.batchSize, placeholders: config.placeholders, loading: config.loading });
+        this.#syncEmpty();
         this.#syncCounter();
     }
 
@@ -417,20 +380,6 @@ export default class ListView {
         }
     }
 
-    /** Whether more matches are to come: prepared and waiting to be shown, or not scanned yet. */
-    get #hasMore() {
-        return this.#prepared.length > 0 || Boolean(this.#view?.hasMore);
-    }
-
-    get #isBatched() {
-        return (this.#config.batchSize ?? ListView.#defaultBatchSize) > 0;
-    }
-
-    /** How many rows the next step renders. */
-    get #stepSize() {
-        return this.#config.batchSize || (this.#config.batchSize === 0 ? ListView.#streamChunkSize : ListView.#defaultBatchSize);
-    }
-
     // -----------------------------------------------------------------
     // Rendering
     // -----------------------------------------------------------------
@@ -446,7 +395,7 @@ export default class ListView {
      * long list holds up its opening. The selected row is rendered again as focus goes to it (see focusInitial).
      */
     trim() {
-        if (this.#isBatched && this.#rows.length > this.#stepSize) this.render();
+        if (this.#rowList.isBatched && this.#rowList.rows.length > this.#rowList.stepSize) this.render();
     }
 
     /** Shows the entries matching a search, starting again from the first batch. An empty search shows them all. */
@@ -463,10 +412,22 @@ export default class ListView {
 
         // Counting the matches of a search on a long list takes a moment, so it waits for a short pause too.
         clearTimeout(this.#counterTimer);
-        if (this.#config.counter && this.#view.size < 0) {
-            const view = this.#view;
-            this.#counterTimer = setTimeout(() => this.#view === view && this.#syncCounter(view.count()), 150);
-        }
+        const view = this.#rowList.view;
+        if (this.#config.counter && view.size < 0)
+            this.#counterTimer = setTimeout(() => this.#rowList.view === view && this.#syncCounter(view.count()), 150);
+    }
+
+    /** Shows the matches of a folded query, from the first batch. */
+    #showMatches(query) {
+        this.#rowList.show(this.#source.filter(query, this.#config.locale, !this.#config.loading));
+        this.#syncCounter();
+    }
+
+    /** After the list added rows or brought them up to date. */
+    #rendered() {
+        this.#syncTabStop();
+        this.#syncEmpty();
+        this.#syncCounter();
     }
 
     /**
@@ -478,16 +439,16 @@ export default class ListView {
             matchMedia("(prefers-reduced-motion: reduce)").matches) return null;
 
         this.#glide ??= new Glide(this.#popover);
-        return this.#glide.take(this.#scroller, this.#glideRows(), this.#groupItems);
+        return this.#glide.take(this.#scroller, this.#glideRows(), this.#rowList.groupItems);
     }
 
     #playGlide(taken) {
-        if (taken) this.#glide.play(taken, this.#scroller, this.#glideRows(), this.#groupItems);
+        if (taken) this.#glide.play(taken, this.#scroller, this.#glideRows(), this.#rowList.groupItems);
     }
 
     /** The rendered rows, in order, as Glide takes them: keyed by their option, with their group. */
     * #glideRows() {
-        for (const { entry, button } of this.#rows) yield { key: entry, group: entry.group ?? null, button };
+        for (const { entry, element } of this.#rowList.rows) yield { key: entry, group: entry.group ?? null, button: element };
     }
 
     /**
@@ -496,16 +457,17 @@ export default class ListView {
      * a search, where it has been counted. Without it, a search whose matches aren't all scanned yet keeps
      * the text it has until they are counted (see filter).
      */
-    #syncCounter(matches = this.#view?.size) {
+    #syncCounter(matches = this.#rowList.view?.size) {
         const counter = this.#counter;
+        const view = this.#rowList.view;
         counter.hidden = !this.#config.counter;
-        if (counter.hidden || !this.#view || matches < 0) return;
+        if (counter.hidden || !view || matches < 0) return;
 
         const text = this.#config.counterLabel({
-            shown: this.#shownCount,
+            shown: this.#rowList.shownCount,
             matches,
             total: this.#source.entries.length,
-            search: Boolean(this.#view.query),
+            search: Boolean(view.query),
             loading: Boolean(this.#config.loading),
         });
         if (counter.textContent !== text) counter.textContent = text;
@@ -516,134 +478,37 @@ export default class ListView {
      * count also gives the rows their aria-setsize, which would otherwise wait for the list to be rendered.
      */
     #announce() {
-        const view = this.#view;
+        const view = this.#rowList.view;
         if (!view?.query || this.#signal.aborted) {
             this.#status.textContent = "";
             return;
         }
 
         const count = view.count();
-        this.#syncSetSize(view);
+        this.#rowList.syncSetSize();
         this.#status.textContent = count ? this.#config.matchesLabel(count) : this.#config.noMatchesLabel;
     }
 
     /** Shows "No matches" when a search has found nothing, and nothing more is coming. */
     #syncEmpty() {
-        const view = this.#view;
-        this.#empty.hidden = !(view?.query && !this.#hasMore && !this.#rows.length && !this.#config.loading);
-    }
-
-    /**
-     * The first batch is rendered right away. With batching on, more rows follow a few at a time as the list
-     * scrolls (see #topUp). With batching off, the rest streams in step by step. Either way a newer search replaces
-     * the one being shown.
-     */
-    #showMatches(query) {
-        const view = this.#view = this.#source.filter(query, this.#config.locale, !this.#config.loading);
-
-        this.#prepared = [];
-        this.#askedForMore = false;
-        this.#highlighter.clear();
-        this.#lastGroup = null;
-        this.#setSize = null;
-        this.#resetPull();
-        this.#rows = [];
-        this.#recordsByEntry = new WeakMap();
-        this.#groupItems = new Map();
-        this.#dividerItems = new Map();
-        this.#list.replaceChildren();
-        this.#tail = [];
-
-        this.#renderMore(this.#stepSize);
-        this.#syncCounter();
-        this.#scheduleTopUp();
-
-        if (!this.#isBatched) {
-            // noinspection JSIgnoredPromiseFromCall, The stream manages its own lifetime and doesn't need to be awaited.
-            this.#stream(view);
-        }
-    }
-
-    async #stream(view) {
-        this.#list.setAttribute("aria-busy", view.hasMore || Boolean(this.#config.loading));
-
-        try {
-            while (this.#hasMore) {
-                await ListView.#yieldToMain();
-                if (this.#view !== view || this.#signal.aborted) return;
-
-                this.#renderMore(this.#stepSize);
-            }
-        } finally {
-            if (this.#view === view) this.#list.setAttribute("aria-busy", Boolean(this.#config.loading));
-        }
-    }
-
-    /**
-     * Shows the next `count` matches, or fewer if the scan runs out of time or of entries. The scan prepares them a
-     * batch at a time (or as many as a bigger step needs), so that showing a few rows per frame never scans per
-     * frame.
-     */
-    #renderMore(count, budget = ListView.#scanBudget) {
-        if (this.#prepared.length < count && this.#view.hasMore) {
-            const pulled = this.#pull(this.#view, Math.max(count - this.#prepared.length, this.#stepSize), budget);
-            this.#prepared = this.#prepared.concat(pulled);
-        }
-
-        this.#appendRows(this.#view, this.#prepared.splice(0, count));
-        this.#syncTail();
-        this.#syncEmpty();
-        this.#syncCounter();
-    }
-
-    /**
-     * Pulls the next `count` matches from the view to render, or fewer if `budget` milliseconds run out or the view
-     * does. Of a folded group only the first match is kept, which brings its header; the rest are passed over, and
-     * so don't count. Each kept match is given its place among all the matches, for aria-posinset.
-     */
-    #pull(view, count, budget) {
-        const found = [];
-        const deadline = performance.now() + budget;
-
-        do {
-            for (const entry of view.pull(count - found.length, deadline - performance.now())) {
-                this.#consumed++;
-                if (entry.group && entry.group === this.#pulledGroup && this.#isFolded(entry.group, view)) continue;
-
-                this.#pulledGroup = entry.group;
-                this.#positions.set(entry, this.#consumed);
-                found.push(entry);
-            }
-        } while (found.length < count && view.hasMore && performance.now() < deadline);
-
-        return found;
-    }
-
-    /** Starts #pull over, for a new view. */
-    #resetPull() {
-        this.#consumed = 0;
-        this.#positions = new WeakMap();
-        this.#pulledGroup = null;
-    }
-
-    /** How many matches the list has shown, as rows or inside folded groups. */
-    get #shownCount() {
-        return this.#consumed - this.#prepared.length;
+        const view = this.#rowList.view;
+        this.#empty.hidden = !(view?.query && !this.#rowList.hasMore && !this.#rowList.rows.length &&
+            !this.#config.loading);
     }
 
     /**
      * Whether a group's rows are folded away: in the sheet, where its header was tapped, while there's no search
      * (which shows every group that has matches unfolded).
      */
-    #isFolded(group, view = this.#view) {
+    #isFolded(group, view = this.#rowList.view) {
         return Boolean(group) && this.#sheet && !view?.query && this.#folded.has(group);
     }
 
     /** Folds or unfolds the group of a tapped header, in the sheet while there's no search. */
     #toggleGroup(header) {
-        if (!this.#sheet || this.#view?.query) return;
+        if (!this.#sheet || this.#rowList.view?.query) return;
 
-        const group = [...this.#groupItems].find(([, li]) => li.firstElementChild === header)?.[0];
+        const group = [...this.#rowList.groupItems].find(([, li]) => li.firstElementChild === header)?.[0];
         if (group) this.#setFolded(group, !this.#folded.has(group));
     }
 
@@ -653,7 +518,7 @@ export default class ListView {
      * the open sheet the rows fade, and its card and the groups below glide, as they do for a search (see Glide).
      */
     #setFolded(group, folded) {
-        const header = this.#groupItems.get(group)?.firstElementChild;
+        const header = this.#rowList.groupItems.get(group)?.firstElementChild;
         const top = header?.getBoundingClientRect().top;
         const taken = this.#takeForGlide();
 
@@ -667,10 +532,23 @@ export default class ListView {
     }
 
     /**
+     * Adds to a group's header the count of its selected options, shown while it's folded (see #syncHeader). In the
+     * sheet a tap on the header folds the group. Screen readers can't reach the header, and nothing starts folded, so
+     * they always get every group unfolded: a listbox may hold only options and groups, which leaves no valid place
+     * for a button that folds.
+     */
+    #createGroup(header) {
+        const count = document.createElement("span");
+        addClasses(count, "headerCount");
+        count.hidden = true;
+        header.append(count);
+    }
+
+    /**
      * Brings a group's header up to date: its label, whether it's folded (data-folded and the headerFolded plug),
      * and, while it is, how many of its options are selected, so a folded group doesn't hide them.
      */
-    #syncHeader(li, group, view = this.#view) {
+    #syncHeader(li, group, view = this.#rowList.view) {
         const header = li.firstElementChild;
         const [text, count] = header.childNodes;
         if (text.data !== group.label) text.data = group.label;
@@ -691,84 +569,19 @@ export default class ListView {
         count.hidden = !selected;
     }
 
-    #scheduleTopUp() {
-        this.#topUpFrame ||= requestAnimationFrame(() => {
-            this.#topUpFrame = 0;
-            this.#topUp();
-        });
-    }
-
-    /**
-     * Keeps a cushion of rendered rows below the visible part of the list, showing just enough to make up for what
-     * scrolled into view, so the list grows smoothly as it scrolls. Then sees whether to ask the page for more.
-     */
-    #topUp() {
-        if (!this.#view || this.#signal.aborted || !this.#popover.matches(":popover-open")) return;
-
-        // The skeleton rows' offsetTop is measured in the scroller: the popover is positioned, and so is the sheet's
-        // list (see platypicker.css).
-        const scroller = this.#scroller;
-        const end = this.#tail[0]?.offsetTop ?? scroller.scrollHeight;
-        const below = end - scroller.scrollTop - scroller.clientHeight;
-        const wanted = scroller.clientHeight * ListView.#cushion;
-
-        if (below < wanted && this.#hasMore && this.#isBatched) {
-            const rowHeight = this.#rows.at(-1)?.button.offsetHeight || 32;
-            this.#renderMore(Math.ceil((wanted - below) / rowHeight));
-            this.#scheduleTopUp(); // Again next frame, in case the scan ran out of time or the rows are taller.
-        }
-
-        this.#askForMore(below < wanted);
-    }
-
-    /**
-     * While the page says it's loading more options, asks it for more before the list runs out: as soon as fewer
-     * than a batch of matches are left to show, so the next page has time to arrive. Once until the page adds
-     * options, and again whenever the end comes into view, in case a fetch got nowhere.
-     */
-    #askForMore(nearEnd) {
-        if (!this.#config.loading) {
-            this.#wasAtEnd = false;
-            return;
-        }
-
-        const unshown = this.#view.count() - this.#shownCount;
-        const atEnd = nearEnd && unshown <= 0;
-
-        if ((unshown < this.#stepSize && !this.#askedForMore) || (atEnd && !this.#wasAtEnd)) {
-            this.#askedForMore = true;
-            this.#actions.loadMore({ search: this.#search.value.trim(), batchSize: this.#stepSize });
-        }
-
-        this.#wasAtEnd = atEnd;
-    }
-
     /**
      * Makes sure the entry has a row, rendering up to it if need be. Returns false when the entry doesn't
      * match the current search, or is in a folded group, unless `unfold` says to unfold that group.
      */
     ensureRendered(entry, { unfold = false } = {}) {
-        const view = this.#view;
+        const view = this.#rowList.view;
         if (!view?.includes(entry)) return false;
         if (this.#isFolded(entry.group, view)) {
             if (!unfold) return false;
             this.#setFolded(entry.group, false);
         }
 
-        while (!this.#recordsByEntry.has(entry) && this.#hasMore) this.#renderMore(this.#stepSize, Infinity);
-
-        return this.#recordsByEntry.has(entry);
-    }
-
-    #appendRows(view, entries) {
-        if (!entries.length) return;
-
-        const { items, groups } = this.#buildItems(view, entries);
-        for (const [group, rows] of groups) group.lastElementChild.append(...rows);
-        this.#list.insertBefore(this.#fragmentOf(items), this.#tail[0] ?? null);
-        this.#syncSetSize(view);
-        this.#syncTabStop();
-        this.#highlightItems(view, entries);
+        return this.#rowList.ensureRendered(entry);
     }
 
     /** The focused element, asked of the list's own root so that it's found inside a shadow root too. */
@@ -783,178 +596,19 @@ export default class ListView {
      */
     reconcile() {
         this.#syncFull(); // Options that went away may have been selected.
-        const focusedIndex = this.#rows.findIndex(record => record.button === this.#focused());
-        const keep = Math.max(this.#rows.length, this.#stepSize);
-        const previous = { records: this.#recordsByEntry, groups: this.#groupItems, dividers: this.#dividerItems };
+        const rows = this.#rowList;
+        const focusedIndex = rows.rows.findIndex(record => record.element === this.#focused());
 
-        const view = this.#view = this.#source.filter(this.#query(), this.#config.locale, !this.#config.loading);
-
-        this.#prepared = [];
-        this.#askedForMore = false;
-        this.#highlighter.clear();
-        this.#lastGroup = null;
-        this.#setSize = null;
-        this.#resetPull();
-        this.#rows = [];
-        this.#recordsByEntry = new WeakMap();
-        this.#groupItems = new Map();
-        this.#dividerItems = new Map();
-
-        const entries = this.#pull(view, keep, Infinity);
-        const { items, groups } = this.#buildItems(view, entries, previous);
-        this.#place(this.#list, items);
-        for (const [group, rows] of groups) this.#place(group.lastElementChild, rows);
-        this.#syncSetSize(view);
-        this.#syncTabStop();
-        this.#highlightItems(view, entries);
-        this.#syncTail();
-        this.#syncEmpty();
+        rows.reconcile(this.#source.filter(this.#query(), this.#config.locale, !this.#config.loading));
+        const view = rows.view;
         this.#syncCounter(this.#config.counter && view.query ? view.count() : undefined);
 
         // A focused row that went away hands focus to the row that took its place, or to the search box.
         if (focusedIndex >= 0 && !this.#popover.contains(this.#focused()) &&
             this.#popover.matches(":popover-open")) {
-            const next = this.#rows[Math.min(focusedIndex, this.#rows.length - 1)];
-            (next && !next.entry.disabled ? next.button : this.#firstFocusable())?.focus({ preventScroll: true });
+            const next = rows.rows[Math.min(focusedIndex, rows.rows.length - 1)];
+            (next && !next.entry.disabled ? next.element : this.#firstFocusable())?.focus({ preventScroll: true });
         }
-
-        this.#scheduleTopUp();
-
-        if (!this.#isBatched) {
-            // noinspection JSIgnoredPromiseFromCall, The stream manages its own lifetime and doesn't need to be awaited.
-            this.#stream(view);
-        }
-    }
-
-    /**
-     * Makes the list items for the given matches, in order: dividers, groups and rows. A group is a
-     * <li role="group"> named by its header, with its rows in a list of its own. Returns the items for the list
-     * itself, and for each group the rows for its list. With `reuse` (the maps of a previous render), items that
-     * are still needed are taken from there and brought up to date.
-     */
-    #buildItems(view, entries, reuse) {
-        const items = [];
-        const groups = new Map(); // group <li> -> the items for its own list
-
-        // The items to add to: the list's own, or a group's. A group may be from an earlier batch.
-        const itemsOf = group => {
-            if (!group) return items;
-            const li = this.#groupItems.get(group);
-            if (!groups.has(li)) groups.set(li, []);
-            return groups.get(li);
-        };
-
-        for (const entry of entries) {
-            // Inside the group when it sits between two of its rows, before it when it comes ahead of the group.
-            const inGroup = entry.group && entry.group === this.#lastGroup;
-
-            if (view.hasDividerBefore(entry)) {
-                let li = reuse?.dividers.get(entry);
-                if (!li) {
-                    const divider = document.createElement("hr");
-                    addClasses(divider, "divider");
-                    li = this.#wrapInListItem(divider);
-                    li.setAttribute("aria-hidden", "true"); // A listbox holds options and groups only.
-                    li.dataset.divider = ""; // So the sheet leaves out the line the row after it would draw.
-                }
-
-                this.#dividerItems.set(entry, li);
-                itemsOf(inGroup && entry.group).push(li);
-            }
-
-            if (entry.group !== this.#lastGroup) {
-                this.#lastGroup = entry.group;
-
-                // A group shows up once per render, so it can be keyed by the group.
-                if (entry.group && !this.#groupItems.has(entry.group)) {
-                    const li = reuse?.groups.get(entry.group) ?? this.#createGroup();
-                    this.#syncHeader(li, entry.group, view);
-
-                    // The sheet rounds off the rows outside a group where a group follows them, which CSS can't
-                    // see without :has() (see #styleBar for why that's avoided).
-                    const previous = items.at(-1) ?? (reuse ? null : this.#lastListItem());
-                    if (previous && !previous.matches(".pp-group"))
-                        previous.dataset.beforeGroup = "";
-
-                    this.#groupItems.set(entry.group, li);
-                    items.push(li);
-                }
-            }
-
-            // A folded group brings only its header, and an empty list, which takes away rows rendered before.
-            if (this.#isFolded(entry.group, view)) {
-                itemsOf(entry.group);
-                continue;
-            }
-
-            const old = reuse?.records.get(entry);
-            const record = old ? this.#updateRecord(old) : this.#createRecord(entry);
-            this.#recordsByEntry.set(entry, record);
-            this.#rows.push(record);
-            record.button.setAttribute("aria-posinset", this.#positions.get(entry) ?? this.#rows.length);
-            if (this.#setSize !== null) record.button.setAttribute("aria-setsize", this.#setSize);
-
-            const li = old ? record.button.parentElement : this.#wrapInListItem(record.button);
-            delete li.dataset.beforeGroup; // Set again above if a group still follows it.
-            itemsOf(entry.group).push(li);
-        }
-
-        return { items, groups };
-    }
-
-    /** The list's last item before the skeleton rows, if there are any. */
-    #lastListItem() {
-        return this.#tail.length ? this.#tail[0].previousElementSibling : this.#list.lastElementChild;
-    }
-
-    /**
-     * A group's <li>: its header, hidden from screen readers since it names the group instead, and the list its
-     * rows go in. Both lists are display: contents, so the rows line up as one. The header holds the group's label,
-     * as a text node, and the count of its selected options shown while it's folded (see #syncHeader).
-     *
-     * In the sheet a tap on the header folds the group. Screen readers can't reach the header, and nothing starts
-     * folded, so they always get every group unfolded: a listbox may hold only options and groups, which leaves no
-     * valid place for a button that folds.
-     */
-    #createGroup() {
-        const header = document.createElement("h6");
-        addClasses(header, "header");
-        header.id = `${this.#popover.id}-${++ListView.#lastId}`;
-        header.setAttribute("aria-hidden", "true");
-
-        const count = document.createElement("span");
-        addClasses(count, "headerCount");
-        count.hidden = true;
-        header.append(document.createTextNode(""), count);
-
-        const list = document.createElement("ul");
-        addClasses(list, "groupList");
-        list.setAttribute("role", "none");
-
-        const li = document.createElement("li");
-        addClasses(li, "group");
-        li.setAttribute("role", "group");
-        li.setAttribute("aria-labelledby", header.id);
-        li.append(header, list);
-        return li;
-    }
-
-    /**
-     * Gives every row the size of the list, for "3 of 20". It's known at once without a search, and once the scan is
-     * done with one; until then it's -1, unknown.
-     */
-    #syncSetSize(view) {
-        const size = String(view.size);
-        if (size === this.#setSize) return;
-
-        this.#setSize = size;
-        for (const record of this.#rows) record.button.setAttribute("aria-setsize", size);
-    }
-
-    #fragmentOf(items) {
-        const fragment = document.createDocumentFragment();
-        fragment.append(...items);
-        return fragment;
     }
 
     /**
@@ -965,7 +619,7 @@ export default class ListView {
         if (this.#tabStop?.isConnected) return;
 
         const selected = this.#source.firstSelected;
-        this.#setTabStop((this.#recordsByEntry.get(selected) ?? this.#rows[0])?.button ?? null);
+        this.#setTabStop((this.#rowList.recordOf(selected) ?? this.#rowList.rows[0])?.element ?? null);
     }
 
     #setTabStop(button) {
@@ -976,67 +630,18 @@ export default class ListView {
     }
 
     /**
-     * Puts the items in a list (the list itself or a group's) in the given order, ahead of the tail. Items that are no
-     * longer wanted are removed, and the rest only move when their order changed, since moving a node takes focus
-     * away from it.
+     * Makes a row: a button, focusable by the arrow keys rather than Tab (see #syncTabStop), with its content in this
+     * order: image, icon, label, subtext, check. The record keeps the parts by name: the label's text node as `text`,
+     * the subtext as `small`. The image and icon are made by #updateParts, and only for an option that has one, so a
+     * row without stays as it was.
      */
-    #place(list, items) {
-        const wanted = new Set(items);
-        for (const child of [...list.children])
-            if (!wanted.has(child) && !this.#tail.includes(child)) child.remove();
-
-        let cursor = list.firstElementChild;
-        for (const item of items) {
-            if (item === cursor) cursor = cursor.nextElementSibling;
-            else list.insertBefore(item, cursor);
-        }
-    }
-
-    /** Highlights the query in the rows of these entries and in the headers of groups matched by name. */
-    #highlightItems(view, entries) {
-        // Ranges are made once the items are in the document: moving a node collapses the ranges inside it.
-        if (!view.query) return;
-
-        for (const entry of entries) {
-            const header = entry.group && this.#groupItems.get(entry.group)?.firstElementChild;
-            if (header && view.groupMatches(entry.group) && !view.textMatches(entry))
-                this.#highlightText(view, header, "text", header.firstChild);
-
-            const record = this.#recordsByEntry.get(entry);
-            if (record && view.textMatches(entry)) this.#highlightMatch(record, view);
-        }
-    }
-
-    #createRecord(entry) {
+    #createRow() {
         const button = document.createElement("button");
         button.type = "button";
         button.setAttribute("role", "option");
         button.tabIndex = -1;
         addClasses(button, "item");
 
-        const record = { entry, button, ...this.#createParts(button), active: undefined, disabled: false };
-        this.#recordsByButton.set(button, record);
-
-        return this.#updateRecord(record);
-    }
-
-    /** Brings a row up to date with its entry, writing only what differs. */
-    #updateRecord(record) {
-        const { entry, button } = record;
-
-        this.#updateParts(record);
-        if (button.title !== entry.title) button.title = entry.title;
-
-        this.#syncState(record);
-        return record;
-    }
-
-    /**
-     * Builds a row's content into its button, in this order: image, icon, label, subtext, check. Returns the parts by
-     * name, which go on the row's record: the label's text node as `text`, the subtext as `small`. The image and icon
-     * are made by #updateParts, and only for an option that has one, so a row without stays as it was.
-     */
-    #createParts(button) {
         const label = document.createElement("span");
         addClasses(label, "label");
         const text = document.createTextNode("");
@@ -1051,7 +656,17 @@ export default class ListView {
         addClasses(check, "check");
 
         button.append(label, small, check);
-        return { image: null, icon: null, label, text, small, check };
+        return { element: button, image: null, icon: null, label, text, small, check, active: undefined, disabled: false };
+    }
+
+    /** Brings a row up to date with its entry, writing only what differs. */
+    #updateRow(record) {
+        const { entry, element } = record;
+
+        this.#updateParts(record);
+        if (element.title !== entry.title) element.title = entry.title;
+
+        this.#syncState(record);
     }
 
     /** Brings a row's content up to date with its entry, writing only what differs. */
@@ -1070,22 +685,22 @@ export default class ListView {
      * the itemDisabled plug: while its option is, and while max options are selected and its option isn't one of them.
      */
     #syncState(record) {
-        const { entry, button } = record;
+        const { entry, element } = record;
         const selected = this.#source.isSelected(entry);
         const active = selected && !entry.ownDisabled;
         if (record.active !== active) {
             record.active = active;
-            button.setAttribute("aria-selected", active);
-            toggleClasses(button, "itemSelected", active);
+            element.setAttribute("aria-selected", active);
+            toggleClasses(element, "itemSelected", active);
         }
 
         // Not the disabled attribute: a disabled row stays focusable, so it can be found, and says it's disabled.
         const disabled = entry.disabled || (this.#full && !selected);
         if (record.disabled !== disabled) {
             record.disabled = disabled;
-            toggleClasses(button, "itemDisabled", disabled);
-            if (disabled) button.setAttribute("aria-disabled", "true");
-            else button.removeAttribute("aria-disabled");
+            toggleClasses(element, "itemDisabled", disabled);
+            if (disabled) element.setAttribute("aria-disabled", "true");
+            else element.removeAttribute("aria-disabled");
         }
     }
 
@@ -1118,72 +733,14 @@ export default class ListView {
         });
     }
 
-    #wrapInListItem(element) {
-        const li = document.createElement("li");
-        li.setAttribute("role", "none");
-        li.append(element);
-        return li;
-    }
-
-    /**
-     * The tail marks the end of the list while more rows are to come: the skeleton rows if there are any
-     * configured, otherwise a single empty item. More rows are to come while some matches aren't shown yet, or
-     * while the page says it's loading more options. #topUp shows them as the list scrolls.
-     */
-    #syncTail(rebuild = false) {
-        const wanted = this.#hasMore || Boolean(this.#config.loading);
-
-        if (this.#tail.length && (!wanted || rebuild)) {
-            for (const li of this.#tail) li.remove();
-            this.#tail = [];
-        }
-
-        if (!wanted) return;
-
-        if (!this.#tail.length) this.#createTail();
-    }
-
-    #createTail() {
-        const count = this.#config.placeholders ?? 0;
-
-        if (!count) {
-            const li = document.createElement("li");
-            li.setAttribute("aria-hidden", "true");
-            this.#list.append(li);
-            this.#tail.push(li);
-            return;
-        }
-
-        for (let i = 0; i < count; i++) {
-            const wave = document.createElement("div");
-            addClasses(wave, "placeholder");
-
-            const bar = document.createElement("span");
-            addClasses(bar, "placeholderBar");
-            wave.append(bar);
-
-            const button = document.createElement("button");
-            button.type = "button";
-            addClasses(button, "item");
-            button.disabled = true;
-            button.setAttribute("aria-disabled", "true");
-            button.append(wave);
-
-            const li = this.#wrapInListItem(button);
-            li.setAttribute("aria-hidden", "true");
-            this.#list.append(li);
-            this.#tail.push(li);
-        }
-    }
-
     /**
      * Brings the rendered rows up to date with which options are selected. Changes to the options themselves (their
      * text, attributes, or which options there are) go through reconcile() instead.
      */
     refresh() {
         this.#syncFull();
-        for (const record of this.#rows) this.#syncState(record);
-        for (const [group, li] of this.#groupItems) this.#syncHeader(li, group);
+        for (const record of this.#rowList.rows) this.#syncState(record);
+        for (const [group, li] of this.#rowList.groupItems) this.#syncHeader(li, group);
     }
 
     // -----------------------------------------------------------------
@@ -1194,17 +751,13 @@ export default class ListView {
         return Search.fold(this.#search.value.trim(), this.#config.locale);
     }
 
-    #highlightMatch(record, view) {
-        const { entry, button, text, small } = record;
-        this.#highlightText(view, button, "text", text);
+    #highlightRow(record, view) {
+        const { entry, element, text, small } = record;
+        this.#rowList.highlightText(view, element, "text", text);
 
         const subtext = entry.subtext.toLowerCase();
         if (subtext && subtext !== entry.label.toLowerCase())
-            this.#highlightText(view, button, "subtext", small.firstChild);
-    }
-
-    #highlightText(view, owner, key, node) {
-        this.#highlighter.apply(owner, key, node, node && view.locate(node.data));
+            this.#rowList.highlightText(view, element, "subtext", small.firstChild);
     }
 
     // -----------------------------------------------------------------
@@ -1213,7 +766,7 @@ export default class ListView {
 
     /** Whether the entry matches the current search. It may not have been rendered yet. */
     isVisible(entry) {
-        return this.#view?.includes(entry) ?? true;
+        return this.#rowList.view?.includes(entry) ?? true;
     }
 
     isSelectable(entry) {
@@ -1230,14 +783,14 @@ export default class ListView {
      * time; its group's header is brought into view instead, with its count of selected options.
      */
     focusInitial({ search = true } = {}) {
-        this.#scheduleTopUp(); // The popover has its size now, so the list can fill it.
+        this.#rowList.scheduleTopUp(); // The popover has its size now, so the list can fill it.
 
         const selected = this.#source.firstSelected;
-        const selectedButton = selected && this.ensureRendered(selected) ? this.#recordsByEntry.get(selected).button : null;
+        const selectedButton = selected && this.ensureRendered(selected) ? this.#rowList.recordOf(selected).element : null;
         const header = !selectedButton && selected && this.#isFolded(selected.group)
-            ? this.#renderHeader(selected.group)
+            ? this.#rowList.renderHeader(selected.group)
             : null;
-        if (selectedButton ?? header) this.#reveal(selectedButton ?? header, true);
+        if (selectedButton ?? header) this.#rowList.reveal(selectedButton ?? header, true);
 
         if (search && !this.#search.hidden) {
             this.#search.focus({ preventScroll: true });
@@ -1250,39 +803,13 @@ export default class ListView {
         target?.focus({ preventScroll: target === selectedButton || Boolean(header) });
     }
 
-    /** Renders the list as far as a group's header, and returns it. */
-    #renderHeader(group) {
-        while (!this.#groupItems.has(group) && this.#hasMore) this.#renderMore(this.#stepSize, Infinity);
-        return this.#groupItems.get(group)?.firstElementChild ?? null;
-    }
-
     #firstFocusable() {
         return this.#popover.querySelector("input:not([hidden]), .pp-item:not(:disabled, [aria-disabled='true'])");
     }
 
     scrollIntoView(entry) {
-        const button = this.#recordsByEntry.get(entry)?.button;
-        if (button) this.#reveal(button, false);
-    }
-
-    /**
-     * Scrolls the popover so that a row is in view, centred or by the least amount. Element.scrollIntoView() would
-     * also scroll the page to bring the row to the middle of the window, which makes the page jump on open.
-     * The sticky bar covers the top of the popover and the sticky counter its bottom, so the parts under them don't
-     * count as in view.
-     */
-    #reveal(button, center) {
-        if (!this.#popover.matches(":popover-open")) return;
-
-        const scroller = this.#scroller;
-        const bar = this.#coveredHeight;
-        const top = button.getBoundingClientRect().top - scroller.getBoundingClientRect().top - scroller.clientTop - bar;
-        const height = button.offsetHeight;
-        const room = scroller.clientHeight - bar - this.#coveredBottom;
-
-        if (center) scroller.scrollTop += top - (room - height) / 2;
-        else if (top < 0) scroller.scrollTop += top;
-        else if (top + height > room) scroller.scrollTop += top + height - room;
+        const button = this.#rowList.recordOf(entry)?.element;
+        if (button) this.#rowList.reveal(button, false);
     }
 
     /**
@@ -1307,7 +834,7 @@ export default class ListView {
     setSheet(sheet) {
         if (this.#sheet === sheet) return;
         this.#sheet = sheet;
-        if (this.#folded.size && this.#view) this.reconcile(); // Folds show only in the sheet.
+        if (this.#folded.size && this.#rowList.view) this.reconcile(); // Folds show only in the sheet.
     }
 
     /** The parts the sheet's behaviour works with (see Sheet). */
@@ -1340,7 +867,7 @@ export default class ListView {
             const match = this.#findTypeAheadMatch(this.#typeAheadBuffer);
 
             if (match && this.ensureRendered(match, { unfold: true })) {
-                this.#recordsByEntry.get(match).button.focus();
+                this.#rowList.recordOf(match).element.focus();
 
                 requestAnimationFrame(() => this.scrollIntoView(match));
 
@@ -1386,7 +913,7 @@ export default class ListView {
             // Home and End go to the first and last row, Page Up and Page Down a popover's height. Only from a row,
             // so that they still move the caret in the search box.
             const jump = { Home: -Infinity, End: Infinity, PageUp: -1, PageDown: 1 }[e.code];
-            if (jump && this.#recordsByButton.has(e.target)) {
+            if (jump && this.#rowList.recordOfElement(e.target)) {
                 e.preventDefault();
                 this.#jump(e.target, jump);
                 return;
@@ -1401,8 +928,8 @@ export default class ListView {
             e.preventDefault();
 
             // On the last rendered item the next batch comes first, so the key never stalls at the end of a longer list.
-            if (step > 0 && e.target === focusable.at(-1) && this.#hasMore) {
-                this.#renderMore(this.#stepSize, Infinity);
+            if (step > 0 && e.target === focusable.at(-1) && this.#rowList.hasMore) {
+                this.#rowList.renderMore(this.#rowList.stepSize, Infinity);
                 focusable = focusableElements();
             }
 
@@ -1416,18 +943,19 @@ export default class ListView {
      * Infinity). Rows that aren't rendered yet are rendered first, so End reaches the last match of a long list.
      */
     #jump(from, pages) {
-        const index = this.#rows.findIndex(record => record.button === from);
+        const rows = this.#rowList;
+        const index = rows.rows.findIndex(record => record.element === from);
         const room = this.#scroller.clientHeight - this.#coveredHeight - this.#coveredBottom;
         const pageSize = Math.max(1, Math.floor(room / from.offsetHeight) - 1);
         const wanted = Number.isFinite(pages) ? index + pages * pageSize : pages;
 
-        while (wanted >= this.#rows.length && this.#hasMore)
-            this.#renderMore(wanted === Infinity ? Infinity : this.#stepSize, Infinity);
+        while (wanted >= rows.rows.length && rows.hasMore)
+            rows.renderMore(wanted === Infinity ? Infinity : rows.stepSize, Infinity);
 
-        const target = this.#rows[Math.min(Math.max(wanted, 0), this.#rows.length - 1)]?.button;
+        const target = rows.rows[Math.min(Math.max(wanted, 0), rows.rows.length - 1)]?.element;
         if (!target) return;
 
         target.focus({ preventScroll: true });
-        this.#reveal(target, false);
+        rows.reveal(target, false);
     }
 }
