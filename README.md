@@ -576,7 +576,7 @@ Safari 27 has `appearance: base-select`, but on the Mac it still draws `<select 
 
 ## About
 
-Platypicker is an open-source web component that enhances native selects, with no dependencies. It's developed on GitHub and published to [npm](https://www.npmjs.com/package/platypicker). Bug reports and feature requests go to [GitHub issues](https://github.com/peter-petkov/platypicker/issues), and pull requests are welcome, including corrections to the translations. This project is tested with BrowserStack.
+Platypicker is an open-source web component that enhances native selects, with no dependencies. It's developed on GitHub and published to [npm](https://www.npmjs.com/package/platypicker). Bug reports and feature requests go to [GitHub issues](https://github.com/peter-petkov/platypicker/issues), questions and ideas to [GitHub Discussions](https://github.com/peter-petkov/platypicker/discussions), and pull requests are welcome, including corrections to the translations. This project is tested with BrowserStack.
 
 ### License
 
