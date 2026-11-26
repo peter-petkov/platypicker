@@ -1,8 +1,9 @@
 "use strict";
 
-import { addClasses, classes, removeClasses } from "./classes.js";
 import Highlighter from "burrowkit/highlighter.js";
-import Languages, { languages } from "./languages.js";
+import Languages from "burrowkit/languages.js";
+import { addClasses, classes, removeClasses } from "./classes.js";
+import translations, { languages } from "./languages.js";
 import ListView from "./list-view.js";
 import OptionSource from "./option-source.js";
 import Sheet from "./sheet.js";
@@ -412,7 +413,7 @@ export default class PlatyPicker extends HTMLElement {
      */
     #syncLanguage() {
         const locale = Languages.of(this);
-        const { texts, ready } = Languages.texts(locale, PlatyPicker.languageMap);
+        const { texts, ready } = translations.texts(locale, PlatyPicker.languageMap);
 
         this.#locale = locale;
         this.#texts = texts;
