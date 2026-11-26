@@ -1,6 +1,6 @@
 "use strict";
 
-import Languages from "./languages.js";
+import Search from "burrowkit/search.js";
 
 /**
  * An <optgroup> as the list sees it.
@@ -74,8 +74,8 @@ export class OptionEntry {
  * never searched in one go, and a view that is no longer wanted is simply dropped.
  *
  * An entry matches when the query matches its label, subtext or icon, or its option group's label (which includes the
- * whole group), as Languages.match matches: by its letters in order, the first starting a word, or as a whole. Both
- * sides are compared folded (see Languages.fold), so case and accents don't matter.
+ * whole group), as Search.match matches: by its letters in order, the first starting a word, or as a whole. Both
+ * sides are compared folded (see Search.fold), so case and accents don't matter.
  *
  * Tiered, strong matches come first, those where every matched piece starts a word, then the weak ones, each in
  * list order: the list is scanned twice, the second time for the weak matches. An option group moves as a whole,
@@ -111,7 +111,7 @@ export class FilteredView {
     #prepare;
 
     /**
-     * `query` is folded already; `fold` folds a text the same way, and `prepare` makes it ready for Languages.match.
+     * `query` is folded already; `fold` folds a text the same way, and `prepare` makes it ready for Search.match.
      * Without `tiered`, the matches come in list order.
      */
     constructor(entries, query, fold, prepare, tiered = true) {
@@ -195,9 +195,9 @@ export class FilteredView {
         return Boolean(this.#query) && this.#tierOf(entry) !== FilteredView.#none;
     }
 
-    /** Where the query matches a text, as { start, end } pieces of it (see Languages.match), or null. */
+    /** Where the query matches a text, as { start, end } pieces of it (see Search.match), or null. */
     locate(text) {
-        return Languages.match(this.#prepare(text), this.#query)?.parts ?? null;
+        return Search.match(this.#prepare(text), this.#query)?.parts ?? null;
     }
 
     /** Whether the query matches the label of the entry's option group. */
@@ -244,9 +244,9 @@ export class FilteredView {
 
     // The cheap test on the folded text first, since most texts fail it and preparing a text costs more.
     #match(text) {
-        if (!text || !Languages.mayMatch(this.#fold(text), this.#query)) return FilteredView.#none;
+        if (!text || !Search.mayMatch(this.#fold(text), this.#query)) return FilteredView.#none;
 
-        const match = Languages.match(this.#prepare(text), this.#query);
+        const match = Search.match(this.#prepare(text), this.#query);
         return !match ? FilteredView.#none : match.strong ? FilteredView.#strong : FilteredView.#weak;
     }
 
@@ -266,7 +266,7 @@ export default class OptionSource {
     #groupsByElement = new WeakMap();
     #observer;
     #folded = new Map();    // text -> its folded form, for #foldedLocale
-    #prepared = new Map();  // text -> its form for Languages.match, for #foldedLocale
+    #prepared = new Map();  // text -> its form for Search.match, for #foldedLocale
     #foldedLocale = null;
 
     constructor(select) {
@@ -362,7 +362,7 @@ export default class OptionSource {
 
     /**
      * The entries matching a search, found lazily. The query is trimmed and folded for the locale (see
-     * Languages.fold); an empty one matches all. Strong matches come first unless `tiered` is false (see
+     * Search.fold); an empty one matches all. Strong matches come first unless `tiered` is false (see
      * FilteredView).
      */
     filter(query, locale = "", tiered = true) {
@@ -371,17 +371,17 @@ export default class OptionSource {
     }
 
     /**
-     * Folds a text (see Languages.fold), remembering it, so a search or type-ahead doesn't fold every label again on
+     * Folds a text (see Search.fold), remembering it, so a search or type-ahead doesn't fold every label again on
      * every key. The memory is by text, so a changed option simply misses it, and it starts over when the language
      * changes or it grows past the number of texts the list can have.
      */
     fold(text, locale = "") {
-        return this.#remember(this.#folded, text, locale, Languages.fold);
+        return this.#remember(this.#folded, text, locale, Search.fold);
     }
 
-    /** Makes a text ready for Languages.match (see Languages.prepare), remembering it as fold() does. */
+    /** Makes a text ready for Search.match (see Search.prepare), remembering it as fold() does. */
     prepare(text, locale = "") {
-        return this.#remember(this.#prepared, text, locale, Languages.prepare);
+        return this.#remember(this.#prepared, text, locale, Search.prepare);
     }
 
     #remember(memory, text, locale, make) {

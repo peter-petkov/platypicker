@@ -1,9 +1,9 @@
 "use strict";
 
+import Search from "burrowkit/search.js";
 import { addClasses, toggleClasses } from "./classes.js";
 import { hideBrokenImages, syncIcon, syncImage } from "./decorations.js";
 import Glide from "./glide.js";
-import Languages from "./languages.js";
 
 /**
  * The popover: a search box with select all / none buttons, and the list of entries.
@@ -29,7 +29,7 @@ export default class ListView {
     static #emoji = /[\p{Extended_Pictographic}\p{Emoji_Modifier}\p{Regional_Indicator}\u200d\ufe0f\u20e3\u{e0020}-\u{e007f}]/gu;
 
     /**
-     * The text type-ahead matches against: folded like a search (see Languages.fold), with emoji removed so
+     * The text type-ahead matches against: folded like a search (see Search.fold), with emoji removed so
      * "🧀 Cheese" is found by typing "ch".
      */
     #typeAheadText(label) {
@@ -453,7 +453,7 @@ export default class ListView {
     filter(rawValue) {
         // In the open sheet, the rows glide to their new places (see Glide).
         const taken = this.#takeForGlide();
-        this.#showMatches(Languages.fold(rawValue.trim(), this.#config.locale));
+        this.#showMatches(Search.fold(rawValue.trim(), this.#config.locale));
         this.#scroller.scrollTop = 0;
         this.#playGlide(taken);
 
@@ -1191,7 +1191,7 @@ export default class ListView {
     // -----------------------------------------------------------------
 
     #query() {
-        return Languages.fold(this.#search.value.trim(), this.#config.locale);
+        return Search.fold(this.#search.value.trim(), this.#config.locale);
     }
 
     #highlightMatch(record, view) {
@@ -1336,7 +1336,7 @@ export default class ListView {
             // A letter or digit of any script.
             if (e.ctrlKey || e.altKey || e.metaKey || !/^[\p{L}\p{N}]$/u.test(e.key)) return;
 
-            this.#typeAheadBuffer += Languages.fold(e.key, this.#config.locale);
+            this.#typeAheadBuffer += Search.fold(e.key, this.#config.locale);
             const match = this.#findTypeAheadMatch(this.#typeAheadBuffer);
 
             if (match && this.ensureRendered(match, { unfold: true })) {
