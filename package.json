@@ -48,6 +48,8 @@
     "build": "node tools/build.mjs",
     "check:firefox": "node tools/browser-check.mjs firefox",
     "check:webkit": "node tools/browser-check.mjs webkit",
-    "check:types": "tsc -p types"
+    "check:types": "tsc -p types",
+    "sync:css": "node tools/sync-css.mjs",
+    "check:css": "node tools/sync-css.mjs --check"
   }
 }

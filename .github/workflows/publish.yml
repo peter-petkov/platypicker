@@ -114,6 +114,10 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # The stylesheet carries a copy of Burrowkit's shared CSS, which has to be the installed release's.
+      - name: Check the synced CSS
+        run: npm run check:css
+
       - name: Build package if necessary
         run: npm run build --if-present
 
