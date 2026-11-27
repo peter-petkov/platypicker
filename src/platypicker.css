@@ -156,6 +156,7 @@
             /* Full height leaves a strip at the top, which the spring between heights may overshoot into. */
             max-height: var(--_pp-screen);
             overflow: hidden;
+            outline: none; /* Takes focus as it opens (see ListView.focusInitial). */
 
             /* About the height of Safari's two bars over the keyboard, and some. */
             &[data-keyboard] {

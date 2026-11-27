@@ -779,13 +779,14 @@ export default class ListView {
     /**
      * Called when the popover opens. The selected item is rendered if it wasn't yet and brought into view. Focus
      * goes to the search box when there is one, otherwise to the selected item, otherwise to the first item. With
-     * `search` false (in the sheet, where focusing the search box would bring up the on-screen keyboard), the
-     * search box is passed over.
+     * `sheet` true, focus goes to the popover itself: focusing the search box would bring up the on-screen keyboard,
+     * and a focused row would show its focus ring to a touch user who has no use for it. Focus is still inside, for
+     * Esc and screen readers, and the arrow keys go on from there.
      *
      * A selected item in a folded group stays folded, or opening would unfold every group with a selection each
      * time; its group's header is brought into view instead, with its count of selected options.
      */
-    focusInitial({ search = true } = {}) {
+    focusInitial({ sheet = false } = {}) {
         this.#rowList.scheduleTopUp(); // The popover has its size now, so the list can fill it.
 
         const selected = this.#source.firstSelected;
@@ -795,7 +796,14 @@ export default class ListView {
             : null;
         if (selectedButton ?? header) this.#rowList.reveal(selectedButton ?? header, true);
 
-        if (search && !this.#search.hidden) {
+        if (sheet) {
+            this.#popover.tabIndex = -1;
+            this.#popover.focus({ preventScroll: true });
+            return;
+        }
+        this.#popover.removeAttribute("tabindex"); // Left from the sheet, before the screen grew.
+
+        if (!this.#search.hidden) {
             this.#search.focus({ preventScroll: true });
             return;
         }
