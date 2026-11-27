@@ -1,5 +1,6 @@
 "use strict";
 
+import Announcer from "burrowkit/announcer.js";
 import createDecorations from "burrowkit/decorations.js";
 import RowList from "burrowkit/list.js";
 import Search from "burrowkit/search.js";
@@ -45,7 +46,6 @@ export default class ListView {
     #list;                              // Its <ul role="listbox">.
     #empty;                             // "No matches", shown under the list when a search finds nothing.
     #status;                            // Tells screen readers how many options match the search, or that max is reached.
-    #announceTimer;
     #limitSaid = null;                  // What the status line said when max was last reached.
     #counter;                           // How many options there are, or match the search, under the list.
     #counterTimer;
@@ -83,7 +83,7 @@ export default class ListView {
 
     destroy() {
         clearTimeout(this.#typeAheadTimer);
-        clearTimeout(this.#announceTimer);
+        this.#status.cancel();
         clearTimeout(this.#counterTimer);
         this.#rowList.destroy();
         this.#popover.remove();
@@ -128,9 +128,9 @@ export default class ListView {
         this.#empty.hidden = true;
 
         // A polite live region, visually hidden, which screen readers read out when its text changes.
-        this.#status = document.createElement("div");
-        addClasses(this.#status, "status");
-        this.#status.setAttribute("role", "status");
+        const status = document.createElement("div");
+        addClasses(status, "status");
+        this.#status = new Announcer(status);
 
         // Sticks to the bottom of the popover while the list scrolls.
         this.#counter = document.createElement("p");
@@ -263,7 +263,7 @@ export default class ListView {
         this.#selectNoneButton.dataset.action = "none";
         form.append(this.#selectNoneButton);
 
-        this.#popover.append(this.#list, this.#empty, this.#counter, this.#status);
+        this.#popover.append(this.#list, this.#empty, this.#counter, this.#status.element);
     }
 
     #buildActionButton(onClick) {
@@ -410,8 +410,7 @@ export default class ListView {
         this.#playGlide(taken);
 
         // Once typing pauses, so that screen readers don't read out a count for every key.
-        clearTimeout(this.#announceTimer);
-        this.#announceTimer = setTimeout(() => this.#announce(), 500);
+        this.#status.sayLater(() => this.#matchesText(), 500);
 
         // Counting the matches of a search on a long list takes a moment, so it waits for a short pause too.
         clearTimeout(this.#counterTimer);
@@ -477,19 +476,17 @@ export default class ListView {
     }
 
     /**
-     * Tells screen readers how many options match the search, counting them all, also those not rendered yet. The
-     * count also gives the rows their aria-setsize, which would otherwise wait for the list to be rendered.
+     * What screen readers hear once typing pauses: how many options match the search, counting them all, also those
+     * not rendered yet. The count also gives the rows their aria-setsize, which would otherwise wait for the list to
+     * be rendered.
      */
-    #announce() {
+    #matchesText() {
         const view = this.#rowList.view;
-        if (!view?.query || this.#signal.aborted) {
-            this.#status.textContent = "";
-            return;
-        }
+        if (!view?.query || this.#signal.aborted) return "";
 
         const count = view.count();
         this.#rowList.syncSetSize();
-        this.#status.textContent = count ? this.#config.matchesLabel(count) : this.#config.noMatchesLabel;
+        return count ? this.#config.matchesLabel(count) : this.#config.noMatchesLabel;
     }
 
     /** Shows "No matches" when a search has found nothing, and nothing more is coming. */
@@ -720,19 +717,18 @@ export default class ListView {
         this.#full = full;
         this.#actions.full?.(full);
         if (full && this.#popover.matches(":popover-open")) this.#sayLimitReached();
-        else if (!full && this.#status.textContent === this.#limitSaid)
-            this.#status.textContent = ""; // No longer so, for a screen reader that goes over the page.
+        else if (!full && this.#status.text === this.#limitSaid)
+            this.#status.clear(); // No longer so, for a screen reader that goes over the page.
     }
 
     /**
-     * Tells screen readers that max options are selected, through the status line. It's emptied first, and filled a
-     * frame later, so that saying it again is heard again.
+     * Tells screen readers that max options are selected, through the status line (said so that saying it again is
+     * heard again).
      */
     #sayLimitReached() {
-        this.#status.textContent = "";
-        requestAnimationFrame(() => {
-            if (!this.#signal.aborted && this.#full)
-                this.#status.textContent = this.#limitSaid = this.#config.limitReachedLabel(this.#config.max);
+        this.#status.say(() => {
+            if (this.#signal.aborted || !this.#full) return "";
+            return this.#limitSaid = this.#config.limitReachedLabel(this.#config.max);
         });
     }
 
